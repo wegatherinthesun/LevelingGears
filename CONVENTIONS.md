@@ -7,13 +7,9 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 
 ---
 
-## The author (project owner)
+## Project owner
 
-- Has some coding experience (Python, basic Lua, HTML/JS), not professional. Explain non-obvious
-  concepts briefly when introducing them. Do not assume familiarity with WoW addon internals.
-- Works on an old Mac. Prefer solutions with zero or minimal tooling. Never require compiling
-  anything from source. The offline data pipeline is written in Python (already installed) and, if
-  a database engine is wanted, SQLite (ships with macOS) — never a database server.
+- Has some coding experience (Python, basic Lua, HTML/JS), not professional.
 - Builds and tests in small increments. STOP after each version step and wait for beta-testing
   results before continuing.
 
@@ -30,7 +26,18 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 5. **Data is baked offline, not faked.** Until the real baked database exists, any feature needing
    item/quest/loot data runs on a tiny hand-made sample table OR shows "Coming soon." Never fake a
    full database inline.
-6. Keep code in small, clearly named files. Comment generously — the author reads the code.
+6. Keep code in small, clearly named files. Comment generously — the project owner is not a
+   professional developer and reads the code directly.
+7. **A completed test report from the project owner is authoritative and actionable, not just
+   informational** (this is different from a report from any other tester, which may need judgment
+   about whether/how to act on it). On receiving one: treat confirmed-working items as real
+   confirmation (reflect in `bugs/known-bugs.md`/`PROGRESS.md` where relevant); investigate and
+   fix/mitigate real bugs immediately, not just file them for later — if a root cause can't be
+   confirmed by static review, add targeted debug logging and ask for specific evidence in the
+   retest rather than guessing at a fix; file genuine new feature ideas in `ROADMAP.md` at the next
+   free version slot (see the versioning ladder) but do **not** build them until every
+   currently-shipped feature is confirmed working, unless directed otherwise; update `TEST_PLAN.md`
+   so the next pass knows what to re-confirm and where to resume.
 
 ## Mandatory maintenance rules (apply to every change)
 - After every code change, verify the addon still parses and update the TOC version if the shipped addon version changed.
@@ -53,7 +60,7 @@ The addon always says "gears," never "gear." Window title: **Leveling Gears**. V
 smaller text directly under the title. Icon (designed later): a small gear meshing with a big gear.
 Buttons use the branding: **"Select Gears"**, **"View Gears"**.
 
-## Versioning ladder (defined by the author — follow exactly)
+## Versioning ladder (follow exactly)
 
 - **0.1** — first runnable skeleton. 0.11, 0.12… = small additions while the addon is "just a
   window and buttons."
@@ -76,7 +83,9 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   stabilization/testing milestone's sub-decimal space** (bugfixes found during Testing Phase 1 use
   the thousandths rule as usual: 0.301, 0.302…; a genuine new sub-feature of this milestone would be
   0.31 — but 0.31 was also the old data-pipeline download step, now renumbered to 0.41, so check
-  `ROADMAP.md` before assuming a two-decimal number is free).
+  `ROADMAP.md` before assuming a two-decimal number is free). **0.31-0.34 are now taken** (Testing
+  Phase 1 follow-up features found in the v0.301 test report — see `ROADMAP.md`'s "Testing Phase 1
+  follow-ups" section); the next free two-decimal number in this milestone is **0.35**.
 - **Version A** — first feature-complete **alpha** (no decimal). A.1, A.2 = alpha fixes.
 - **Version B** — **beta**.
 - **1.0** — first shipped release. **1.01** = bug patches. **1.1** = one new feature.

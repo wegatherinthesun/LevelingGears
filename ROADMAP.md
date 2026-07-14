@@ -92,7 +92,7 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   multipliable numbers. v1 policy: **weight only clean numeric stats; ignore procs/use-effects in
   scoring** (item still appears, its normal stats still count). Assigning values to named effects
   would need a SECOND scraped database (e.g., an effect→value table) — spec this as an explicit
-  future option only if the author wants it. Do NOT build it into early versions.
+  future option, not something to build into early versions.
 
 ### Data pipeline (build the schema early; fill it in stages)
 - **0.23 — Equipped-gear weakness evaluation.** Using the visible 0.2 weights, evaluate each
@@ -103,6 +103,46 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   average pieces, and cyan/blue/violet marking stronger-than-average pieces. This is a no-database
   step and is intentionally aimed at identifying improvement opportunities rather than producing a
   traditional "gear score".
+
+### Testing Phase 1 follow-ups (found during v0.301 testing; gated on all current features passing)
+
+These came out of the first real test pass (`TEST_PLAN.md`, v0.301) as things to build, not bugs in
+what already exists. **Do not start any of these until every currently-built feature is confirmed
+working** — fix what's broken first (see `bugs/known-bugs.md` #28-#30), finish the Phase 1
+regression checklist, then come back here.
+
+- **0.31 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
+  minimap (the standard convention most players expect from an addon minimap icon); the new position
+  persists across sessions the same way window position does. Left-click still opens/closes the
+  settings window. A plain right-click (no drag) no longer needs to also open/close the window once
+  drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
+  right-click currently doing the same thing; that note goes away once this ships.
+- **0.32 — Custom art: minimap button icon/border, and the addon's own icon/logo.** The current
+  minimap button uses a generic placeholder icon (`INV_Misc_Gear_01`) and the border appears larger
+  than the clickable button itself. `CONVENTIONS.md`'s Branding section already calls for "a small
+  gear meshing with a big gear" — this is where that actually gets designed and built, for the
+  minimap button and anywhere else the addon shows its own icon.
+- ~~**0.33 — Shift-click scoring on equipped items, replacing `/lgs score`.**~~ **Built in v0.303**,
+  pulled forward and shipped as bug #30's real fix (`bugs/known-bugs.md` #30) rather than staying
+  gated — direct feedback on that bug ("too complicated... shift-click an equipped item to output the
+  information about the gear into the chat") superseded the gating for this piece specifically.
+  Implemented as **shift+left-click**, not the originally-requested shift+right-click: verified
+  against FrameXML that right-click unconditionally fires `UseInventoryItem` regardless of
+  modifiers (risking an unwanted trinket-proc etc.), while left-click already branches on Shift for
+  its own safe "insert item link in chat" behavior — see bug #30 for the full reasoning. `/lgs score`
+  stays working as the debug-bench fallback (per its original purpose — sanity-checking
+  `Priorities.lua` — even after the click-based path exists).
+  **Consequence for the future 0.6 "suggest gear" flow:** that feature was originally slated to use
+  shift+left-click as its trigger gesture; shift+left-click is now taken by scoring, so 0.6 needs a
+  different gesture (e.g. shift+right-click, alt+click, or a button in the tooltip) decided when that
+  milestone is actually scoped — not decided here.
+- **0.34 — Profile creation dialog with a name field.** Clicking "Create new profile" currently
+  auto-names it "Profile N" with no way to customize it. Instead, open a small popup frame over the
+  settings window with a text input for the name, and a tooltip on that input suggesting example
+  names (e.g. "dungeon healing," "hybrid pvp," "solo questing") so new testers have a sense of what
+  a profile name is for. Bundle in clarifying the profile-picker button generally if anything more is
+  needed beyond the "Profile:" label already added (bug #28).
+
 - **0.4 — Freeze the schema + hand-made sample.** Implement the exact table shapes above as real
   Lua files. Populate with a ~12-item HAND-MADE sample spanning every source kind (drop, quest,
   chain, craft, vendor, boe) so all later UI can be built and tested with zero pipeline. This is
@@ -124,8 +164,8 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   lines appended INTO the tooltip (selected upgrade + where to get it), and the clickable actions
   ("Select Gears" / "next step") on a small separate clickable flyout frame anchored beside the
   tooltip, or triggered by a modifier key (e.g., "Alt+click to Select Gears") — propose the
-  approach, let the author pick, record it here. No upgrade chosen for that slot → the Select Gears
-  action. One chosen → show it + where to get it + the next-step action.
+  approach for review and record the chosen one here. No upgrade chosen for that slot → the Select
+  Gears action. One chosen → show it + where to get it + the next-step action.
 - **0.6 — Recommendation window.** Opens from "Select Gears," scoped to the hovered slot (gloves →
   glove upgrades). Layout top→bottom: header (name + icon + version), character summary (name,
   level, color-rated gearscore), then suggested items: each row = icon + name (native quality
@@ -157,7 +197,7 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
 
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),
-  matches a table of popular builds (hand-made, author-expanded). Its ONLY job is to **move the
+  matches a table of popular builds (hand-made, expanded over time). Its ONLY job is to **move the
   visible 0–10 sliders on the 0.2 page automatically** to a preset — the player watches them move and
   can still grab any slider by hand afterward. It never hides or replaces the weight page; it's a
   convenience layer on top of it, not a separate scoring path. Dropdown to override the guess; must
@@ -165,9 +205,10 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   adjusts the same always-visible sliders themselves. (Partially superseded by the v0.25 scoring
   engine's automatic spec detection and default-weight seeding — see `DESIGN.md` — but a visible
   "assumed spec" indicator/override dropdown in the UI is still not built.)
-- **Proc/effect valuation (optional).** See the proc note under 0.2 — only if the author commits to
+- **Proc/effect valuation (optional).** See the proc note under 0.2 — contingent on committing to
   the second scraped database.
-- **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`), gated by the author.
+- **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`); each requires explicit
+  approval before starting.
 
 ---
 

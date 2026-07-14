@@ -218,3 +218,25 @@ function Scoring:DescribeCurrentSpec()
 	end
 	return label
 end
+
+-- Shared presentation for an already-computed score/breakdown: both the /lgs score debug command
+-- (Core.lua, scores against Priorities.lua directly) and the shift+left-click-on-equipped-item
+-- feature (GearEvaluation.lua, scores against the player's live profile weights) print through
+-- this one function so the chat output format only exists in one place.
+function Scoring.PrintBreakdown(_self, itemLink, score, breakdown, specDescription)
+	if not LG.Debug then
+		return
+	end
+	LG.Debug.PrintChat("Score for " .. itemLink .. " as " .. specDescription .. ": " .. string.format("%.1f", score))
+
+	local sortedKeys = {}
+	for statKey in pairs(breakdown) do
+		table.insert(sortedKeys, statKey)
+	end
+	table.sort(sortedKeys, function(a, b)
+		return math.abs(breakdown[a]) > math.abs(breakdown[b])
+	end)
+	for _, statKey in ipairs(sortedKeys) do
+		LG.Debug.PrintChat("  " .. statKey .. ": " .. string.format("%.2f", breakdown[statKey]))
+	end
+end

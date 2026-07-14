@@ -22,14 +22,25 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.301 — first Testing Phase 1 bugfix.** The author's own on-disk debug log surfaced a real bug
-(#27, `bugs/known-bugs.md`) that the v0.3 static conflict audit couldn't have caught: `DetectSpec`
-was crashing on every call since v0.25, so gear-outline coloring and spec-aware default weights had
-likely never worked. Patched defensively. **Still not confirmed live.** Next step: work through
-`TEST_PLAN.md`'s full regression checklist before anything else gets pushed — its first item is
-confirming this exact fix (do defaults now seed spec-aware instead of a flat 5?). Testers email
+**v0.303 — bug #30's real fix: shift+left-click an equipped item to score it.** v0.302's mitigation
+for bug #30 (a clearer `/lgs score` usage message) was rejected as too complicated; the requested fix
+was a direct one: shift-click an equipped item in the character window to print its score to chat,
+no slash command needed. Verified Blizzard's real click behavior via FrameXML before implementing
+anything: right-click unconditionally fires
+`UseInventoryItem` regardless of modifiers (would risk an unwanted trinket-proc etc. on shift+right-
+click), so this shipped as **shift+left-click** instead — side-effect-free, and reuses the same
+gesture Blizzard already uses for "insert item link in chat." `GearEvaluation.lua` now hooks each
+equipped slot button once via `HookScript` (additive, doesn't replace Blizzard's own handler);
+`/lgs score` still works as the debug-bench fallback. This also pulled forward and closed
+`ROADMAP.md`'s previously-gated 0.33 item — see that file for the consequence for the future 0.6
+"suggest gear" gesture (shift+left-click is no longer available for it). Bugs #28/#29 from v0.302
+remain as they were (see `bugs/known-bugs.md`). Next step: resume `TEST_PLAN.md` at T1 to re-confirm
+this and last round's fixes, then continue through T16-T35, which were never reached. Testers email
 completed checklists to `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start. Full
 detail in `PROGRESS.md`'s Current status section.
+
+How to handle a completed test report is a standing rule — see `CONVENTIONS.md`'s Hard process
+rules.
 
 After finishing any step: update `PROGRESS.md` (and `bugs/known-bugs.md` if relevant) before
 considering the task done — see `CONVENTIONS.md`'s Mandatory maintenance rules.

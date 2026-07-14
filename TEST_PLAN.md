@@ -34,25 +34,33 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.301.** A real bug (#27), found from the author's own on-disk debug log, not from the
-static audit — this is the most important thing to re-verify:
+**Version: v0.303.** No test report has come in since the first real v0.301 pass, so this
+section covers everything changed across v0.301 → v0.303 in one go. That first pass found bug #27's
+fix largely working (T1/T3/T7 showed clean loads and successful gear scoring — a big improvement)
+but stopped at T15/T16 after hitting three more real issues. v0.302 fixed/mitigated those three;
+v0.303 then replaced v0.302's bug #30 mitigation with the actual requested fix. **Testing
+should resume from T1** to re-confirm everything still works after all of this, then continue on to
+T16-T35, which were never reached last time:
 
-1. **`DetectSpec` was crashing on every single call since v0.25.** `GetTalentTabInfo`'s `pointsSpent`
-   return wasn't at the position the code assumed, so `Scoring.lua:102` threw a Lua error every time
-   — caught silently by whichever `pcall`/`SafeCall` boundary was nearest, so nothing visibly crashed.
-   The practical effect: gear-outline coloring likely never painted anything, and every profile's
-   default weights likely fell back to a flat 5 instead of a spec-aware seed. Patched to try three
-   plausible return positions instead of one guessed position (see `bugs/known-bugs.md` #27). **This
-   needs the first real test** — see T20 below.
-2. **The v0.261 nine-file reorganization** changed *how* every feature is wired together without
-   intending to change *what* any feature does. **Test everything, not just what seems related** —
-   bug #27 is a live example of a v0.25-era bug that had nothing to do with the reorg, surfacing
-   only once someone actually looked at real runtime output.
-3. **A documentation/version reorganization** — zero code risk, but T2 below confirms the displayed
-   version string actually matches.
-4. **A static conflict audit** was run before v0.3 (cross-file reference check, `luac -p` +
-   `luacheck`, cross-doc link validation) — all clean, but static analysis cannot catch a runtime
-   API-return-type mismatch like bug #27. Treat the audit as a floor, not a ceiling.
+1. **Bug #28 (solved): profile picker button read as a "restore defaults" action.** Added a
+   "Profile:" label to the left of the button — re-check T15 with this in mind.
+2. **Bug #29 (open, mitigated): window position restores consistently but not to the exact dragged
+   spot.** No confirmed root cause yet — added debug logging (`/lgs debug` level 1) to both save and
+   restore, plus a defensive pixel-rounding fix. **T11 this round should include the
+   `/lgs debug dump` output** covering both a drag and a reopen, so there's real data to compare
+   instead of a visual impression.
+3. **Bug #30 (solved): `/lgs score` reported as "too complicated."** The previous round's
+   usage-message mitigation was rejected outright in favor of the real fix: shift-click
+   an equipped item in the character window to print its score to chat, no slash command needed.
+   Built as **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
+   `bugs/known-bugs.md` for the verified Blizzard-click-behavior reasoning). **T8 below now tests
+   this as the primary workflow**; `/lgs score` still works as a debug-bench fallback.
+4. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art, and a real
+   profile-naming dialog were filed in `ROADMAP.md`'s "Testing Phase 1 follow-ups" (0.31, 0.32, 0.34)
+   from feedback in the same report. None of these are testable yet — don't look for them.
+
+Bug #27 itself (from v0.301) is not fully closed — T20 (spec-aware default seeding across multiple
+classes) still hasn't actually been run. That's still this round's highest-value test.
 
 ---
 
@@ -78,7 +86,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.301**.
+- Expected: Reads **v0.303**.
 - Result:
 - Notes:
 
@@ -120,11 +128,27 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T8 — `/lgs score` on real items**
-- Instruction: Type `/lgs score` then shift-click an equipped or bagged item into the chat box and
-  press Enter. Try items with different stat mixes (e.g. a weapon, a caster cloth item).
+**T8 — Shift+left-click an equipped item to score it (bug #30's real fix)**
+- Instruction: Open the character window (paperdoll) so your equipped gear is visible, then
+  shift+left-click one of your equipped items. Try several different slots/items (e.g. a weapon, a
+  caster cloth item, a trinket).
 - Repeat: 3x (3 different items)
-- Expected: Prints a derived-stat breakdown and a final score; numbers look plausible for each item.
+- Expected: Prints a derived-stat breakdown and a final score to chat, scored against your own
+  profile weights (same weights that drive the gear-outline colors). A plain left-click on the same
+  item still picks it up as normal (don't confirm the drag, just check the cursor picks it up), and a
+  plain shift-click (no click type held down beyond Shift) still inserts the item link into an open
+  chat edit box as it always has — neither of those should be affected by this change.
+- Result:
+- Notes:
+
+**T8b — `/lgs score` still works as a fallback**
+- Instruction: Type `/lgs score ` (with the trailing space, don't press Enter yet), then shift-click
+  an equipped or bagged item — this inserts the item link right into that same line — then press
+  Enter.
+- Repeat: 1x
+- Expected: Prints a derived-stat breakdown and a final score, scored against the raw `Priorities.lua`
+  table rather than your own profile weights (so the numbers may differ slightly from T8 above — that
+  difference is expected, not a bug; see `DESIGN.md`).
 - Result:
 - Notes:
 
@@ -145,11 +169,15 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ### Window behavior
 
-**T11 — Window position persists**
-- Instruction: Drag the window somewhere new, then `/reload`. Repeat once more but fully exit and
-  relaunch the client instead of `/reload`.
+**T11 — Window position persists (bug #29 — reported imprecise last round)**
+- Instruction: Drag the window to a spot you can describe precisely (e.g. "top-left corner flush
+  against the minimap"), then `/reload`. Repeat once more but fully exit and relaunch the client
+  instead of `/reload`.
 - Repeat: 2x (one `/reload`, one full restart)
-- Expected: Window reopens in the last dragged position both times.
+- Expected: Window reopens in the *exact* dragged position both times, not just a similar area.
+  Please include `/lgs debug dump` covering both the drag and the reopen — new logging this round
+  prints the exact saved/restored coordinates, which is the hard evidence needed to actually
+  pin down last round's "close but not exact" report.
 - Result:
 - Notes:
 
@@ -178,10 +206,12 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ### Profiles section
 
-**T15 — Profile dropdown contents**
-- Instruction: Open the profile dropdown.
+**T15 — Profile dropdown contents (bug #28 — fixed this round)**
+- Instruction: Look at the profile section, then open the profile dropdown.
 - Repeat: 1x
-- Expected: Lists "Default," any profiles you've created, and "Create new profile."
+- Expected: A "Profile:" label now sits to the left of the button (new this round, so it no longer
+  reads like a "restore defaults" action). Opening it lists "Default," any profiles you've created,
+  and "Create new profile."
 - Result:
 - Notes:
 

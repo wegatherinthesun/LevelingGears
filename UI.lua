@@ -19,12 +19,21 @@ local generalSettingsCheckbox = nil
 local weightLabels = {}
 
 -- Apply any previously saved frame position so the window appears where it was last left.
+-- Bug #29 (open): testers report the restored position is consistently in "a similar general
+-- area" but not the exact spot the window was dragged to -- logged here and in SaveWindowPosition
+-- so a real debug-log comparison of saved vs. applied values is possible next test pass, rather
+-- than guessing at a fix with no evidence.
 local function ApplySavedPosition(frame)
 	local settings = LG.Settings.GetGeneralSettings()
 	local pos = settings.position
 	if pos and pos.point and pos.relativePoint then
 		frame:ClearAllPoints()
 		frame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x or 0, pos.y or 0)
+		if LG.Debug then
+			LG.Debug.WriteDebugLog(string.format(
+				"ApplySavedPosition: point=%s relativePoint=%s x=%.2f y=%.2f",
+				pos.point, pos.relativePoint, pos.x or 0, pos.y or 0), 1)
+		end
 	end
 end
 
@@ -36,13 +45,24 @@ local function SaveWindowPosition(frame)
 		xOfs, yOfs = 0, 0
 	end
 
+	-- Round to whole pixels: SetPoint/GetPoint round-trips can accumulate tiny floating-point
+	-- drift across repeated save/restore cycles, and WoW positions are effectively pixel-integer
+	-- anyway. Cheap, safe regardless of whether this turns out to be bug #29's actual cause.
+	xOfs = math.floor((xOfs or 0) + 0.5)
+	yOfs = math.floor((yOfs or 0) + 0.5)
+
 	local settings = LG.Settings.GetGeneralSettings()
 	settings.position = {
 		point = point or "CENTER",
 		relativePoint = relativePoint or "CENTER",
-		x = xOfs or 0,
-		y = yOfs or 0,
+		x = xOfs,
+		y = yOfs,
 	}
+	if LG.Debug then
+		LG.Debug.WriteDebugLog(string.format(
+			"SaveWindowPosition: point=%s relativePoint=%s x=%d y=%d",
+			settings.position.point, settings.position.relativePoint, xOfs, yOfs), 1)
+	end
 end
 
 -- Open or close the single settings window that the addon uses for all configuration.
@@ -331,9 +351,16 @@ profileHint:SetWidth(300)
 profileHint:SetJustifyH("LEFT")
 profileHint:SetText("Create and switch profiles per character. These can later be tied to specs or roles.")
 
+-- A bare "Default" button reads as ambiguous (easy to mistake for a "restore defaults" action --
+-- see bugs/known-bugs.md #28) -- an explicit "Profile:" label makes clear this button IS the
+-- profile picker/dropdown, not a reset action.
+local profileDropdownLabel = profileSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+profileDropdownLabel:SetPoint("TOPLEFT", profileHint, "BOTTOMLEFT", 0, -12)
+profileDropdownLabel:SetText("Profile:")
+
 profileDropdownButton = CreateFrame("Button", nil, profileSection, "UIPanelButtonTemplate")
-profileDropdownButton:SetSize(180, 24)
-profileDropdownButton:SetPoint("TOPLEFT", profileHint, "BOTTOMLEFT", 0, -8)
+profileDropdownButton:SetSize(160, 24)
+profileDropdownButton:SetPoint("LEFT", profileDropdownLabel, "RIGHT", 8, 0)
 profileDropdownButton:SetText("Select profile")
 profileDropdownButton:SetScript("OnClick", ToggleProfileMenu)
 

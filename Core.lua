@@ -12,35 +12,30 @@ local PrintChat = LG.Debug.PrintChat
 local SafeCall = LG.Debug.SafeCall
 
 -- Debug bench for the v0.25 scoring engine: prints the derived-stat breakdown and final score for
--- a shift-clicked item link, scored against the character's own detected class/spec/mode, so the
--- Priorities.lua weight tables can be sanity-checked in game against real items.
+-- a shift-clicked item link, scored strictly against Priorities.lua's authored table (not the
+-- player's own hand-adjusted weights), so the priority tables themselves can be sanity-checked
+-- independent of any customization. Bug #30's real fix (per the author: shift+left-click an
+-- equipped item instead) lives in `GearEvaluation.lua` and uses the player's live profile weights
+-- via the same `Scoring:PrintBreakdown` this command calls -- this command remains as the
+-- debug-bench fallback for checking the raw priority tables, per DESIGN.md.
 local function HandleScoreCommand(argText)
 	local itemLink = argText:gsub("^%s+", ""):gsub("%s+$", "")
 	if itemLink == "" then
-		PrintChat("Usage: /lgs score <shift-click an item link>")
+		PrintChat("Usage: type /lgs score , then (in that SAME line, before pressing Enter) shift-click an item, then press Enter. For everyday use, shift+left-click an equipped item instead.")
 		return
 	end
 
 	local itemStats = GetItemStats(itemLink)
-	if not itemStats then
+	if not itemStats or not next(itemStats) then
+		LG.Debug.WriteDebugLog("HandleScoreCommand: GetItemStats returned " ..
+			(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
 		PrintChat("Could not read item stats for that link (item may not be cached yet -- try again in a moment).")
 		return
 	end
 
 	local class, specKey, mode = LG.Scoring:DetectSpec()
 	local score, breakdown = LG.Scoring:ScoreItem(itemStats, class, specKey, mode)
-	PrintChat("Score for " .. itemLink .. " as " .. LG.Scoring:DescribeCurrentSpec() .. ": " .. string.format("%.1f", score))
-
-	local sortedKeys = {}
-	for statKey in pairs(breakdown) do
-		table.insert(sortedKeys, statKey)
-	end
-	table.sort(sortedKeys, function(a, b)
-		return math.abs(breakdown[a]) > math.abs(breakdown[b])
-	end)
-	for _, statKey in ipairs(sortedKeys) do
-		PrintChat("  " .. statKey .. ": " .. string.format("%.2f", breakdown[statKey]))
-	end
+	LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
 end
 
 -- Slash commands are intentionally limited to the two primary entry points so the addon stays easy

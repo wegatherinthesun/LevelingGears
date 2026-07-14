@@ -35,6 +35,49 @@ local equippedSlotDefinitions = {
 }
 
 local gearOutlineFrames = {}
+local scoreClickHookedButtons = {}
+
+-- Bug #30's real fix (per the author, after rejecting the /lgs score slash command as "too
+-- complicated"): shift-click an equipped item in the character window to print its score breakdown
+-- to chat. HookScript (not SetScript) is required here -- it runs alongside Blizzard's own OnClick
+-- handler instead of replacing it, so the native left-click (pick up), ctrl-click (dress up), and
+-- shift-click (insert item link in chat) behaviors all stay intact.
+--
+-- Implemented as shift+LEFT-click, not shift+right-click as literally requested: confirmed against
+-- FrameXML's PaperDollItemSlotButton_OnClick that right-click unconditionally calls
+-- UseInventoryItem(slotId) regardless of any held modifier, so hooking shift+right-click would also
+-- risk firing the item's on-use effect (e.g. a trinket proc) as an unwanted side effect. Left-click
+-- already branches on Shift for its own "insert item link in chat" behavior, so shift+left-click is
+-- both side-effect-free and reuses a gesture every WoW player already knows.
+local function EnsureScoreClickHook(slotButton, slotId)
+	if not slotButton or scoreClickHookedButtons[slotButton] then
+		return
+	end
+	scoreClickHookedButtons[slotButton] = true
+
+	slotButton:HookScript("OnClick", function(_, button)
+		if button ~= "LeftButton" or not IsShiftKeyDown() then
+			return
+		end
+
+		local itemLink = GetInventoryItemLink("player", slotId)
+		if not itemLink then
+			return
+		end
+
+		local itemStats = GetItemStats(itemLink)
+		if not itemStats or not next(itemStats) then
+			WriteDebugLog("EnsureScoreClickHook: GetItemStats returned " ..
+				(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
+			return
+		end
+
+		LG.Weights.EnsureWeights()
+		local profile = LG.Settings.GetActiveProfile()
+		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, profile and profile.weights)
+		LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
+	end)
+end
 
 -- Score a single equipped slot using the v0.25/0.26 engine and the active profile's weights.
 -- EnsureWeights seeds any never-set stat from the detected spec's Priorities default, then leaves
@@ -153,6 +196,7 @@ function GearEvaluation.UpdateEquippedGearEvaluation()
 		-- entry must not abort the evaluation for every other slot.
 		local slotOk, slotId = pcall(GetInventorySlotInfo, slotDefinition.slotName)
 		if slotOk and slotId then
+			EnsureScoreClickHook(_G[slotDefinition.buttonName], slotId)
 			local score = GetEquippedItemScore(slotId)
 			if score and score > 0 then
 				itemScores[slotDefinition.buttonName] = score
