@@ -22,11 +22,14 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.3 — "stable, reorganized baseline," entering Testing Phase 1.** A static conflict/consistency
-audit (code, conventions, cross-doc references) passed clean — see `PROGRESS.md`. Nothing has been
-verified in game yet. Next step: work through `TEST_PLAN.md`'s full regression checklist before
-anything gets pushed — every feature and option needs a pass. `TESTERS.md` has the process for
-anyone else running that checklist. Full detail in `PROGRESS.md`'s Current status section.
+**v0.301 — first Testing Phase 1 bugfix.** The author's own on-disk debug log surfaced a real bug
+(#27, `bugs/known-bugs.md`) that the v0.3 static conflict audit couldn't have caught: `DetectSpec`
+was crashing on every call since v0.25, so gear-outline coloring and spec-aware default weights had
+likely never worked. Patched defensively. **Still not confirmed live.** Next step: work through
+`TEST_PLAN.md`'s full regression checklist before anything else gets pushed — its first item is
+confirming this exact fix (do defaults now seed spec-aware instead of a flat 5?). `TESTERS.md` has
+the process for anyone else running that checklist. Full detail in `PROGRESS.md`'s Current status
+section.
 
 After finishing any step: update `PROGRESS.md` (and `bugs/known-bugs.md` if relevant) before
 considering the task done — see `CONVENTIONS.md`'s Mandatory maintenance rules.

@@ -56,7 +56,7 @@ testing can't validate that coverage.
 ### Load & version
 - [ ] Addon loads with zero Lua errors on a full client restart (not just `/reload`) — confirms the
   9-file load order and the `## SavedVariables` TOC directive both still work.
-- [ ] Window title bar reads **v0.3**.
+- [ ] Window title bar reads **v0.301**.
 - [ ] `/lgs debug dump` right after login shows no unexpected errors in the ring buffer.
 
 ### Slash commands & minimap
