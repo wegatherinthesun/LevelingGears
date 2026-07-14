@@ -44,12 +44,12 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 - Validation: `luac -p Core.lua` completed successfully.
 - Follow-up: Confirm in-game that the addon loads and opens normally after a reload.
 
-### 3. Optional debug logging needed without spamming users
+### 3. Optional debug logging needed without spamming players
 - Status: Solved
 - Discovered: 2026-07-13
 - Solved: 2026-07-13
 - Version introduced: 0.21
-- Summary: The addon needed a quiet, opt-in debugging path for Lua errors without always writing logs or affecting other users.
+- Summary: The addon needed a quiet, opt-in debugging path for Lua errors without always writing logs or affecting other players.
 - Observed behavior:
   - There was no safe way to capture addon errors locally.
 - Likely cause: no opt-in debug logging path existed yet.
@@ -77,19 +77,19 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 - Validation: The file contents were checked directly.
 - Follow-up: Keep version metadata aligned whenever the addon version changes.
 
-### 5. Slash-command surface was too broad and did not guide users on first launch
+### 5. Slash-command surface was too broad and did not guide players on first launch
 - Status: Solved
 - Discovered: 2026-07-13
 - Solved: 2026-07-13
 - Version introduced: 0.21
-- Summary: The addon exposed an extra /lg alias and did not clearly tell users how to open the settings window on first launch.
+- Summary: The addon exposed an extra /lg alias and did not clearly tell players how to open the settings window on first launch.
 - Observed behavior:
-  - Users saw an extra slash command alias and had no launch-time reminder for the supported commands.
+  - Players saw an extra slash command alias and had no launch-time reminder for the supported commands.
 - Likely cause: the command registration was broader than needed and the startup message did not include usage guidance.
 - Attempts to fix:
   - Removed the /lg alias from the command registration.
-  - Added a startup chat message telling users to type /levelinggears or /lgs to open settings.
-- Resolution: The addon now supports only /levelinggears and /lgs, and it gives users a clear first-launch reminder.
+  - Added a startup chat message telling players to type /levelinggears or /lgs to open settings.
+- Resolution: The addon now supports only /levelinggears and /lgs, and it gives players a clear first-launch reminder.
 - Validation: Lua syntax remained valid after the change.
 - Follow-up: Confirm the new command behavior in game after a full reload.
 
@@ -198,7 +198,7 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 - Solved: 2026-07-13
 - Version introduced: 0.11 (minimap button) / regressed further whenever the button setup was touched
 - Summary: `local minimapButton = nil` was declared once near the top of the file as the module-wide reference used by `SetMinimapButtonVisible`. The actual minimap button frame was later created with `local minimapButton = CreateFrame(...)`, which declared a *new, second* local that shadowed the first instead of assigning into it. `SetMinimapButtonVisible` kept its original upvalue, which stayed nil forever, so toggling "Show minimap button" silently did nothing.
-- Observed behavior: Not yet reported by the user; found via static review (`luacheck` flagged "variable minimapButton was previously defined").
+- Observed behavior: Not yet reported by the author; found via static review (`luacheck` flagged "variable minimapButton was previously defined").
 - Likely cause: re-using `local` for what should have been a plain assignment into the already-declared module-level variable.
 - Attempts to fix: Removed the `local` keyword from the minimap button's creation line so it assigns into the existing module-level `minimapButton` variable instead of shadowing it.
 - Resolution: `SetMinimapButtonVisible` now controls the real minimap button.
@@ -211,7 +211,7 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 - Solved: 2026-07-13
 - Version introduced: 0.1 (present from the very first skeleton)
 - Summary: `LevelingGears.toc` never had a `## SavedVariables: LevelingGearsDB` line. Without it, WoW never persists `LevelingGearsDB` between sessions — it behaves like an ordinary Lua global that is empty on every login. Every feature described as "saved" in this file (window position, minimap toggle, profiles, stat weights) has likely never actually survived a real logout/login, only `/reload` within the same session.
-- Observed behavior: Not yet reported by the user (easy to miss since `/reload` doesn't reload the game process and so doesn't expose the bug); found via static review of the TOC against the Lua file's SavedVariables usage.
+- Observed behavior: Not yet reported by the author (easy to miss since `/reload` doesn't reload the game process and so doesn't expose the bug); found via static review of the TOC against the Lua file's SavedVariables usage.
 - Likely cause: the TOC metadata was updated for version numbers but the SavedVariables directive was never added when SavedVariables usage was introduced.
 - Attempts to fix: Added `## SavedVariables: LevelingGearsDB` to `LevelingGears.toc` and bumped the version to 0.241.
 - Resolution: `LevelingGearsDB` will now be written to and restored from the account's `WTF` SavedVariables file across full game restarts. **Note for testing:** a `.toc` metadata change (like adding a `## SavedVariables` line) is only read when the game client fully starts up, not on `/reload` — `/reload` alone is not enough to pick up this specific kind of fix.
@@ -233,10 +233,10 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 
 ### 15. No colored outlines appear around equipped gear
 - Status: Mitigated (root cause found and fixed in bug #16; CharacterFrame OnShow fix below is still a valid, permanent improvement)
-- Discovered: 2026-07-13 (reported by the user)
+- Discovered: 2026-07-13 (reported by the author)
 - Version introduced: 0.23 (equipped-gear weakness evaluation)
 - Summary: The equipped-gear outline evaluation looks up the paperdoll slot buttons by global name (`_G.CharacterHeadSlot`, etc.) and only re-runs on `PLAYER_ENTERING_WORLD`, `PLAYER_EQUIPMENT_CHANGED`, and `UNIT_INVENTORY_CHANGED`. This client (TBC Classic Anniversary, a modern client build) loads the paperdoll/Character panel UI on demand rather than at login, so those slot buttons likely don't exist yet the first time the evaluation runs, and nothing ever re-triggers it once the player opens their character sheet for the first time. `EnsureGearOutline` silently returns nil for a missing button, so the failure is invisible — no error, just no borders.
-- Observed behavior: User reports no color borders around equipped gear at all.
+- Observed behavior: No color borders around equipped gear at all.
 - Likely cause: paperdoll slot buttons not yet created when `UpdateEquippedGearEvaluation` runs; evaluation was never re-triggered by opening the character panel.
 - Evidence: `GearScoreTBCClassic` (an addon installed on this same client, doing very similar per-slot paperdoll work) explicitly defers all of its paperdoll-slot logic to `CharacterFrame:HookScript("OnShow", ...)` rather than assuming the slot buttons exist at login — the same defensive pattern this addon was missing.
 - Attempts to fix:
@@ -248,45 +248,45 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 
 ### 16. `RelicSlot` is not a valid inventory slot in TBC, and its hard Lua error silently killed every outline
 - Status: Solved
-- Discovered: 2026-07-13 (found via the user's own `WTF/Account/ANDROIDEYES/SavedVariables/LevelingGears.lua`, which had captured 50 identical debug-log entries: `Core.lua:607: Invalid inventory slot in GetInventorySlotInfo`)
+- Discovered: 2026-07-13 (found via the author's own `WTF/Account/ANDROIDEYES/SavedVariables/LevelingGears.lua`, which had captured 50 identical debug-log entries: `Core.lua:607: Invalid inventory slot in GetInventorySlotInfo`)
 - Solved: 2026-07-13
 - Version introduced: 0.24 ("expanded the equipped-gear evaluation to cover offhand and extra inventory slots where possible")
 - Summary: `equippedSlotDefinitions` included `{ slotName = "RelicSlot", buttonName = "CharacterRelicSlot" }`. Relics did not get their own separate equipment slot until Wrath of the Lich King — in TBC, relic items (Librams/Idols/Totems/Sigils) share the same slot as ranged weapons (`RangedSlot`). `GetInventorySlotInfo("RelicSlot")` throws a hard Lua error ("Invalid inventory slot") on this TBC ruleset rather than returning nil. Because `RelicSlot` was the *last* entry in the list, and a thrown error aborts the whole enclosing function (not just that loop iteration), `UpdateEquippedGearEvaluation` was erroring out before it ever reached the code that colors and shows the outline frames — so literally nobody, on any class, ever saw a single colored border, regardless of the CharacterFrame/OnShow fix in bug #15.
-- Observed behavior: User reports no color borders around equipped gear at all; the addon's own debug log (captured automatically by `SafeCall`, independent of whether debug mode was toggled on) showed the same error repeating every time the evaluation ran.
+- Observed behavior: No color borders around equipped gear at all; the addon's own debug log (captured automatically by `SafeCall`, independent of whether debug mode was toggled on) showed the same error repeating every time the evaluation ran.
 - Likely cause: the slot list was extended in 0.24 to "cover offhand and extra inventory slots where possible" without verifying each slot name against the TBC ruleset specifically — a violation of the project's own Expansion Compatibility rule (CLAUDE.md: "Many Blizzard APIs differ between expansions. Never mix APIs from different game versions without explicitly supporting both").
 - Attempts to fix:
   - Removed the `RelicSlot`/`CharacterRelicSlot` entry from `equippedSlotDefinitions` entirely, since TBC has no separate relic slot or button for it.
   - Hardened the slot-lookup loop in `UpdateEquippedGearEvaluation` with `pcall(GetInventorySlotInfo, slotDefinition.slotName)` so that if any other slot name is ever invalid on this ruleset, only that one slot is skipped instead of aborting the outline evaluation for every equipped item.
 - Resolution: The evaluation can no longer be killed outright by a single bad slot name, on this or any future expansion target.
-- Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass; confirmed the error string and its exact source line via the user's own on-disk debug log before making the change.
+- Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass; confirmed the error string and its exact source line via the author's own on-disk debug log before making the change.
 - Follow-up: In-game, `/reload`, open the character panel, and confirm colored borders now appear around equipped gear. Run `/lgs debug dump` afterward — the repeating "Invalid inventory slot" error should no longer appear, and the "Gear evaluation: N/20 slot buttons found, M items scored" line (added in bug #15) should show a non-zero `M`.
-- Update (2026-07-13): user confirmed the colors are now working as expected. Closing this bug.
+- Update (2026-07-13): confirmed via testing that the colors are now working as expected. Closing this bug.
 
-### 17. User still reported settings not retaining; added a "Save Settings" footer button and clarified the persistence model
-- Status: Mitigated (no code bug found; added a confidence/confirmation mechanism per user request)
+### 17. Settings still reported as not retaining; added a "Save Settings" footer button and clarified the persistence model
+- Status: Mitigated (no code bug found; added a confidence/confirmation mechanism per the author's request)
 - Discovered: 2026-07-13
 - Version introduced: N/A (design/education gap, not a code regression)
-- Summary: User reported that changes to settings still weren't being retained, and asked for a static "Apply" button below the scrollable area that saves settings so they survive a reload. Re-read every settings-writing code path end to end (`SetWeight`, `SetMinimapButtonVisible`, `SaveWindowPosition`, `SetActiveProfile`, `CreateProfile`, `SetDebugEnabled`) and found no buffering or bug — every one of them already mutates `LevelingGearsDB` immediately and directly; there is no code-level "unsaved" state for a button to flush. This is also directly contradicted by hard evidence: the user's own on-disk SavedVariables file already contained real, non-default weights and window position for their character (see bug #13), proving the persistence pipeline itself works.
-- Observed behavior: User perceives settings as "not retaining" despite the underlying mechanism demonstrably writing correct data to disk at least once.
-- Likely cause: WoW addons have no manual "save" step by convention — the client itself flushes SavedVariables to disk only at real save points (`/reload`, camping out, "Log Out," "Exit Game"). If the client process is ever terminated outside one of those paths (force-quit, crash, killed process), anything since the last save point is lost with no addon-side way to prevent it. This is almost certainly what the user is experiencing, not a code defect.
+- Summary: Reported that changes to settings still weren't being retained, and requested a static "Apply" button below the scrollable area that saves settings so they survive a reload. Re-read every settings-writing code path end to end (`SetWeight`, `SetMinimapButtonVisible`, `SaveWindowPosition`, `SetActiveProfile`, `CreateProfile`, `SetDebugEnabled`) and found no buffering or bug — every one of them already mutates `LevelingGearsDB` immediately and directly; there is no code-level "unsaved" state for a button to flush. This is also directly contradicted by hard evidence: the author's own on-disk SavedVariables file already contained real, non-default weights and window position for their character (see bug #13), proving the persistence pipeline itself works.
+- Observed behavior: Settings perceived as "not retaining" despite the underlying mechanism demonstrably writing correct data to disk at least once.
+- Likely cause: WoW addons have no manual "save" step by convention — the client itself flushes SavedVariables to disk only at real save points (`/reload`, camping out, "Log Out," "Exit Game"). If the client process is ever terminated outside one of those paths (force-quit, crash, killed process), anything since the last save point is lost with no addon-side way to prevent it. This is almost certainly the explanation, not a code defect.
 - Attempts to fix:
-  - Added a static "Save Settings" button in a fixed footer anchored to the window frame (not the scroll child), so it stays visible regardless of scroll position, per the user's request.
-  - The button calls `ReloadUI()`, the only Blizzard-provided way for an addon to force an on-demand save-and-reload cycle, giving the user a visible, on-demand confirmation that a save happened (matching the "Reload UI" button pattern Blizzard's own addon-list panel uses for the same purpose).
+  - Added a static "Save Settings" button in a fixed footer anchored to the window frame (not the scroll child), so it stays visible regardless of scroll position, per the author's request.
+  - The button calls `ReloadUI()`, the only Blizzard-provided way for an addon to force an on-demand save-and-reload cycle, giving the player a visible, on-demand confirmation that a save happened (matching the "Reload UI" button pattern Blizzard's own addon-list panel uses for the same purpose).
   - Documented the actual WoW SavedVariables persistence model in CLAUDE.md's Technical notes so this doesn't get re-litigated as a "bug" later.
 - Resolution: No code change was needed to fix "retention" itself (it already worked); added the button as reassurance/confirmation UI, exactly as requested.
 - Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass.
-- Follow-up: Ask the user specifically how they are closing the client when testing (graceful Log Out/Exit Game vs. force-quitting the process/window). If settings still don't survive a genuine `/reload` or graceful exit after this version, that would indicate a real remaining bug and needs a fresh look with `/lgs debug dump` output attached.
-- Update (2026-07-13): user reported the button "is just reloading the UI and the settings aren't being updated at all." Re-read the user's on-disk SavedVariables file again and confirmed weight values had genuinely changed between two separate readings (proof the data pipeline keeps working correctly) — so this wasn't data loss. See bug #18 for the actual design fix.
+- Follow-up: Confirm with the author specifically how they are closing the client when testing (graceful Log Out/Exit Game vs. force-quitting the process/window). If settings still don't survive a genuine `/reload` or graceful exit after this version, that would indicate a real remaining bug and needs a fresh look with `/lgs debug dump` output attached.
+- Update (2026-07-13): reported that the button "is just reloading the UI and the settings aren't being updated at all." Re-read the author's on-disk SavedVariables file again and confirmed weight values had genuinely changed between two separate readings (proof the data pipeline keeps working correctly) — so this wasn't data loss. See bug #18 for the actual design fix.
 
 ### 18. Save Settings button forced a disruptive, pointless reload; equipped-gear colors didn't live-update when weights changed
 - Status: Solved
-- Discovered: 2026-07-13 (user: "the save settings button is just reloading the UI and the settings aren't being updated at all")
+- Discovered: 2026-07-13 (author: "the save settings button is just reloading the UI and the settings aren't being updated at all")
 - Solved: 2026-07-13
 - Version introduced: 0.244 (the Save Settings button itself); the live-update gap dates to 0.2 (`SetWeight`)
 - Summary: Two separate, real issues combined to make the 0.244 button feel broken:
-  1. `SetWeight` (called by every stat weight's +/- button) updated the underlying data and its own label text, but never called `UpdateEquippedGearEvaluation` — so changing a weight never live-updated the equipped-gear outline colors. The colors only ever refreshed on profile switch/creation or a full reload/init. From the user's perspective, adjusting a weight visibly "did nothing" to the gear borders.
-  2. The 0.244 "Save Settings" button called `ReloadUI()` on every click. Since every setting already writes into `LevelingGearsDB` the instant it changes (confirmed working via the on-disk file), `ReloadUI()` had nothing new to persist — it only closed and reopened the whole UI. Combined with issue 1, clicking it produced a jarring screen reload that "did nothing" from the user's point of view, reasonably reading as broken.
-- Observed behavior: user reports clicking Save Settings reloads the UI but nothing appears updated.
+  1. `SetWeight` (called by every stat weight's +/- button) updated the underlying data and its own label text, but never called `UpdateEquippedGearEvaluation` — so changing a weight never live-updated the equipped-gear outline colors. During testing, adjusting a weight visibly "did nothing" to the gear borders.
+  2. The 0.244 "Save Settings" button called `ReloadUI()` on every click. Since every setting already writes into `LevelingGearsDB` the instant it changes (confirmed working via the on-disk file), `ReloadUI()` had nothing new to persist — it only closed and reopened the whole UI. Combined with issue 1, clicking it produced a jarring screen reload that "did nothing," reasonably reading as broken.
+- Observed behavior: Clicking Save Settings reloads the UI but nothing appears updated.
 - Likely cause: (1) an incomplete wiring of `SetWeight` to the gear-evaluation refresh path; (2) the 0.244 button design copied a "Reload UI" pattern from other addons' *disable/enable-addon* flows (where a reload is genuinely required to load/unload Lua files) without recognizing that a simple settings change never requires one.
 - Attempts to fix:
   - `SetWeight` now calls `SafeCall(UpdateEquippedGearEvaluation)` after updating a weight, so equipped-gear outline colors update immediately as weights change, with no reload needed.
@@ -298,10 +298,10 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 
 ### 19. Removed Shirt, Ammo, and Tabard from the equipped-gear evaluation; confirmed relics need no per-class special-casing
 - Status: Solved
-- Discovered: 2026-07-13 (user request)
+- Discovered: 2026-07-13 (author request)
 - Solved: 2026-07-13
-- Version introduced: N/A (scope reduction requested by the user, not a bug)
-- Summary: User asked to stop evaluating the Shirt, Ammo, and Tabard slots (all cosmetic/non-stat-relevant for gearing purposes), and asked whether relics needed per-class handling.
+- Version introduced: N/A (scope reduction requested by the author, not a bug)
+- Summary: The author asked to stop evaluating the Shirt, Ammo, and Tabard slots (all cosmetic/non-stat-relevant for gearing purposes), and asked whether relics needed per-class handling.
 - Resolution:
   - Removed `ShirtSlot`, `AmmoSlot`, and `TabardSlot` from `equippedSlotDefinitions`; the evaluation now covers 17 slots.
   - Verified (via web search, not assumption, per this project's "never invent or guess API/game behavior" rule) that TBC has no separate relic slot — it was added in Wrath of the Lich King. In TBC, Librams (Paladin), Idols (Druid), and Totems (Shaman) all occupy the same slot as ranged weapons. The existing `RangedSlot` entry already evaluates this slot for every class, so no per-class logic is needed; added a code comment recording this so it isn't relitigated or "fixed" incorrectly later.
@@ -310,13 +310,13 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 
 ### 20. Stat weight +/- buttons were reversed; rapid clicks could jump by more than 1
 - Status: Solved (button order); Mitigated (multi-jump — root-caused and fixed, awaiting in-game confirmation)
-- Discovered: 2026-07-13 (user report)
+- Discovered: 2026-07-13 (author report)
 - Solved: 2026-07-13
 - Version introduced: button order dates to 0.2; the multi-jump behavior was introduced by this session's own 0.245 fix (bug #18)
 - Summary: Two issues:
-  1. The `-` button was anchored to the right of `+` (reading left to right: `+`, then `-`). User wants `-` on the left, matching the conventional decrement-then-increment reading order.
-  2. User reported that clicking +/- "sometimes" changed the value by 1, 3, or 5 instead of 1. `SetWeight` only ever applies a hardcoded `+1`/`-1` delta per call, so a value changing by more than 1 can only happen if `SetWeight` is invoked more than once per perceived click. The addon's own debug log showed the smoking gun: after the 0.245 fix that made `SetWeight` call the (relatively expensive, 17-slot) `UpdateEquippedGearEvaluation` on every click, the log recorded bursts of multiple gear evaluations within the same second (e.g. two entries both timestamped `12:15:09`) during weight-adjustment testing. Running a full evaluation synchronously on every click was likely causing enough of a hitch that rapid clicking queued up and fired in a burst, reading as a multi-step jump.
-- Observed behavior: user reports the buttons are visually swapped and that increments are sometimes inconsistent.
+  1. The `-` button was anchored to the right of `+` (reading left to right: `+`, then `-`). The author wants `-` on the left, matching the conventional decrement-then-increment reading order.
+  2. Reported that clicking +/- "sometimes" changed the value by 1, 3, or 5 instead of 1. `SetWeight` only ever applies a hardcoded `+1`/`-1` delta per call, so a value changing by more than 1 can only happen if `SetWeight` is invoked more than once per perceived click. The addon's own debug log showed the smoking gun: after the 0.245 fix that made `SetWeight` call the (relatively expensive, 17-slot) `UpdateEquippedGearEvaluation` on every click, the log recorded bursts of multiple gear evaluations within the same second (e.g. two entries both timestamped `12:15:09`) during weight-adjustment testing. Running a full evaluation synchronously on every click was likely causing enough of a hitch that rapid clicking queued up and fired in a burst, reading as a multi-step jump.
+- Observed behavior: The buttons are visually swapped and increments are sometimes inconsistent.
 - Likely cause: (1) simple anchor-order mistake; (2) this session's own bug #18 fix added a synchronous, non-trivial recalculation directly in the hot click path with no debounce.
 - Attempts to fix:
   - Swapped the `upButton`/`downButton` anchors so `-` renders to the left of `+`.
@@ -324,39 +324,88 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
 - Resolution: Button order now matches the request; rapid clicking should no longer be able to visibly lag or burst-fire.
 - Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass.
 - Follow-up: In-game, click a stat's `-`/`+` buttons both slowly and rapidly in succession and confirm the value always changes by exactly 1 per click, with no delayed multi-step jumps.
-- Update (2026-07-13): user reported the multi-jump was still happening on the *first* click specifically (not just rapid repeat clicks), still landing on jumps of 4-5. See bug #22 — this pointed to a completely different root cause than the 0.245 debounce theory: a stale display value, not a multi-fire click.
-- Update (2026-07-13): user confirmed fixed after the bug #22 fix landed (0.247). Closing.
+- Update (2026-07-13): reported that the multi-jump was still happening on the *first* click specifically (not just rapid repeat clicks), still landing on jumps of 4-5. See bug #22 — this pointed to a completely different root cause than the 0.245 debounce theory: a stale display value, not a multi-fire click.
+- Update (2026-07-13): confirmed fixed via testing after the bug #22 fix landed (0.247). Closing.
 
-### 21. User reports settings still not surviving a reload, despite repeated on-disk confirmation
-- Status: Solved — see bug #22, which found and fixed a stale-display bug that fully explains this report without any actual data loss; user confirmed fixed
+### 21. Settings reported as still not surviving a reload, despite repeated on-disk confirmation
+- Status: Solved — see bug #22, which found and fixed a stale-display bug that fully explains this report without any actual data loss; confirmed fixed via testing
 - Discovered: 2026-07-13
-- Summary: User asked to confirm `LevelingGearsDB = LevelingGearsDB or {}` is declared at load time and questioned whether persistence is wired correctly. Re-confirmed: `Core.lua:7` declares exactly `LevelingGearsDB = LevelingGearsDB or {}`, matching `## SavedVariables: LevelingGearsDB` in the TOC exactly (case-sensitive match verified). This is the correct, standard idiom.
-- Evidence against a real persistence bug: diffing multiple reads of `WTF/Account/ANDROIDEYES/SavedVariables/LevelingGears.lua` taken minutes apart across this conversation shows the on-disk weights repeatedly changing between reads, and the debug log shows continuous, error-free "Gear evaluation" activity across dozens of timestamps spanning the whole session. This means saves are demonstrably succeeding, repeatedly, during the user's actual test session.
-- Likely cause: identified in bug #22 — the settings window only ever synced its displayed labels from `LevelingGearsDB` once, at initial addon load. Reopening the window later (the normal way a user checks "did my setting survive?") never re-ran that sync, so the window could show stale numbers that looked like data loss even though the real, saved values were correct underneath the whole time.
-- Follow-up: None — user confirmed fixed.
+- Summary: The author asked to confirm `LevelingGearsDB = LevelingGearsDB or {}` is declared at load time and questioned whether persistence is wired correctly. Re-confirmed: `Core.lua:7` declares exactly `LevelingGearsDB = LevelingGearsDB or {}`, matching `## SavedVariables: LevelingGearsDB` in the TOC exactly (case-sensitive match verified). This is the correct, standard idiom.
+- Evidence against a real persistence bug: diffing multiple reads of `WTF/Account/ANDROIDEYES/SavedVariables/LevelingGears.lua` taken minutes apart across this conversation shows the on-disk weights repeatedly changing between reads, and the debug log shows continuous, error-free "Gear evaluation" activity across dozens of timestamps spanning the whole session. This means saves are demonstrably succeeding, repeatedly, during that actual test session.
+- Likely cause: identified in bug #22 — the settings window only ever synced its displayed labels from `LevelingGearsDB` once, at initial addon load. Reopening the window later (the normal way a player checks "did my setting survive?") never re-ran that sync, so the window could show stale numbers that looked like data loss even though the real, saved values were correct underneath the whole time.
+- Follow-up: None — confirmed fixed via testing.
 
 ### 22. Settings window never re-synced its displayed values after the first load, causing both the "first click jumps by 4-5" and "settings don't survive reload" reports
-- Status: Solved — user confirmed fixed
-- Discovered: 2026-07-13 (user: "first click to iterate up and down is still doing 4 or 5 instead of 1")
+- Status: Solved — confirmed fixed via testing
+- Discovered: 2026-07-13 (author: "first click to iterate up and down is still doing 4 or 5 instead of 1")
 - Solved: 2026-07-13
 - Version introduced: 0.2 (the underlying gap has existed since the weight UI was first built; only exposed clearly once real non-default data existed to diverge from the placeholder)
-- Summary: Every stat row is created with a hardcoded placeholder label text of `"5"` (`CreateStatRow`), and `RefreshWeightLabels()` (which overwrites every label with the true persisted value) was previously only ever called once, during the addon's initial load sequence (`SafeCall(InitializeProfileState)`). Nothing re-ran it when the user later reopened the settings window. Since the window starts hidden and is opened well after load, in practice this coincidentally still worked much of the time — but any gap between what the window last displayed and what the true saved value is (e.g. after set-and-forget testing, or if a display path was ever skipped) would only get corrected the moment a stat's own `+`/`-` button was clicked, because that's the only other code path that touches a label directly. Clicking `+`/`-` computes `trueValue + delta` and displays the result — so the *first* click on a stat whose displayed number didn't match its true saved value would show a jump equal to that gap (matching the reported 4-5, which lines up exactly with the gap between the "5" placeholder and the real 9-10 values already observed in this character's saved weights), while every click after that looked correct (display and truth now in sync).
-- Observed behavior: user reports the first interaction with a stat jumps by 4 or 5 instead of 1, and separately reports settings appearing not to survive a reload — both consistent with the settings window showing a stale number until first touched.
-- Likely cause: `RefreshWeightLabels`/`RefreshProfileList`/`RefreshGeneralSettingsUI` were wired to run once at file load, but never wired to the window's own `OnShow` — the actual moment a user looks at the page and forms an opinion about whether their data survived.
+- Summary: Every stat row is created with a hardcoded placeholder label text of `"5"` (`CreateStatRow`), and `RefreshWeightLabels()` (which overwrites every label with the true persisted value) was previously only ever called once, during the addon's initial load sequence (`SafeCall(InitializeProfileState)`). Nothing re-ran it when the settings window was later reopened. Since the window starts hidden and is opened well after load, in practice this coincidentally still worked much of the time — but any gap between what the window last displayed and what the true saved value is (e.g. after set-and-forget testing, or if a display path was ever skipped) would only get corrected the moment a stat's own `+`/`-` button was clicked, because that's the only other code path that touches a label directly. Clicking `+`/`-` computes `trueValue + delta` and displays the result — so the *first* click on a stat whose displayed number didn't match its true saved value would show a jump equal to that gap (matching the reported 4-5, which lines up exactly with the gap between the "5" placeholder and the real 9-10 values already observed in this character's saved weights), while every click after that looked correct (display and truth now in sync).
+- Observed behavior: The first interaction with a stat jumps by 4 or 5 instead of 1, and settings separately appeared not to survive a reload — both consistent with the settings window showing a stale number until first touched.
+- Likely cause: `RefreshWeightLabels`/`RefreshProfileList`/`RefreshGeneralSettingsUI` were wired to run once at file load, but never wired to the window's own `OnShow` — the actual moment a player looks at the page and forms an opinion about whether their data survived.
 - Attempts to fix:
   - Forward-declared `RefreshWeightLabels` (added to the existing forward-declaration block, alongside `RefreshProfileList`/`SetActiveProfile`/`CreateProfile`) and changed its definition to `RefreshWeightLabels = function() ... end` so it can be referenced before its own definition point, per the project's dependency-graph rule.
   - The settings window's `OnShow` handler now calls `RefreshGeneralSettingsUI()`, `RefreshProfileList()`, and `RefreshWeightLabels()` every time the window is opened, not just once at initial load — guaranteeing the display always matches `LevelingGearsDB` regardless of how long ago the addon first loaded.
   - The "Save Settings" footer button now also calls all three refreshers before printing its confirmation message, so clicking it gives concrete, visible proof (the numbers on screen re-paint from the real data) rather than just a chat message taken on faith.
 - Resolution: The settings window can no longer display a stale number for longer than the time it takes to reopen it.
-- Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass. User confirmed fixed in-game.
+- Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass. Confirmed fixed in-game via testing.
 - Follow-up: None.
 
 ### 23. Added Armor as a weightable stat
 - Status: Solved
-- Discovered: 2026-07-13 (user request)
+- Discovered: 2026-07-13 (author request)
 - Solved: 2026-07-13
 - Version introduced: N/A (new stat coverage, not a bug)
-- Summary: User asked for the addon to also check the Armor stat. Added `{ key = "ARMOR", name = "Armor" }` to `statDefinitions` and to the "Other stats" group (alongside the other mitigation stats: Defense, Dodge, Parry, Block, Block Value, Resilience), and added `ARMOR = { "ITEM_MOD_ARMOR_SHORT" }` to `itemStatAliases`, following the exact naming convention every other stat alias already uses.
+- Summary: The author asked for the addon to also check the Armor stat. Added `{ key = "ARMOR", name = "Armor" }` to `statDefinitions` and to the "Other stats" group (alongside the other mitigation stats: Defense, Dodge, Parry, Block, Block Value, Resilience), and added `ARMOR = { "ITEM_MOD_ARMOR_SHORT" }` to `itemStatAliases`, following the exact naming convention every other stat alias already uses.
 - Caveat (recorded per this project's "never invent/guess API behavior" rule): a plain armor piece's base armor value is intrinsic to its material/item level/slot and is NOT exposed as an `ITEM_MOD_*` stat by `GetItemStats` at all — there is no API for that. What `ITEM_MOD_ARMOR_SHORT` actually captures is BONUS armor modifiers only (e.g. a shield with an "of the Bear"-style suffix, or a rare item with +Armor as an explicit stat). This token's exact behavior on this specific client is unverified (no local way to test client-side Lua output in this session); if it never contributes to any item's score in play, the documented fallback is a hidden-tooltip scan of the "Armor" line, matching the existing policy already recorded in Technical notes for other uncertain `GetItemStats` coverage (Healing/Spell Power/MP5).
 - Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass; confirmed `statDefinitions` and `statGroups` both contain exactly 28 unique, matching stat keys (including `ARMOR`) via a scripted diff.
 - Follow-up: In-game, confirm "Armor" appears as a row in the "Other stats" section with working +/- controls, and check whether equipping a shield with bonus armor (or any item with a +Armor suffix) actually contributes to that item's score — if it never does, revisit with a tooltip-scan fallback.
+
+### 24. Replaced the flat weighted-sum scorer with a three-layer conversion-aware engine; removed primary-stat sliders
+- Status: Solved
+- Discovered: 2026-07-13 (author request: spec-aware default weights)
+- Solved: 2026-07-13
+- Version introduced: N/A (new feature/architecture change, not a bug — but see the double-counting issue below, which WAS a real latent bug in the pre-0.25 scorer)
+- Summary: The author asked for the weight sliders to get smart, spec-aware default values (fully hand-adjustable afterward). Building that required knowing how much a primary stat (Agility, Strength, etc.) is actually worth in derived terms — which exposed a real, pre-existing bug: `GetEquippedItemScore` had summed `rawStatValue * weight` for every weighted stat since 0.2, including primaries. That double-counts — e.g. Agility contributed its own weighted value AND (implicitly, through no fault of the scorer, since it never modeled the connection) should also have flowed into Attack Power/crit%/armor, which have their own separate weights. Added `Conversions.lua` (Layer 1 live rating/Agility/Intellect conversions + Layer 2 hardcoded AP-per-primary table), `Priorities.lua` (Layer 3: authored default weights, 9 classes × 27 specs × 2 modes), and `Scoring.lua` (`ScoreItem`/`ScoreEquippedItem`, spec/form detection).
+- Observed behavior: not reported as a bug (the naive sum "worked" in the sense of producing *a* number), found while implementing the requested feature.
+- Likely cause: the original 0.2 scorer was built before any conversion logic existed, and treated every weighted stat as directly comparable regardless of whether it was a primary or already-derived stat.
+- Attempts to fix:
+  - Primaries are now converted to derived stats (AP, RAP, HEALTH, MANA, CRIT, ARMOR) via `Conversions:ApplyConversions` before any weight is applied; only derived stats are ever weighted.
+  - Removed the STR/AGI/STA/INT/SPI sliders from the "Core stats" settings group (weighting them directly would double-count under the new engine) and added HEALTH/MANA sliders — the derived stats Stamina and Intellect actually turn into.
+  - `EnsureWeights` now seeds any never-set weight from the character's detected spec/mode default (`LG.Scoring:GetDefaultWeights`) instead of a flat 5, but never overwrites a weight the player has already touched.
+  - Added `/lgs score <item link>` (not `/lg score` — `/lg` was deliberately removed, see bug #5) to print the derived-stat breakdown and final score for sanity-checking the Priorities tables against real items. Fixed a real bug found while adding it: `HandleSlashCommand` lowercases its whole argument, which would have corrupted a pasted item link's case-sensitive `|H`/`|h` escape pair — the `score` subcommand is matched against the original casing instead.
+  - Added `CHARACTER_POINTS_CHANGED`/`PLAYER_LEVEL_UP` to the existing gear-evaluation event frame so a respec or level-up (which changes the detected spec) re-scores equipped gear immediately.
+  - Full rationale and every judgment call (rating fallback source, low-level default spec per class, Druid form-for-scoring, Hit/Crit/Haste offense-type simplification, why Spirit has no conversion) recorded in the new `DESIGN.md`.
+- Resolution: Scoring no longer double-counts primaries; default weights are spec-aware; the player's own hand-adjustments remain fully authoritative.
+- Validation: `luac -p` and `luacheck` both pass on all 4 Lua files.
+- Follow-up: In-game, `/reload`, open settings and confirm Health/Mana rows appear in "Core stats" with no Str/Agi/Sta/Int/Spi rows; confirm gear-outline colors still render; run `/lgs score` on a few equipped items and sanity-check the printed breakdown.
+
+### 25. Added 0.05-precision weight steps and a Restore Defaults button; layout offset not yet visually confirmed
+- Status: Mitigated (implemented and validated statically; the one open item is an in-game visual check, not a known defect)
+- Discovered: 2026-07-13 (author request)
+- Version introduced: N/A (new feature, not a bug)
+- Summary: The author asked to make the spec-aware defaults (added in bug #24 / v0.25) explicit and reversible via a "Restore Defaults" button, and to allow 0.05-precision adjustments instead of whole integers while keeping the 0-10 scale and units simple.
+- Resolution:
+  - Added `RestoreDefaultWeights` + a "Restore Defaults" button in the stat-weights section, which overwrites the ENTIRE active profile's weights with `LG.Scoring:GetDefaultWeights()` — distinct from `EnsureWeights`, which still only ever seeds a never-touched key.
+  - Added `WEIGHT_STEP = 0.05`, `RoundToStep`, and `FormatWeight` (Core.lua) so `+`/`-` clicks move by 0.05 with values rounded to avoid floating-point drift and displayed with only as many decimals as needed.
+  - Added a Shift-click modifier for a coarser ±1 step (judgment call, not explicitly requested — see DESIGN.md) since 0.05 alone would need up to 200 clicks to cross the bar; documented in the page's own helper text.
+  - Bumped `ReflowStatGroups`' starting Y-offset (`-102` to `-134`) to make room for the new button row, based on the existing row-height/gap conventions already used elsewhere in this file, not a measured in-game value.
+- Observed behavior: not yet run in game.
+- Likely follow-up needed: this project's own mandatory rule requires confirming settings sections don't overlap after any UI change — the `-134` offset is a reasoned estimate, not a confirmed measurement, since this session cannot render the client.
+- Validation: `luac -p Core.lua` and `luacheck Core.lua` both pass (only the pre-existing, documented `GetActiveProfile` single-iteration-loop notice remains).
+- Follow-up: In-game, `/reload`, open settings, and confirm (a) the "Restore Defaults" button doesn't overlap the "Core stats" group header below it, (b) clicking `+`/`-` moves a weight by 0.05 and displays cleanly (e.g. "9.55", not "9.550000001"), (c) Shift-click moves by 1, (d) "Restore Defaults" resets every stat back to the spec-detected values and prints the expected confirmation.
+
+### 26. Split `Core.lua` (1100+ lines) into 9 files by responsibility
+- Status: Mitigated (implemented and statically validated; in-game load/functional check is the one open item, same caveat as every UI-only change in this ledger)
+- Discovered: 2026-07-13 (author request)
+- Version introduced: N/A (reorganization, not a bug)
+- Summary: The author asked to keep `Core.lua` itself small and move logic/UI/debugging into whichever files make sense, since it had grown to cover debug logging, SavedVariables/profile CRUD, weight math, equipped-gear scoring, and the entire settings window in one 1100+ line file.
+- Resolution:
+  - New files: `Debug.lua` (logging, `PrintChat`, `SafeCall`, addon version — loads first), `Settings.lua` (general settings + per-character profile CRUD), `Weights.lua` (stat list + 0.05-precision weight math), `GearEvaluation.lua` (equipped-item scoring + outline coloring), `UI.lua` (the settings window). `Core.lua` is now ~100 lines: slash-command dispatch + startup sequence only.
+  - Every function that used to need a same-file `local` forward-declaration to be callable across the old file (`RefreshProfileList`, `RefreshWeightLabels`, `SetActiveProfile`, `CreateProfile`, `UpdateEquippedGearEvaluation` — the exact functions behind bugs #11 and #22) is now a field on the shared `LG` namespace table instead, which Lua resolves at call time rather than parse time. This isn't just a relocation — it structurally removes the whole class of forward-reference bug this project had hit twice before.
+  - Kept a strict data/UI layering: `Settings.lua`/`Weights.lua` never touch a widget directly, calling a narrow `LG.UI.*` hook instead; `UI.lua` never touches SavedVariables directly, calling `LG.Settings.*`/`LG.Weights.*` instead.
+  - One deliberate small simplification while moving the code: `UI.lua`'s `statGroups` now looks up each stat's name/key from `Weights.statDefinitions` by key instead of re-typing the same key+name pairs a second time, removing a pre-existing duplication between the two lists (functionally identical output, verified by construction).
+  - Updated `LevelingGears.toc`'s file list to the new 9-file load order (order matters here: `Debug.lua` first since everything depends on it, `Core.lua` last since it orchestrates everything else).
+- Observed behavior: not yet run in game.
+- Validation: `luac -p` and `luacheck` both pass on all 9 files (only the pre-existing, documented `GetActiveProfile` single-iteration-loop notice remains, now in `Settings.lua`). Grepped for stale bare references to every moved function name and for duplicate function definitions — none found.
+- Follow-up: In-game, `/reload`, confirm the addon loads with no Lua errors (this touched every file's load boundary), and re-run the full existing manual regression list (open/close window, switch/create profile, adjust a weight, Restore Defaults, gear-outline colors, `/lgs score`) since the reorganization touched the call path of literally every feature even though no behavior was intended to change.
