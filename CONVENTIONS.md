@@ -45,7 +45,7 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 - Every change should include a short note in the bug ledger if it affects startup, addon loading, slash commands, UI initialization, SavedVariables, or version metadata.
 - Follow WoW addon conventions at every step: use Classic-compatible APIs, keep the settings UI on a single window, store data in SavedVariables, register slash commands and events safely, avoid fragile UI patterns that can break initialization, and keep the visual language aligned with the existing Blizzard UI.
 - Never leave a change unrecorded just because it is small; log it in `PROGRESS.md` and the bug ledger before moving on.
-- Keep `TEST_PLAN.md` current **every commit**: update "Recent changes to focus on" to describe what changed and why it matters for testing, and add/update/remove regression-checklist rows so the checklist never drifts from what actually exists. See `TEST_PLAN.md`'s own header for the exact process.
+- Keep `TEST_PLAN.md` current **every commit**: update "Recent changes to focus on" to describe what changed and why it matters for testing, and add/update/remove regression-checklist rows so the checklist never drifts from what actually exists. See `TEST_PLAN.md`'s own "For whoever maintains this project" section at the bottom for the exact process. Keep tester-facing content (the Quick start, the checklist itself) simple — testers should not need to read `TESTERS.md` or anything else to complete and submit it.
 
 ## Branding
 

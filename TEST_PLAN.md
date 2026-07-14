@@ -1,38 +1,25 @@
 # TEST_PLAN.md — Leveling Gears
 
-This is a **reusable template**, not a one-off document. The checklist below is the same one used
-every testing round; only "Recent changes to focus on" and individual test cases change as the
-addon changes. Read `TESTERS.md` once first if you haven't — it covers environment setup, severity
-levels, and how to file a defect. This file is what you actually work through during a test session.
+## Quick start
 
-## How to use this file (for testers)
+1. Save this file somewhere you'll find it again.
+2. Open it in any plain text editor (Notepad, TextEdit, etc. — nothing special needed).
+3. Fill in **Tester info** just below.
+4. Go through the checklist one test at a time: do what it says, then write your result and any
+   notes right under it. Do this for every test, even the ones that just work — a blank line looks
+   the same as "forgot to test this."
+5. Fill in **Summary** at the very end.
+6. Rename the file to `TEST_RESULTS_<yourname>_v<version>.md` (e.g. `TEST_RESULTS_pat_v0301.md`).
+7. Email the renamed file as an attachment to **wegatherinthesun@gmail.com**, subject line
+   `Leveling Gears test report - v<version> - <yourname>`.
 
-1. Make sure you have the latest version of this file before starting.
-2. **Copy it and rename your copy** to `TEST_RESULTS_<yourname>_<YYYY-MM-DD>.md` (e.g.
-   `TEST_RESULTS_helio_2026-07-15.md`). Do this before filling anything in — never edit the
-   repository's own `TEST_PLAN.md` with your answers.
-3. Fill in the **Tester info** block below.
-4. Work through every test case in order. For each one: do what **Instruction** says, the number of
-   times **Repeat** says, and record **Result** and **Notes** — even when it passes. A blank result
-   is indistinguishable from "skipped."
-5. If a test case fails, don't stop — note it, keep going, and file a full defect report per
-   `TESTERS.md`'s template afterward. This file's **Notes** field only needs enough detail to link
-   to that report (e.g. "Failed — see defect report #3").
-6. Fill in the **Summary** block at the end.
-7. Submit your renamed, filled-in copy the way `TESTERS.md` describes.
+That's really it. Everything past this point is the actual checklist, plus optional extra context —
+you don't need to read any of it first, just start at Tester info below.
 
-## How this template is kept current (for whoever is committing)
-
-Before calling a commit done:
-1. Update **"Recent changes to focus on"** below to describe what this commit changed and why it
-   matters for testing — replace the previous entry, don't just append (git history already
-   preserves the old ones; `PROGRESS.md` is the permanent log).
-2. If a feature was added, changed, or removed, add/update/remove its test case so the checklist
-   never drifts from what actually exists. Keep the same per-case format (Instruction/Repeat/
-   Expected/Result/Notes) so the template stays consistent release to release.
-3. If a past bug's fix is touched again, cross-reference its number from `bugs/known-bugs.md`.
-4. Keep test case IDs (T1, T2, …) stable once assigned — renumbering breaks cross-references in old
-   defect reports. Append new cases at the end of their section instead of renumbering.
+Two optional one-time settings in-game make your results more useful if anything goes wrong (skip
+these and it still mostly works, just harder to diagnose):
+- Type `/console scriptErrors 1` once, so any error pops up on screen instead of hiding silently.
+- Type `/lgs debug` once, so the addon keeps its own error log you can copy from if needed.
 
 ---
 
@@ -376,5 +363,27 @@ testing into a grind. If you have time to do more on any case, more is always we
 ## Summary (fill in after finishing)
 
 - Total test cases: 35 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
-- Defect reports filed this session (per `TESTERS.md`'s template), by number/title:
+- Anything that failed, in plain language, and how bad it seemed:
 - Overall impression / anything not covered by a specific test case above:
+
+Done? Rename the file and email it per the Quick start at the top. Thank you!
+
+---
+
+## For whoever maintains this project (not testers — nothing below applies to you)
+
+This file is a **reusable template**: the same checklist format every round, with "Recent changes
+to focus on" and individual test cases updated as the addon changes.
+
+Before calling a commit done:
+1. Update **"Recent changes to focus on"** above to describe what this commit changed and why it
+   matters for testing — replace the previous entry, don't just append (git history already
+   preserves the old ones; `PROGRESS.md` is the permanent log).
+2. If a feature was added, changed, or removed, add/update/remove its test case so the checklist
+   never drifts from what actually exists. Keep the same per-case format (Instruction/Repeat/
+   Expected/Result/Notes) so the template stays consistent release to release.
+3. If a past bug's fix is touched again, cross-reference its number from `bugs/known-bugs.md`.
+4. Keep test case IDs (T1, T2, …) stable once assigned — renumbering breaks cross-references in old
+   test reports. Append new cases at the end of their section instead of renumbering.
+5. Collect completed reports from the `wegatherinthesun@gmail.com` inbox as they arrive; there's no
+   automated intake.

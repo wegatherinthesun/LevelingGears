@@ -8,7 +8,7 @@ score" required.
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
-> [`TESTERS.md`](TESTERS.md).
+> [`TEST_PLAN.md`](TEST_PLAN.md) — its "Quick start" has everything you need.
 
 ## What it does today
 
@@ -111,10 +111,11 @@ split by purpose so a given change only needs to load the piece it actually need
 - [`DATA_PIPELINE.md`](DATA_PIPELINE.md) — source URLs, license status, and parser design for the
   future data pipeline (roadmap steps 0.41-0.44).
 - [`bugs/known-bugs.md`](bugs/known-bugs.md) — the working bug ledger (open/solved/mitigated).
-- [`TESTERS.md`](TESTERS.md) — start here if you're testing this addon: environment setup, testing
-  conventions, and how to report findings.
-- [`TEST_PLAN.md`](TEST_PLAN.md) — living, per-commit test checklist: what changed recently, what's
-  at risk, and the full regression checklist for the current testing phase.
+- [`TEST_PLAN.md`](TEST_PLAN.md) — start here if you're testing this addon. A fillable checklist
+  template with a "Quick start": save it, fill it in, email it back. Also the living record of what
+  changed recently and what's at risk.
+- [`TESTERS.md`](TESTERS.md) — optional extra context for testers (severity levels, environment
+  notes, giving more detail on a serious finding) — not required reading.
 - `.luacheckrc` — configuration for [luacheck](https://github.com/lunarmodules/luacheck), used as a
   local linter only; the addon itself has zero runtime dependency on it.
 

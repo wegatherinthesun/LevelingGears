@@ -1,19 +1,10 @@
 # TESTERS.md — Leveling Gears
 
-Welcome. This project runs its testing the way an engineering team runs a QA pass on a build before
-release: a defined scope, a repeatable checklist, and defect reports precise enough that the person
-fixing them doesn't have to guess what happened. This document is your onboarding — read it once,
-then work from [`TEST_PLAN.md`](TEST_PLAN.md) for every actual test session.
-
-## Reading order
-
-1. [`README.md`](README.md) — what the addon does and how to install it. Read this first if you
-   haven't already.
-2. **This file** — how testing works here, once.
-3. [`TEST_PLAN.md`](TEST_PLAN.md) — before every test session. It's a reusable template: the same
-   checklist format every round, with "Recent changes to focus on" and individual test cases updated
-   as the addon changes. Always pull the latest version, **copy it, and rename your copy** (the file
-   itself explains exactly how) before filling anything in — never edit the repository's own copy.
+**You probably don't need this file.** `TEST_PLAN.md`'s "Quick start" at the top has everything
+required to test and submit your results: save the file, fill it in, email it back. This document
+is optional extra context — read it if you want to understand why things are set up this way, or if
+you want to give a more detailed report on something that went wrong. Nothing here is required
+reading.
 
 ## Scope: what's actually testable right now
 
@@ -21,40 +12,32 @@ Leveling Gears is early (v0.301). The stat-weighting and scoring engine — the 
 sliders, profiles, and the equipped-gear outline coloring — is real and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
 no tooltip integration, no recommendation window. If a roadmap item in `ROADMAP.md` is marked "Not
-built," that's expected, not a defect. Only file a report for something that should work today
+built," that's expected, not a defect. Only note something as a problem if it should work today
 (per `TEST_PLAN.md`) and doesn't.
 
-## Environment setup
+## Environment notes
 
 - **Client:** World of Warcraft — TBC Classic Anniversary specifically (the build reporting
   `Interface: 20505`). Other Classic versions or retail are out of scope.
 - **Install:** per `README.md`'s Installation section. Confirm `/levelinggears` or `/lgs` opens the
-  settings window before starting any test session — if it doesn't, stop and report that first.
-- **Turn on Lua error display**, if it isn't already: `/console scriptErrors 1`, or enable "Display
-  Lua Errors" in the default UI's AddOns options. Silent failures are the hardest kind to fix —
-  we want to see every error, not just the ones that show up as broken behavior.
-- **Enable the addon's own debug log** at the start of every session: `/lgs debug`. It's a
-  SavedVariables-backed ring buffer (the sandbox has no file access), and `/lgs debug dump` prints
-  its recent entries to chat — include the relevant lines in any defect report.
+  settings window before starting — if it doesn't, that's worth noting right away.
 - **Test across more than one class/spec if you can.** The scoring engine's default weights
   (`Priorities.lua`) are authored per class/spec/mode — 9 classes × up to 3 specs × 2 modes.
-  Coverage across different characters is more valuable here than repeat runs on one.
+  Coverage across different characters is more valuable here than repeat runs on one. (`TEST_PLAN.md`
+  already asks for this on the specific test case where it matters most.)
 
-## Testing conventions
+## A few things worth knowing
 
-- **Work from `TEST_PLAN.md`, not ad hoc.** It's the current source of truth for what to test and
-  why. If you find something worth testing that isn't on it, test it anyway and mention the gap in
-  your report — the checklist gets updated from exactly that kind of feedback.
-- **Reproduce before reporting.** If you can't make it happen twice, say so explicitly in the
-  report rather than letting it read as a confirmed, repeatable defect.
-- **State expected vs. actual, not just actual.** "Clicking + should raise the value by 0.05; it
-  raised it by 1" is a report someone can act on immediately. "The button is wrong" is not.
-- **A stale display is not the same as lost data.** This project has hit that exact false alarm
-  more than once (see `bugs/known-bugs.md` #21/#22) — before reporting "my settings didn't save,"
-  reopen the settings window (or `/reload`) and check again before concluding data was actually
-  lost.
+- **Reproduce before calling something a solid failure.** If it only happened once and you couldn't
+  make it happen again, say so in your notes rather than stating it as a sure thing.
+- **Say what you expected vs. what actually happened**, not just what happened. "Clicking + should
+  raise the value by 0.05; it raised it by 1" is something that can be acted on immediately. "The
+  button is wrong" isn't.
+- **A stale display is not the same as lost data.** This project has hit that exact false alarm more
+  than once (see `bugs/known-bugs.md` #21/#22) — before deciding "my settings didn't save," reopen
+  the settings window (or `/reload`) and check again first.
 
-## Severity levels
+## Severity levels (optional — only if you want to rate how bad something is)
 
 | Severity | Meaning | Example |
 |---|---|---|
@@ -64,13 +47,12 @@ built," that's expected, not a defect. Only file a report for something that sho
 | **Minor** | Works, but incorrectly in a limited way | A stat's default weight looks wrong for one spec; a label shows one extra decimal |
 | **Cosmetic** | Visual only, no functional impact | A section slightly overlaps at an unusual window size; a color is a shade off |
 
-## Defect report template
+## Giving extra detail on something serious (optional)
 
-`TEST_PLAN.md`'s per-case **Notes** field is only meant to hold enough to point at a fuller report —
-e.g. "Failed, see defect report #3" — not the whole story. For anything beyond a Pass, especially
-Blocker/Critical/Major findings, write a full report using the template below and reference its
-number/title from the relevant test case's Notes field. It mirrors `bugs/known-bugs.md`'s own
-structure so a good report can go almost straight into the ledger.
+For most things, a plain-language note on the relevant `TEST_PLAN.md` test case is enough — what you
+did, what you expected, what actually happened. If something feels Blocker/Critical/Major and you
+want to give more detail than fits in that one line, add this alongside your notes for that test
+case (in the same email, or as a second attachment):
 
 ```
 ### [one-line summary]
@@ -83,14 +65,11 @@ structure so a good report can go almost straight into the ledger.
 - Expected:
 - Actual:
 - Reproducible: Yes (every time) / Yes (sometimes) / No (happened once)
-- Debug log excerpt (`/lgs debug dump`), if relevant:
+- Debug log excerpt (`/lgs debug` then `/lgs debug dump`), if you have it:
 - Screenshot, if relevant:
 ```
 
-## Submitting findings
+## Submitting
 
-Submit your renamed, filled-in `TEST_PLAN.md` copy (per its own instructions) together with any
-full defect reports it references, the way the project maintainer has asked for them (a shared doc,
-a GitHub issue, a message — whichever channel you were given). Don't edit `bugs/known-bugs.md`
-directly unless you've been explicitly asked to; it's a living, curated ledger, and someone needs to
-fold your report in alongside root-cause analysis, not just append it.
+Covered in `TEST_PLAN.md`'s Quick start: rename the completed file and email it to
+**wegatherinthesun@gmail.com**. Nothing else to set up — no accounts, no separate tool.

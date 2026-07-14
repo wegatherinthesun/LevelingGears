@@ -104,6 +104,27 @@ the current single most important next step — this file has everything behind 
   recorded the redefinition itself in `CONVENTIONS.md`'s versioning ladder rather than silently
   overriding a rule the author had explicitly written as non-negotiable ("no matter how many
   bugfix/maintenance passes happen first").
+- **2026-07-14** — Decided how tester findings actually get submitted: GitHub Issues, using two new
+  issue templates (`.github/ISSUE_TEMPLATE/test-report.md`, `defect-report.md`) rather than an
+  email/file-upload workflow. Reasoning: the repo is already public with Issues enabled (confirmed
+  via the GitHub API, not assumed), so this needs zero new infrastructure and no git knowledge from
+  testers — just a free GitHub account and a web form. This directly replaced an earlier, awkward
+  instinct (renaming a filled-in `TEST_PLAN.md` copy and pushing/emailing it, which would have meant
+  testers needing push access or the maintainer manually filing every submission by hand). The "Test
+  report" template intentionally doesn't duplicate the checklist's instructional text (Instruction/
+  Repeat/Expected) inline — that would drift from `TEST_PLAN.md` every time it's updated — it just
+  provides Tester info/Summary bookends and a place to paste the completed T1-T35 results.
+- **2026-07-14** — Reversed the GitHub Issues decision above after the author noted that most actual
+  testers are not experienced with GitHub (or git at all): removed `.github/ISSUE_TEMPLATE/`
+  entirely and switched to the simplest possible channel — download `TEST_PLAN.md`, fill it in with
+  any plain text editor, rename it, email it to `wegatherinthesun@gmail.com`. Restructured
+  `TEST_PLAN.md` around a "Quick start" at the very top so a tester needs to read roughly ten lines,
+  not the whole document, to get going; moved the maintainer-only "keep this file current" process
+  notes to a clearly-marked section at the bottom instead of the top, so testers don't have to
+  scroll past them. Reframed `TESTERS.md` as explicitly optional reference material (severity
+  levels, a more detailed defect template, environment nuances) rather than required onboarding —
+  nothing in it is needed to complete a basic test pass. Updated `README.md` and `CLAUDE.md` to
+  point testers at `TEST_PLAN.md` first instead of `TESTERS.md`.
 
 ---
 
