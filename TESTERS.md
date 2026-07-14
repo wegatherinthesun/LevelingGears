@@ -10,9 +10,10 @@ then work from [`TEST_PLAN.md`](TEST_PLAN.md) for every actual test session.
 1. [`README.md`](README.md) — what the addon does and how to install it. Read this first if you
    haven't already.
 2. **This file** — how testing works here, once.
-3. [`TEST_PLAN.md`](TEST_PLAN.md) — before every test session. It changes with every commit: it
-   names what changed, what's at risk because of that change, and the full regression checklist for
-   the current testing phase. Always pull the latest version before you start.
+3. [`TEST_PLAN.md`](TEST_PLAN.md) — before every test session. It's a reusable template: the same
+   checklist format every round, with "Recent changes to focus on" and individual test cases updated
+   as the addon changes. Always pull the latest version, **copy it, and rename your copy** (the file
+   itself explains exactly how) before filling anything in — never edit the repository's own copy.
 
 ## Scope: what's actually testable right now
 
@@ -65,8 +66,11 @@ built," that's expected, not a defect. Only file a report for something that sho
 
 ## Defect report template
 
-Copy this for each finding. It mirrors `bugs/known-bugs.md`'s own structure so a good report can go
-almost straight into the ledger.
+`TEST_PLAN.md`'s per-case **Notes** field is only meant to hold enough to point at a fuller report —
+e.g. "Failed, see defect report #3" — not the whole story. For anything beyond a Pass, especially
+Blocker/Critical/Major findings, write a full report using the template below and reference its
+number/title from the relevant test case's Notes field. It mirrors `bugs/known-bugs.md`'s own
+structure so a good report can go almost straight into the ledger.
 
 ```
 ### [one-line summary]
@@ -85,7 +89,8 @@ almost straight into the ledger.
 
 ## Submitting findings
 
-Submit completed reports the way the project maintainer has asked for them (a shared doc, a GitHub
-issue, a message — whichever channel you were given). Don't edit `bugs/known-bugs.md` directly
-unless you've been explicitly asked to; it's a living, curated ledger, and someone needs to fold
-your report in alongside root-cause analysis, not just append it.
+Submit your renamed, filled-in `TEST_PLAN.md` copy (per its own instructions) together with any
+full defect reports it references, the way the project maintainer has asked for them (a shared doc,
+a GitHub issue, a message — whichever channel you were given). Don't edit `bugs/known-bugs.md`
+directly unless you've been explicitly asked to; it's a living, curated ledger, and someone needs to
+fold your report in alongside root-cause analysis, not just append it.

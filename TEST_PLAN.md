@@ -1,17 +1,47 @@
 # TEST_PLAN.md — Leveling Gears
 
-Living test plan. **Updated every commit** — not a historical record (that's `PROGRESS.md`'s job).
-If you're testing, read `TESTERS.md` once first, then come here for what to actually test today.
+This is a **reusable template**, not a one-off document. The checklist below is the same one used
+every testing round; only "Recent changes to focus on" and individual test cases change as the
+addon changes. Read `TESTERS.md` once first if you haven't — it covers environment setup, severity
+levels, and how to file a defect. This file is what you actually work through during a test session.
 
-## How this file is kept current (for whoever is committing)
+## How to use this file (for testers)
+
+1. Make sure you have the latest version of this file before starting.
+2. **Copy it and rename your copy** to `TEST_RESULTS_<yourname>_<YYYY-MM-DD>.md` (e.g.
+   `TEST_RESULTS_helio_2026-07-15.md`). Do this before filling anything in — never edit the
+   repository's own `TEST_PLAN.md` with your answers.
+3. Fill in the **Tester info** block below.
+4. Work through every test case in order. For each one: do what **Instruction** says, the number of
+   times **Repeat** says, and record **Result** and **Notes** — even when it passes. A blank result
+   is indistinguishable from "skipped."
+5. If a test case fails, don't stop — note it, keep going, and file a full defect report per
+   `TESTERS.md`'s template afterward. This file's **Notes** field only needs enough detail to link
+   to that report (e.g. "Failed — see defect report #3").
+6. Fill in the **Summary** block at the end.
+7. Submit your renamed, filled-in copy the way `TESTERS.md` describes.
+
+## How this template is kept current (for whoever is committing)
 
 Before calling a commit done:
 1. Update **"Recent changes to focus on"** below to describe what this commit changed and why it
    matters for testing — replace the previous entry, don't just append (git history already
    preserves the old ones; `PROGRESS.md` is the permanent log).
-2. If a feature was added, changed, or removed, add/update/remove its row in the **regression
-   checklist** so the checklist never drifts from what actually exists.
+2. If a feature was added, changed, or removed, add/update/remove its test case so the checklist
+   never drifts from what actually exists. Keep the same per-case format (Instruction/Repeat/
+   Expected/Result/Notes) so the template stays consistent release to release.
 3. If a past bug's fix is touched again, cross-reference its number from `bugs/known-bugs.md`.
+4. Keep test case IDs (T1, T2, …) stable once assigned — renumbering breaks cross-references in old
+   defect reports. Append new cases at the end of their section instead of renumbering.
+
+---
+
+## Tester info
+
+- Name:
+- Date:
+- Addon version under test:
+- Character(s) used (name, class, spec, level):
 
 ---
 
@@ -26,108 +56,310 @@ static audit — this is the most important thing to re-verify:
    The practical effect: gear-outline coloring likely never painted anything, and every profile's
    default weights likely fell back to a flat 5 instead of a spec-aware seed. Patched to try three
    plausible return positions instead of one guessed position (see `bugs/known-bugs.md` #27). **This
-   needs the first real test**: create a fresh profile on a clearly melee, ranged, and caster
-   character and confirm the seeded defaults now look spec-appropriate (e.g. a Warrior seeds high
-   Attack Power, not a flat 5 on everything) — and confirm gear-outline colors now actually appear.
-2. **The v0.261 nine-file reorganization** (`Core.lua` split into `Debug.lua`/`Settings.lua`/
-   `Weights.lua`/`GearEvaluation.lua`/`UI.lua`/`Core.lua`, alongside the existing `Conversions.lua`/
-   `Priorities.lua`/`Scoring.lua`) changed *how* every feature is wired together (cross-file calls
-   through the shared `LG` namespace instead of same-file locals) without intending to change *what*
-   any feature does. **Test everything, not just what seems related** — bug #27 above is a live
-   example of a v0.25-era bug that had nothing to do with the reorg, surfacing only once someone
-   actually looked at real runtime output.
-3. **A documentation/version reorganization** (`CLAUDE.md` split into `PROGRESS.md`/`ROADMAP.md`/
-   `CONVENTIONS.md`/`DATA_PIPELINE.md`, roadmap milestones 0.3-0.9 renumbered to 0.4-0.91). Zero code
-   risk, but worth confirming the addon's own displayed version string (window title bar) actually
-   reads **v0.301**.
+   needs the first real test** — see T20 below.
+2. **The v0.261 nine-file reorganization** changed *how* every feature is wired together without
+   intending to change *what* any feature does. **Test everything, not just what seems related** —
+   bug #27 is a live example of a v0.25-era bug that had nothing to do with the reorg, surfacing
+   only once someone actually looked at real runtime output.
+3. **A documentation/version reorganization** — zero code risk, but T2 below confirms the displayed
+   version string actually matches.
 4. **A static conflict audit** was run before v0.3 (cross-file reference check, `luac -p` +
-   `luacheck` on all 9 files, cross-doc link validation) — all clean, but static analysis cannot
-   catch a runtime API-return-type mismatch like bug #27. Treat the audit as a floor, not a ceiling —
-   nothing below should be skipped on the assumption "the audit already covered it."
+   `luacheck`, cross-doc link validation) — all clean, but static analysis cannot catch a runtime
+   API-return-type mismatch like bug #27. Treat the audit as a floor, not a ceiling.
 
 ---
 
 ## Phase 1 — Full regression checklist
 
-Every row needs a pass before pushing. Check across **more than one class/spec** where noted — the
-scoring engine's defaults are authored per class/spec/mode (`Priorities.lua`), so single-character
-testing can't validate that coverage.
+Every case needs a result before submitting. Where a case says to check across multiple classes/
+specs, that's because the scoring engine's defaults are authored per class/spec/mode
+(`Priorities.lua`) — single-character testing can't validate that coverage.
+
+Repeat counts are deliberately modest — enough to catch an intermittent issue without turning
+testing into a grind. If you have time to do more on any case, more is always welcome.
 
 ### Load & version
-- [ ] Addon loads with zero Lua errors on a full client restart (not just `/reload`) — confirms the
-  9-file load order and the `## SavedVariables` TOC directive both still work.
-- [ ] Window title bar reads **v0.301**.
-- [ ] `/lgs debug dump` right after login shows no unexpected errors in the ring buffer.
+
+**T1 — Addon loads cleanly**
+- Instruction: Fully exit and relaunch the client (not `/reload`), then log into a test character.
+- Repeat: 2x (once via full restart, once via `/reload` afterward)
+- Expected: No Lua errors on either load. Confirms the 9-file load order and the
+  `## SavedVariables` TOC directive both still work.
+- Result:
+- Notes:
+
+**T2 — Version string is correct**
+- Instruction: Open the settings window and read the version line under the title.
+- Repeat: 1x
+- Expected: Reads **v0.301**.
+- Result:
+- Notes:
+
+**T3 — Debug log is clean on login**
+- Instruction: `/lgs debug` then `/lgs debug dump` shortly after logging in, before touching
+  anything else.
+- Repeat: 1x
+- Expected: No unexpected errors in the ring buffer.
+- Result:
+- Notes:
 
 ### Slash commands & minimap
-- [ ] `/levelinggears` opens/closes the settings window.
-- [ ] `/lgs` opens/closes the same window.
-- [ ] `/lg` does **not** work (deliberately removed — not a bug if it's silent).
-- [ ] `/lgs debug` toggles debug mode with a chat confirmation each way.
-- [ ] `/lgs debug dump` prints the ring buffer (up to 50 entries) to chat.
-- [ ] `/lgs score <item link>` (shift-click an item after typing the command) prints a derived-stat
-  breakdown and a final score. Try an item with a mix of stat types (e.g. a weapon with a proc, a
-  cloth item with spell power) and sanity-check the printed numbers look plausible.
-- [ ] Minimap button visible by default; "Show minimap button" checkbox hides/shows it and persists.
-- [ ] Minimap button opens/closes the window on click. *(Known, accepted: left- and right-click do
-  the same thing — no separate right-click context menu exists yet. Not a bug.)*
+
+**T4 — Primary slash commands toggle the window**
+- Instruction: Type `/levelinggears`, then `/lgs`.
+- Repeat: 2x each (open then close, for both commands)
+- Expected: Each command opens the window if closed, closes it if open.
+- Result:
+- Notes:
+
+**T5 — Removed alias stays removed**
+- Instruction: Type `/lg`.
+- Repeat: 1x
+- Expected: Nothing happens (deliberately removed — silence is correct, not a bug).
+- Result:
+- Notes:
+
+**T6 — Debug mode toggle**
+- Instruction: Type `/lgs debug`.
+- Repeat: 2x (once to enable, once to disable)
+- Expected: A chat confirmation each time, matching the new state.
+- Result:
+- Notes:
+
+**T7 — Debug dump**
+- Instruction: Type `/lgs debug dump`.
+- Repeat: 1x
+- Expected: Prints the ring buffer (up to 50 entries) to chat.
+- Result:
+- Notes:
+
+**T8 — `/lgs score` on real items**
+- Instruction: Type `/lgs score` then shift-click an equipped or bagged item into the chat box and
+  press Enter. Try items with different stat mixes (e.g. a weapon, a caster cloth item).
+- Repeat: 3x (3 different items)
+- Expected: Prints a derived-stat breakdown and a final score; numbers look plausible for each item.
+- Result:
+- Notes:
+
+**T9 — Minimap button visibility**
+- Instruction: Toggle the "Show minimap button" checkbox off, then on.
+- Repeat: 2x (both directions)
+- Expected: The minimap button hides/shows immediately and the state survives reopening the window.
+- Result:
+- Notes:
+
+**T10 — Minimap button opens the window**
+- Instruction: Left-click the minimap button, then right-click it.
+- Repeat: 2x (both buttons)
+- Expected: Both open/close the window. *(Known, accepted: no separate right-click menu exists yet
+  — identical behavior is correct, not a bug.)*
+- Result:
+- Notes:
 
 ### Window behavior
-- [ ] Window is draggable; position persists across `/reload` and a full restart.
-- [ ] Escape key closes the window.
-- [ ] Scroll area scrolls smoothly; nothing is clipped.
-- [ ] No two settings sections visually overlap at the default window size.
-- [ ] Close button (X) closes the window.
 
-### General settings section
-- [ ] "Show minimap button" checkbox reflects the true saved state every time the window is
-  reopened (not just at first load).
+**T11 — Window position persists**
+- Instruction: Drag the window somewhere new, then `/reload`. Repeat once more but fully exit and
+  relaunch the client instead of `/reload`.
+- Repeat: 2x (one `/reload`, one full restart)
+- Expected: Window reopens in the last dragged position both times.
+- Result:
+- Notes:
+
+**T12 — Escape closes the window**
+- Instruction: Open the window, press Escape.
+- Repeat: 2x
+- Expected: Window closes both times.
+- Result:
+- Notes:
+
+**T13 — Scrolling and layout**
+- Instruction: Scroll the settings area top to bottom. Look for clipped content or any two sections
+  visually overlapping.
+- Repeat: 1x
+- Expected: Smooth scroll, nothing clipped, no section overlaps another (including the "Restore
+  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26).
+- Result:
+- Notes:
+
+**T14 — Close button**
+- Instruction: Click the X close button.
+- Repeat: 1x
+- Expected: Window closes.
+- Result:
+- Notes:
 
 ### Profiles section
-- [ ] Profile dropdown lists "Default" plus any created profiles, and "Create new profile."
-- [ ] Creating a new profile seeds it with spec-aware default weights (not a flat 5) and switches
-  to it immediately.
-- [ ] Switching profiles updates every visible weight label to that profile's saved values.
-- [ ] Profiles are per-character — an alt does not see another character's profiles.
+
+**T15 — Profile dropdown contents**
+- Instruction: Open the profile dropdown.
+- Repeat: 1x
+- Expected: Lists "Default," any profiles you've created, and "Create new profile."
+- Result:
+- Notes:
+
+**T16 — Creating a profile**
+- Instruction: Click "Create new profile" twice in a row (creating two).
+- Repeat: 2x
+- Expected: Each new profile seeds with spec-aware default weights (not a flat 5 — see T20) and
+  switches to it immediately; names increment sensibly.
+- Result:
+- Notes:
+
+**T17 — Switching profiles**
+- Instruction: Switch between two existing profiles a couple of times.
+- Repeat: 2x
+- Expected: Every visible weight label updates to match the newly-selected profile each time.
+- Result:
+- Notes:
+
+**T18 — Profiles are per-character**
+- Instruction: Log into a different character (alt) and open the settings window.
+- Repeat: 1x
+- Expected: The alt does not see the first character's profiles.
+- Result:
+- Notes:
 
 ### Stat weights section
-- [ ] All three groups (Core stats, Other stats, Resistances) expand/collapse independently via
-  their `+`/`-` header buttons.
-- [ ] "Core stats" shows Spell Power, Healing, Attack Power, Ranged Attack Power, Health, Mana —
-  **not** Strength/Agility/Stamina/Intellect/Spirit (removed in v0.25; see `DESIGN.md`).
-- [ ] Clicking a stat row's `+`/`-` moves the value by exactly 0.05.
-- [ ] Shift-clicking `+`/`-` moves the value by exactly 1.
-- [ ] Values clamp correctly at 0 (minimum) and 10 (maximum) — can't go negative or above 10.
-- [ ] Displayed values never show floating-point artifacts (e.g. "9.550000001") and never an
-  unnecessary trailing zero (e.g. "9.50" should read "9.5"; a whole number shows with no decimal).
-- [ ] **Restore Defaults** button resets every stat in the active profile back to the detected
-  spec/mode default and prints a confirmation naming the detected class/spec.
-- [ ] Restore Defaults button does not visually overlap the stat groups below it (unconfirmed since
-  v0.26 — see `bugs/known-bugs.md` #25/#26 — this is the first real check of that layout).
-- [ ] Test Restore Defaults + spec-aware seeding on **at least 3 different classes/specs** (e.g. a
-  melee spec, a caster spec, and a healer spec) and confirm the seeded defaults look sane for each
-  (e.g. a melee spec seeds high Attack Power, not high Spell Power).
-- [ ] A character under level 10 (no talent points spent) still gets sensible seeded defaults (the
-  "assumed spec" fallback per class in `Priorities.LOW_LEVEL_DEFAULT_SPEC`).
+
+**T19 — Group expand/collapse**
+- Instruction: Click the `+`/`-` on Core stats, Other stats, and Resistances.
+- Repeat: 1x each (3 total)
+- Expected: Each group expands/collapses independently.
+- Result:
+- Notes:
+
+**T20 — Spec-aware default seeding (bug #27 — highest priority this round)**
+- Instruction: Create a fresh profile (or use Restore Defaults) on at least 3 characters covering
+  different roles — e.g. one clearly melee (Warrior/Rogue), one caster (Mage/Warlock), one healer
+  (Priest/Druid/Paladin).
+- Repeat: 3x (3 different characters/specs minimum — more is better if you have alts available)
+- Expected: Seeded weights look role-appropriate (e.g. the melee character seeds high Attack Power,
+  the caster seeds high Spell Power, not a flat 5 across every stat on any of them).
+- Result:
+- Notes:
+
+**T21 — Core stats group contents**
+- Instruction: Expand "Core stats" and read the stat names.
+- Repeat: 1x
+- Expected: Shows Spell Power, Healing, Attack Power, Ranged Attack Power, Health, Mana — **not**
+  Strength/Agility/Stamina/Intellect/Spirit (removed in v0.25).
+- Result:
+- Notes:
+
+**T22 — Fine `+`/`-` stepping**
+- Instruction: Click a stat's `+` button, then its `-` button.
+- Repeat: 3x each direction
+- Expected: Each click moves the value by exactly 0.05, every time.
+- Result:
+- Notes:
+
+**T23 — Shift-click coarse stepping**
+- Instruction: Shift-click a stat's `+` button, then its `-` button.
+- Repeat: 3x each direction
+- Expected: Each click moves the value by exactly 1, every time.
+- Result:
+- Notes:
+
+**T24 — Clamping at the ends of the range**
+- Instruction: Reduce a stat to 0 and keep clicking `-`; raise a stat to 10 and keep clicking `+`.
+- Repeat: 1x each end
+- Expected: Value stops at 0 (never negative) and at 10 (never above), respectively.
+- Result:
+- Notes:
+
+**T25 — Display formatting**
+- Instruction: Land on a few different fractional values (e.g. 9.5, 9.55, a whole number) and read
+  the displayed text.
+- Repeat: 3x (3 different values)
+- Expected: No floating-point artifacts (e.g. never "9.550000001"), no unnecessary trailing zero
+  (e.g. "9.50" should read "9.5"), whole numbers show no decimal at all.
+- Result:
+- Notes:
+
+**T26 — Restore Defaults**
+- Instruction: Hand-adjust a few weights, then click "Restore Defaults."
+- Repeat: 3x
+- Expected: Every stat resets to the detected spec/mode default every time, with a chat confirmation
+  naming the detected class/spec.
+- Result:
+- Notes:
+
+**T27 — Low-level fallback spec**
+- Instruction: If you have a character under level 10 (no talent points spent), check its seeded
+  defaults.
+- Repeat: 1x (skip if no low-level character is available)
+- Expected: Still gets a sensible assumed default per class, not an error or a flat 5.
+- Result:
+- Notes:
 
 ### Save Settings footer
-- [ ] Clicking "Save Settings" re-syncs every displayed value and prints a confirmation naming the
-  active profile. Nothing should visibly "jump" when clicked (there's nothing to reload).
+
+**T28 — Save Settings button**
+- Instruction: Click "Save Settings."
+- Repeat: 2x
+- Expected: Every displayed value re-syncs and a chat confirmation names the active profile. Nothing
+  should visibly "jump" (there's nothing to reload).
+- Result:
+- Notes:
 
 ### Equipped-gear outline coloring
-- [ ] Opening the character panel (`C`) shows a colored outline on each equipped item's slot button.
-- [ ] Colors span the documented red→violet scale, relative to this character's own gear average.
-- [ ] Outlines update immediately (within ~0.2s) after changing a stat weight.
-- [ ] Outlines update after equipping/unequipping an item.
-- [ ] Outlines update after a respec or level-up.
-- [ ] Exactly 17 slots are evaluated — confirm Shirt, Ammo, and Tabard are **not** outlined (removed
-  deliberately), and that the ranged/relic slot is outlined for classes that use it (Paladin Libram,
-  Druid Idol, Shaman Totem, or a ranged weapon).
+
+**T29 — Outlines appear**
+- Instruction: Open the character panel (`C`).
+- Repeat: 2x (close and reopen once)
+- Expected: A colored outline appears on each equipped item's slot button both times.
+- Result:
+- Notes:
+
+**T30 — Color scale**
+- Instruction: Compare outline colors across your equipped items.
+- Repeat: 1x
+- Expected: Colors span red→violet, relative to this character's own gear average (not an absolute
+  or dungeon-standard scale).
+- Result:
+- Notes:
+
+**T31 — Outlines update on weight change**
+- Instruction: Change 3 different stat weights (one at a time) while the character panel is open.
+- Repeat: 3x
+- Expected: Outline colors update within about 0.2s of each change.
+- Result:
+- Notes:
+
+**T32 — Outlines update on equipment change**
+- Instruction: Unequip an item, then re-equip it (or equip a different one).
+- Repeat: 2x
+- Expected: Outlines update to reflect the new gear both times.
+- Result:
+- Notes:
+
+**T33 — Outlines update on respec/level-up**
+- Instruction: If feasible this session, respec or level up.
+- Repeat: 1x each (skip whichever isn't feasible)
+- Expected: Outlines re-evaluate afterward (defaults may also change if spec detection changes).
+- Result:
+- Notes:
+
+**T34 — Correct slot coverage**
+- Instruction: Check which slots are outlined.
+- Repeat: 1x
+- Expected: Exactly 17 slots evaluated. Shirt, Ammo, and Tabard are **not** outlined (removed
+  deliberately). The ranged/relic slot is outlined for classes that use it (Paladin Libram, Druid
+  Idol, Shaman Totem, or an actual ranged weapon).
+- Result:
+- Notes:
 
 ### Persistence
-- [ ] All of the above (weights, profiles, minimap toggle, window position, debug mode) survive a
-  full client exit and relaunch, not just `/reload` — this is the real persistence test; `/reload`
-  alone has produced false confidence before (see `bugs/known-bugs.md` #13).
+
+**T35 — Full persistence across a real restart**
+- Instruction: Set a distinctive combination of weights, profile, minimap toggle, window position,
+  and debug mode. Fully exit and relaunch the client (not `/reload`).
+- Repeat: 1x
+- Expected: Every one of those survives. This is the real persistence test — `/reload` alone has
+  produced false confidence before (see bug #13).
+- Result:
+- Notes:
 
 ---
 
@@ -138,3 +370,11 @@ testing can't validate that coverage.
 - Roadmap features not yet built (tooltip hook, recommendation window, sorting/filters, alt
   professions, data pipeline) are absent by design — see `ROADMAP.md` for what's intentionally not
   built yet at this stage.
+
+---
+
+## Summary (fill in after finishing)
+
+- Total test cases: 35 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
+- Defect reports filed this session (per `TESTERS.md`'s template), by number/title:
+- Overall impression / anything not covered by a specific test case above:
