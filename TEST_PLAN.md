@@ -17,23 +17,33 @@ Before calling a commit done:
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.3.** Three things landed together, none of them changing intended behavior on paper,
-which is exactly why they need real verification rather than being assumed safe:
+**Version: v0.301.** A real bug (#27), found from the author's own on-disk debug log, not from the
+static audit — this is the most important thing to re-verify:
 
-1. **The v0.261 nine-file reorganization** (`Core.lua` split into `Debug.lua`/`Settings.lua`/
+1. **`DetectSpec` was crashing on every single call since v0.25.** `GetTalentTabInfo`'s `pointsSpent`
+   return wasn't at the position the code assumed, so `Scoring.lua:102` threw a Lua error every time
+   — caught silently by whichever `pcall`/`SafeCall` boundary was nearest, so nothing visibly crashed.
+   The practical effect: gear-outline coloring likely never painted anything, and every profile's
+   default weights likely fell back to a flat 5 instead of a spec-aware seed. Patched to try three
+   plausible return positions instead of one guessed position (see `bugs/known-bugs.md` #27). **This
+   needs the first real test**: create a fresh profile on a clearly melee, ranged, and caster
+   character and confirm the seeded defaults now look spec-appropriate (e.g. a Warrior seeds high
+   Attack Power, not a flat 5 on everything) — and confirm gear-outline colors now actually appear.
+2. **The v0.261 nine-file reorganization** (`Core.lua` split into `Debug.lua`/`Settings.lua`/
    `Weights.lua`/`GearEvaluation.lua`/`UI.lua`/`Core.lua`, alongside the existing `Conversions.lua`/
    `Priorities.lua`/`Scoring.lua`) changed *how* every feature is wired together (cross-file calls
    through the shared `LG` namespace instead of same-file locals) without intending to change *what*
-   any feature does. A load-order or wiring mistake here would most likely show up as either a Lua
-   error on load, or a feature that silently no-ops. **Test everything, not just what seems related.**
-2. **A documentation/version reorganization** (`CLAUDE.md` split into `PROGRESS.md`/`ROADMAP.md`/
-   `CONVENTIONS.md`/`DATA_PIPELINE.md`, version bumped 0.261→0.3, roadmap milestones 0.3-0.9
-   renumbered to 0.4-0.91). Zero code risk, but worth confirming the addon's own displayed version
-   string (window title bar) actually reads **v0.3**.
-3. **A static conflict audit** was run before this commit (cross-file reference check, `luac -p` +
-   `luacheck` on all 9 files, cross-doc link validation) — all clean. That audit is static analysis
-   only; it cannot substitute for actually running the client. Nothing below should be skipped on
-   the assumption "the audit already covered it."
+   any feature does. **Test everything, not just what seems related** — bug #27 above is a live
+   example of a v0.25-era bug that had nothing to do with the reorg, surfacing only once someone
+   actually looked at real runtime output.
+3. **A documentation/version reorganization** (`CLAUDE.md` split into `PROGRESS.md`/`ROADMAP.md`/
+   `CONVENTIONS.md`/`DATA_PIPELINE.md`, roadmap milestones 0.3-0.9 renumbered to 0.4-0.91). Zero code
+   risk, but worth confirming the addon's own displayed version string (window title bar) actually
+   reads **v0.301**.
+4. **A static conflict audit** was run before v0.3 (cross-file reference check, `luac -p` +
+   `luacheck` on all 9 files, cross-doc link validation) — all clean, but static analysis cannot
+   catch a runtime API-return-type mismatch like bug #27. Treat the audit as a floor, not a ceiling —
+   nothing below should be skipped on the assumption "the audit already covered it."
 
 ---
 

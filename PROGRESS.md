@@ -9,7 +9,20 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.3 — "stable, reorganized baseline," entering Testing Phase 1.** Files:
+- **Current step: 0.301 — first Testing Phase 1 bugfix (bug #27).** Reading the author's own on-disk
+  debug log (per `TESTERS.md`'s own advice to always check it) surfaced a real, high-impact bug that
+  the earlier static conflict audit could not have caught: `Scoring.DetectSpec` read `pointsSpent`
+  from the wrong `GetTalentTabInfo` return position on this client, throwing a Lua error on every
+  single call since v0.25. Every caller degraded silently instead of crashing the addon (each was
+  behind a `pcall`/`SafeCall` boundary), which is exactly why it went unnoticed until now: gear
+  outlines never colored (same failure mode as bug #16), and spec-aware default weights silently
+  fell back to a flat 5 for every stat, confirmed on disk from a fresh test profile. Patched
+  `Scoring.lua` to try three plausible return positions defensively (`tonumber(c) or tonumber(d) or
+  tonumber(e) or 0`) rather than commit to one guessed position, since the exact signature on this
+  client build couldn't be confirmed from documentation alone. Full detail in `bugs/known-bugs.md`
+  #27. `luac -p`/`luacheck` pass; **this specific fix still needs live in-game confirmation** —
+  it's now the first item in `TEST_PLAN.md`'s regression pass.
+- **Previous step: 0.3 — "stable, reorganized baseline," entering Testing Phase 1.** Files:
   `LevelingGears.toc`, `Debug.lua`, `Conversions.lua`, `Priorities.lua`, `Scoring.lua`,
   `Settings.lua`, `Weights.lua`, `GearEvaluation.lua`, `UI.lua`, `Core.lua`, `DESIGN.md`,
   `DATA_PIPELINE.md`, `ROADMAP.md`, `CONVENTIONS.md`, `TESTERS.md`, `TEST_PLAN.md`. Everything
@@ -205,3 +218,20 @@ the current single most important next step — this file has everything behind 
   click behavior or intentionally-unbuilt roadmap features). `CONVENTIONS.md`'s mandatory maintenance
   rules now require keeping `TEST_PLAN.md` current every commit. `CLAUDE.md` updated to point at both
   new files. `luac -p` and `luacheck` re-verified clean on all 9 Lua files as part of the audit.
+- **0.301 completed (bug #27):** the author's own on-disk debug log (`WTF/.../SavedVariables/
+  LevelingGears.lua`) had its entire 50-entry ring buffer filled with one repeating error:
+  `Scoring.lua:102: attempt to perform arithmetic on local 'pointsSpent' (a string value)`, inside
+  `DetectSpec`. Root cause: `local _, _, pointsSpent = GetTalentTabInfo(tabIndex)` assumed
+  `pointsSpent` sits at return position 3 (the old Classic-era signature); on this client it doesn't
+  — position 3 is a string. Web research found retail's modern signature prepends an `id` return,
+  which would shift `pointsSpent` to position 4 or 5 depending on which later fields exist on this
+  client build; no source confirmed the exact TBC Anniversary signature. Since `DetectSpec` underlies
+  the entire v0.25+ scoring engine, every caller has been failing silently since v0.25: gear-outline
+  coloring aborted before painting anything, and spec-aware default weights fell back to a flat 5
+  every time (confirmed on disk — a freshly created test profile had every stat at exactly 5 except
+  one manually adjusted during 0.05/Shift-click testing). Fixed defensively rather than by guessing a
+  single position: capture positions 3/4/5 and use `tonumber(c) or tonumber(d) or tonumber(e) or 0`,
+  so whichever position is actually numeric on this client wins, without needing certainty about the
+  exact signature. `luac -p`/`luacheck` pass. Not yet re-verified live — see `bugs/known-bugs.md` #27
+  and `TEST_PLAN.md` for the specific follow-up check (does a melee spec now seed high Attack Power
+  instead of a flat 5 across every stat?).

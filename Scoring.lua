@@ -97,8 +97,16 @@ function Scoring.DetectSpec(_self)
 	local bestIndex, bestPoints, totalPoints = nil, -1, 0
 	if GetTalentTabInfo then
 		for tabIndex = 1, 3 do
-			local _, _, pointsSpent = GetTalentTabInfo(tabIndex)
-			pointsSpent = pointsSpent or 0
+			-- pointsSpent's exact return position is uncertain on this client (bug #27): assuming
+			-- the old-style signature (name, icon, pointsSpent, background, ...) put pointsSpent at
+			-- position 3, but the live debug log caught "attempt to perform arithmetic on local
+			-- 'pointsSpent' (a string value)" here -- position 3 is actually a string on this
+			-- client, consistent with a modern-retail-style signature (id, name, icon, pointsSpent,
+			-- background, ...) shifting it to position 4. Rather than commit to either guess, try
+			-- both plausible positions (and position 5, in case a description field is also
+			-- present) and use whichever one is actually numeric.
+			local _, _, c, d, e = GetTalentTabInfo(tabIndex)
+			local pointsSpent = tonumber(c) or tonumber(d) or tonumber(e) or 0
 			totalPoints = totalPoints + pointsSpent
 			if pointsSpent > bestPoints then
 				bestPoints = pointsSpent
