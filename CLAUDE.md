@@ -22,22 +22,24 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.303 — bug #30's real fix: shift+left-click an equipped item to score it.** v0.302's mitigation
-for bug #30 (a clearer `/lgs score` usage message) was rejected as too complicated; the requested fix
-was a direct one: shift-click an equipped item in the character window to print its score to chat,
-no slash command needed. Verified Blizzard's real click behavior via FrameXML before implementing
-anything: right-click unconditionally fires
-`UseInventoryItem` regardless of modifiers (would risk an unwanted trinket-proc etc. on shift+right-
-click), so this shipped as **shift+left-click** instead — side-effect-free, and reuses the same
-gesture Blizzard already uses for "insert item link in chat." `GearEvaluation.lua` now hooks each
-equipped slot button once via `HookScript` (additive, doesn't replace Blizzard's own handler);
-`/lgs score` still works as the debug-bench fallback. This also pulled forward and closed
-`ROADMAP.md`'s previously-gated 0.33 item — see that file for the consequence for the future 0.6
-"suggest gear" gesture (shift+left-click is no longer available for it). Bugs #28/#29 from v0.302
-remain as they were (see `bugs/known-bugs.md`). Next step: resume `TEST_PLAN.md` at T1 to re-confirm
-this and last round's fixes, then continue through T16-T35, which were never reached. Testers email
-completed checklists to `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start. Full
-detail in `PROGRESS.md`'s Current status section.
+**v0.304 (the "single-profile" fork) — removed the multi-profile system entirely.** Reported as
+"lots of errors in the profile." Rather than keep patching the create/switch/name-profiles UI piece
+by piece, it's gone: there is now exactly one hand-adjustable weight set per character, restorable
+to spec defaults via the existing "Restore Defaults" button. Since weights no longer auto-update on
+a respec or talent change (and never did — see `ROADMAP.md`'s new 0.35), the addon now tells the
+player this once at boot in chat. This work happened on the `single-profile` git branch, forked from
+`main` right after v0.303 was committed there. Full detail in `bugs/known-bugs.md` #31 and
+`PROGRESS.md`'s Current status section.
+
+v0.303 (still on `main` and carried into this branch) was bug #30's real fix: shift+left-click an
+equipped item in the character window to print its score to chat, replacing the `/lgs score` slash
+command for everyday use (`/lgs score` still works as a debug-bench fallback). See
+`bugs/known-bugs.md` #30 for the full reasoning, including why shift+left-click was used instead of
+the originally-requested shift+right-click.
+
+Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302/v0.303/v0.304's changes, then
+continue through T16-T35, which were never reached. Testers email completed checklists to
+`wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
 
 How to handle a completed test report is a standing rule — see `CONVENTIONS.md`'s Hard process
 rules.

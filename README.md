@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.303), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.304), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -25,9 +25,13 @@ score" required.
 - **Colored outlines on your equipped gear** — each item's slot gets a thin border colored red
   through violet, showing how it stacks up against the average of your *own* current gear (not a
   raid or dungeon standard), using your weights.
-- **Per-character profiles**, saved and restored automatically.
-- **`/lgs score <item link>`** — a debug command that prints the full derived-stat breakdown and
-  final score for any item, so you can sanity-check the numbers behind a color.
+- **One weight set per character**, saved and restored automatically — hand-adjust it or click
+  "Restore Defaults" any time.
+- **Shift+left-click an equipped item** in the character window to print its full derived-stat
+  breakdown and score to chat.
+- **`/lgs score <item link>`** — a debug command that prints the same kind of breakdown for any
+  item link (scored against the raw default priorities, not your own weights), so the underlying
+  priority tables can be sanity-checked independent of any hand-adjustment.
 
 ## Requirements
 
@@ -78,7 +82,7 @@ fallbacks, Druid form handling, low-level spec assumptions, etc.) are documented
 | `Conversions.lua` | Live stat conversions + the Attack Power table |
 | `Priorities.lua` | Authored default weights per class/spec/mode |
 | `Scoring.lua` | Combines the above into a single item score |
-| `Settings.lua` | SavedVariables: general settings, per-character profiles |
+| `Settings.lua` | SavedVariables: general settings, each character's own stat weights |
 | `Weights.lua` | The weightable-stat list and 0.05-precision weight math |
 | `GearEvaluation.lua` | Scores equipped items and colors their slot outlines |
 | `UI.lua` | The settings window (all frames/widgets) |

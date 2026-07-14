@@ -83,9 +83,12 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   stabilization/testing milestone's sub-decimal space** (bugfixes found during Testing Phase 1 use
   the thousandths rule as usual: 0.301, 0.302…; a genuine new sub-feature of this milestone would be
   0.31 — but 0.31 was also the old data-pipeline download step, now renumbered to 0.41, so check
-  `ROADMAP.md` before assuming a two-decimal number is free). **0.31-0.34 are now taken** (Testing
+  `ROADMAP.md` before assuming a two-decimal number is free). **0.31-0.35 are now taken** (Testing
   Phase 1 follow-up features found in the v0.301 test report — see `ROADMAP.md`'s "Testing Phase 1
-  follow-ups" section); the next free two-decimal number in this milestone is **0.35**.
+  follow-ups" section; 0.33 shipped as bug #30's fix in v0.303, 0.34 was dropped as moot when the
+  v0.304 fork removed profiles entirely, and 0.35 — auto-updating default weights on respec/talent
+  change — was filed fresh in that same fork); the next free two-decimal number in this milestone is
+  **0.36**.
 - **Version A** — first feature-complete **alpha** (no decimal). A.1, A.2 = alpha fixes.
 - **Version B** — **beta**.
 - **1.0** — first shipped release. **1.01** = bug patches. **1.1** = one new feature.
@@ -94,9 +97,13 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
 ## Settings architecture note
 
 - General settings should stay global to the addon and be scoped to the addon itself, not to any one character. Examples: window position, minimap button visibility, default addon behavior toggles, and future default sort/filter choices.
-- Character-specific settings should be stored per character and not shared across alts. This includes the active profile selection and any character-specific override values.
-- Profile-based settings should be stored inside each character's state and should eventually support spec-aware variants. Each profile can later carry fields such as name, role, spec, and profile-specific weights.
-- The implementation uses a simple structure: `LevelingGearsDB.general` for universal settings and `LevelingGearsDB.characters[characterKey].profiles` for profile-specific data. This keeps the model flexible for spec filtering later without forcing a rewrite.
+- Character-specific settings should be stored per character and not shared across alts. This includes stat weights and any other character-specific override values.
+- **v0.304 (single-profile fork):** exactly one weight set per character — no named/created/switched
+  profiles. A player can hand-adjust any weight or restore the whole set to the character's detected
+  spec/mode default; there is nothing else to manage. The earlier multi-profile design (profiles
+  keyed by id, an "active profile" pointer, create/switch/name UI) was a real source of bugs
+  (`bugs/known-bugs.md` #28) for flexibility this addon's design never actually needed.
+- The implementation uses a simple structure: `LevelingGearsDB.general` for universal settings and `LevelingGearsDB.characters[characterKey].weights` for the character's own stat weights.
 
 ---
 
@@ -404,7 +411,7 @@ Verify that:
 - Tooltips accurately describe current behavior.
 - Minimap functionality still behaves correctly.
 - Slash commands continue to function correctly.
-- Profile management still works correctly.
+- Character stat weights still save, load, and restore-to-defaults correctly.
 - Settings continue to save and load correctly.
 - The change has not introduced unnecessary allocations or performance regressions.
 - No unsupported desktop Lua features or libraries have been introduced, including io, os, package, require(), loadfile(), or any other APIs unavailable within the World of Warcraft addon sandbox.

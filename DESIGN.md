@@ -8,8 +8,9 @@ The addon is split by responsibility, loaded in this order (see `LevelingGears.t
    and the addon version string. Loads first; every other file depends on `LG.Debug`.
 2. **`Conversions.lua`** / **`Priorities.lua`** / **`Scoring.lua`** — the three-layer scoring engine
    (see below).
-3. **`Settings.lua`** — the SavedVariables data layer: general (account-wide) settings and
-   per-character profile CRUD (`GetActiveProfile`, `SetActiveProfile`, `CreateProfile`).
+3. **`Settings.lua`** — the SavedVariables data layer: general (account-wide) settings and each
+   character's own single weight set (`GetCharacterState`). No profiles (removed in v0.304 — see
+   `bugs/known-bugs.md` #31).
 4. **`Weights.lua`** — the weightable-stat list (`statDefinitions`) and weight math: 0.05-precision
    rounding/formatting, seeding defaults (`EnsureWeights`), hand-adjusting (`SetWeight`), and
    resetting to spec defaults (`RestoreDefaultWeights`).
@@ -68,7 +69,7 @@ them.
 
 **Key-reuse simplification:** the derived-stat keys in `Conversions`/`Priorities`/`Scoring` are the
 SAME short keys the settings UI already used (`AP`, `HIT`, `CRIT`, `ARMOR`, ...), not new verbose
-names. This means `profile.weights` (SavedVariables) and the Priorities tables share one vocabulary
+names. This means `characterState.weights` (SavedVariables) and the Priorities tables share one vocabulary
 with zero translation layer -- a stat's UI slider, its saved weight, and its Priorities default are
 always the exact same key.
 
@@ -140,11 +141,11 @@ uses, so the priority tables themselves can be sanity-checked against real items
 player customization.
 
 The actual in-game gear-outline evaluation needs the OPPOSITE: score against whatever the player has
-saved in `profile.weights` (seeded from Priorities once, then freely hand-adjustable forever, per
-"the player can hand adjust these"). `Scoring:ScoreEquippedItem(itemStats, weights)` shares the same
-Conversions/offense/apKey machinery as `ScoreItem` but takes the live weights table as a parameter
-instead of re-reading Priorities. `Core.lua`'s `GetEquippedItemScore` calls this one, passing the
-active profile's `weights`.
+saved in `characterState.weights` (seeded from Priorities once, then freely hand-adjustable forever,
+per "the player can hand adjust these"). `Scoring:ScoreEquippedItem(itemStats, weights)` shares the
+same Conversions/offense/apKey machinery as `ScoreItem` but takes the live weights table as a
+parameter instead of re-reading Priorities. `GearEvaluation.lua`'s `GetEquippedItemScore` calls this
+one, passing the character's own `weights` (one flat set per character since v0.304 — no profiles).
 
 ## Slash command: `/lgs score`, not `/lg score`
 
@@ -164,7 +165,7 @@ The Priorities.lua tables ARE the defaults; `EnsureWeights` only ever seeds a ke
 never touched, and a manual `+`/`-` click permanently overrides that key going forward. v0.26 made
 this reversible and finer-grained without changing that basic model:
 
-- **Restore Defaults** (`RestoreDefaultWeights` in Core.lua) overwrites the ENTIRE active profile's
+- **Restore Defaults** (`RestoreDefaultWeights` in `Weights.lua`) overwrites the character's ENTIRE
   `weights` table with the current `LG.Scoring:GetDefaultWeights()` result — the explicit
   "undo everything I've changed" action, distinct from `EnsureWeights`'s
   fill-only-what's-missing behavior.

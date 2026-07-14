@@ -175,8 +175,9 @@ end
 
 -- LG:ScoreItem(itemStats, class, spec, mode) -> score, breakdown -- the debug-bench contract used
 -- by /lgs score: scores strictly against Priorities.lua's AUTHORED table for that class/spec/mode,
--- ignoring any live profile, so the priority tables themselves can be sanity-checked against real
--- items independent of whatever a player has since hand-tweaked. See the _self note on DetectSpec.
+-- ignoring any live character weights, so the priority tables themselves can be sanity-checked
+-- against real items independent of whatever a player has since hand-tweaked. See the _self note on
+-- DetectSpec.
 function Scoring.ScoreItem(_self, itemStats, class, specKey, mode)
 	itemStats = itemStats or {}
 	local specEntry = LG.Priorities[class] and LG.Priorities[class][specKey]
@@ -187,9 +188,9 @@ function Scoring.ScoreItem(_self, itemStats, class, specKey, mode)
 end
 
 -- Score an item for the character's own currently-detected spec/mode, against a LIVE weights
--- table (normally the active profile's profile.weights, already seeded with Priorities defaults
--- for any key the player hasn't touched -- see Core.lua's EnsureWeights). This is what the
--- equipped-gear outline evaluation calls, so player hand-adjustments always take effect.
+-- table (normally the character's own characterState.weights, already seeded with Priorities
+-- defaults for any key the player hasn't touched -- see Weights.lua's EnsureWeights). This is what
+-- the equipped-gear outline evaluation calls, so player hand-adjustments always take effect.
 function Scoring:ScoreEquippedItem(itemStats, weights)
 	itemStats = itemStats or {}
 	local class, specKey, mode = self:DetectSpec()
@@ -200,7 +201,7 @@ function Scoring:ScoreEquippedItem(itemStats, weights)
 	return ComputeScore(itemStats, class, apKey, offense, effectiveWeights)
 end
 
--- Look up this character's default (seed) weights for a brand-new profile or a missing stat key.
+-- Look up this character's default (seed) weights for a brand-new character or a missing stat key.
 -- Returns nil if the class/spec/mode can't be resolved, so callers should fall back to their own
 -- flat default in that case.
 function Scoring:GetDefaultWeights()
@@ -221,7 +222,7 @@ end
 
 -- Shared presentation for an already-computed score/breakdown: both the /lgs score debug command
 -- (Core.lua, scores against Priorities.lua directly) and the shift+left-click-on-equipped-item
--- feature (GearEvaluation.lua, scores against the player's live profile weights) print through
+-- feature (GearEvaluation.lua, scores against the character's own live weights) print through
 -- this one function so the chat output format only exists in one place.
 function Scoring.PrintBreakdown(_self, itemLink, score, breakdown, specDescription)
 	if not LG.Debug then

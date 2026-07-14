@@ -10,7 +10,7 @@ local Debug = LG.Debug
 
 -- The addon's version string. Lives here (rather than in Core.lua, which loads last) because
 -- UI.lua's version label needs it at UI.lua's own load time, before Core.lua has run.
-LG.ADDON_VERSION = "0.303"
+LG.ADDON_VERSION = "0.304"
 
 LevelingGearsDB = LevelingGearsDB or {}
 LevelingGearsDB.general = LevelingGearsDB.general or {}

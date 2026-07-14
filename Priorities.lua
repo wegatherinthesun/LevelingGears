@@ -30,7 +30,7 @@ local function Merge(base, overrides)
 end
 
 -- Archetype bases. Every weight key here matches the settings UI's existing stat keys exactly
--- (see Core.lua statDefinitions) so a spec's table can be dropped straight into a profile's
+-- (see Weights.lua's statDefinitions) so a spec's table can be dropped straight into a character's
 -- weights with no translation step. Resistances, Armor Penetration, Resilience, and Spell
 -- Penetration default to 0 everywhere: all four are situational/zone- or PvP-specific rather than
 -- a general leveling priority, and the player can raise any of them by hand when it matters.
@@ -99,8 +99,8 @@ local TANK_SURVIVAL = Merge(TANK_SPEED, {
 local BEAR_TANK_SURVIVAL = Merge(TANK_SURVIVAL, { PARRY = 0, BLOCK = 0, BLOCKVALUE = 0 })
 
 -- Each spec entry: offense = "melee"/"ranged"/"spell" (which CR_HIT_*/CR_CRIT_*/CR_HASTE_* triplet
--- Conversions.lua should use for this spec), defaultMode = which mode seeds a brand-new profile,
--- speed/survival = the two authored weight tables (0-10).
+-- Conversions.lua should use for this spec), defaultMode = which mode seeds a brand-new character's
+-- weights, speed/survival = the two authored weight tables (0-10).
 Priorities.WARRIOR = {
 	arms = { offense = "melee", defaultMode = "speed", speed = MELEE_DPS_SPEED, survival = MELEE_DPS_SURVIVAL },
 	fury = { offense = "melee", defaultMode = "speed", speed = Merge(MELEE_DPS_SPEED, { HASTE = 7 }), survival = MELEE_DPS_SURVIVAL },

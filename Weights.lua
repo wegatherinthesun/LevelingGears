@@ -1,7 +1,8 @@
 -- Leveling Gears -- Weights.lua
--- The list of weightable derived stats, the 0.05-precision weight math, and the profile-weight
--- data logic (seed defaults, hand-adjust, restore defaults). No UI widgets are touched here -- see
--- UI.lua, which owns the actual weight-label widgets and calls into this file's formatting/rounding.
+-- The list of weightable derived stats, the 0.05-precision weight math, and the character's single
+-- weight-set data logic (seed defaults, hand-adjust, restore defaults). No UI widgets are touched
+-- here -- see UI.lua, which owns the actual weight-label widgets and calls into this file's
+-- formatting/rounding.
 
 local _, LG = ...
 LG.Weights = LG.Weights or {}
@@ -80,18 +81,19 @@ local function GetSpecDefaults()
 	return nil
 end
 
--- Ensure every profile has a complete set of weight values before the UI is refreshed. A missing
+-- Ensure the character has a complete set of weight values before the UI is refreshed. A missing
 -- value is seeded from the character's detected spec/mode default when available, or a flat 5
 -- otherwise -- these are only ever SEED values: they fill a gap once and never overwrite a weight
--- the player has already set or hand-adjusted afterward.
+-- the player has already set or hand-adjusted afterward, and never re-seed on their own if the
+-- player's spec later changes (see ROADMAP.md for the planned follow-up).
 function Weights.EnsureWeights()
-	local profile = LG.Settings.GetActiveProfile()
-	profile.weights = profile.weights or {}
+	local characterState = LG.Settings.GetCharacterState()
+	characterState.weights = characterState.weights or {}
 
 	local defaults = GetSpecDefaults()
 	for _, stat in ipairs(Weights.statDefinitions) do
-		if profile.weights[stat.key] == nil then
-			profile.weights[stat.key] = (defaults and defaults[stat.key]) or 5
+		if characterState.weights[stat.key] == nil then
+			characterState.weights[stat.key] = (defaults and defaults[stat.key]) or 5
 		end
 	end
 end
@@ -103,14 +105,14 @@ end
 -- a full RefreshWeightLabels() pass on every click reintroduced the multi-jump bug from #20/#21.
 function Weights.SetWeight(statKey, delta)
 	Weights.EnsureWeights()
-	local profile = LG.Settings.GetActiveProfile()
-	local newValue = Weights.RoundToStep((profile.weights[statKey] or 5) + delta, Weights.WEIGHT_STEP)
+	local characterState = LG.Settings.GetCharacterState()
+	local newValue = Weights.RoundToStep((characterState.weights[statKey] or 5) + delta, Weights.WEIGHT_STEP)
 	if newValue < Weights.WEIGHT_MIN then
 		newValue = Weights.WEIGHT_MIN
 	elseif newValue > Weights.WEIGHT_MAX then
 		newValue = Weights.WEIGHT_MAX
 	end
-	profile.weights[statKey] = newValue
+	characterState.weights[statKey] = newValue
 
 	if LG.UI and LG.UI.SetWeightLabelText then
 		LG.UI.SetWeightLabelText(statKey, Weights.FormatWeight(newValue))
@@ -120,16 +122,17 @@ function Weights.SetWeight(statKey, delta)
 	end
 end
 
--- Overwrite every weight in the active profile with the character's detected spec/mode default,
--- replacing any hand-adjustment -- the explicit "undo my changes" action, distinct
--- from EnsureWeights, which only ever fills a never-touched key.
+-- Overwrite every one of the character's weights with their detected spec/mode default, replacing
+-- any hand-adjustment -- the explicit "undo my changes" action, distinct from EnsureWeights, which
+-- only ever fills a never-touched key. This is also the only way defaults update after a respec or
+-- talent change today (see ROADMAP.md for the planned automatic follow-up).
 function Weights.RestoreDefaultWeights()
-	local profile = LG.Settings.GetActiveProfile()
+	local characterState = LG.Settings.GetCharacterState()
 	local defaults = GetSpecDefaults()
 
-	profile.weights = {}
+	characterState.weights = {}
 	for _, stat in ipairs(Weights.statDefinitions) do
-		profile.weights[stat.key] = (defaults and defaults[stat.key]) or 5
+		characterState.weights[stat.key] = (defaults and defaults[stat.key]) or 5
 	end
 
 	if LG.UI and LG.UI.RefreshWeightLabels then

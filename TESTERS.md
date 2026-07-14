@@ -8,8 +8,8 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.303). The stat-weighting and scoring engine — the settings window, weight
-sliders, profiles, and the equipped-gear outline coloring — is real and testable. The longer-term
+Leveling Gears is early (v0.304). The stat-weighting and scoring engine — the settings window, weight
+sliders (one set per character), and the equipped-gear outline coloring — is real and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
 no tooltip integration, no recommendation window. If a roadmap item in `ROADMAP.md` is marked "Not
 built," that's expected, not a defect. Only note something as a problem if it should work today
@@ -57,8 +57,7 @@ case (in the same email, or as a second attachment):
 ```
 ### [one-line summary]
 - Severity: Blocker / Critical / Major / Minor / Cosmetic
-- Environment: character class/spec, level, active profile name, addon version (from the window's
-  title bar)
+- Environment: character class/spec, level, addon version (from the window's title bar)
 - Steps to reproduce:
   1.
   2.

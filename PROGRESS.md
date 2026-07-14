@@ -9,7 +9,27 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.303 — bug #30's real fix: shift+left-click an equipped item to score it.**
+- **Current step: 0.304 (the "single-profile" fork) — removed the multi-profile system entirely.**
+  Reported broadly as "lots of errors in the profile," on top of the already-fixed bug #28 (ambiguous
+  picker label). Decision: stop patching the multi-profile system piece by piece and remove it —
+  there is now exactly one hand-adjustable weight set per character, no naming/creating/switching.
+  Committed the prior v0.302/v0.303 work to `main` first, then created a new `single-profile` git
+  branch for this change (an explicit fork, per instruction, rather than continuing to build
+  directly on `main`). `Settings.lua`'s `characterState.profiles`/`activeProfile` map became a flat
+  `characterState.weights` table (`GetActiveProfile`/`SetActiveProfile`/`CreateProfile` removed;
+  `GetCharacterState()` returns the weight state directly), with a one-time migration that pulls an
+  existing character's previously active profile's weights into the new flat state so no one's
+  hand-tuning is lost. `Weights.lua`/`GearEvaluation.lua` updated to match (same `.weights` shape, so
+  the scoring logic itself didn't need to change). `UI.lua`'s entire "Profiles" section (header, hint,
+  dropdown button/menu, divider) is gone; the stat-weights section now sits directly below general
+  settings. `Core.lua`'s boot sequence (`InitializeProfileState` → `InitializeCharacterState`) no
+  longer names a profile, and now prints a new one-time chat message explaining that weights don't
+  auto-update on a respec or talent change and must be restored/re-adjusted by hand (the real fix for
+  that is filed as `ROADMAP.md`'s new 0.35, not built yet). `ROADMAP.md`'s 0.34 ("profile creation
+  dialog") is dropped as moot. `luac -p`/`luacheck` pass clean on all five touched files
+  (`Settings.lua`, `Weights.lua`, `GearEvaluation.lua`, `UI.lua`, `Core.lua`). Full detail in
+  `bugs/known-bugs.md` #31.
+- **Previous step: 0.303 — bug #30's real fix: shift+left-click an equipped item to score it.**
   v0.302's usage-message mitigation for bug #30 was rejected outright as too complicated; the
   requested fix was direct: when the character window is open showing equipped gear, shift-click an
   equipped item to print its score to chat. Before implementing, verified Blizzard's real click
@@ -341,3 +361,25 @@ the current single most important next step — this file has everything behind 
   fallback). Version bumped to 0.303 in `Debug.lua`/`LevelingGears.toc`/`README.md`/`TESTERS.md`.
   `luac -p` and `luacheck` both pass clean on all three touched files (`GearEvaluation.lua`,
   `Scoring.lua`, `Core.lua`).
+- 0.304 completed (on the new `single-profile` branch, forked from `main` right after the v0.303
+  commit): removed the multi-profile system, reported as "lots of errors in the profile." There is
+  now exactly one weight set per character — hand-adjust it or click "Restore Defaults," nothing to
+  name or switch. `Settings.lua`: `characterState.profiles`/`activeProfile` replaced by a flat
+  `characterState.weights`; `GetActiveProfile`/`SetActiveProfile`/`CreateProfile` removed;
+  `GetCharacterState()` now returns the weight state directly, with a one-time migration pulling an
+  existing character's previously active profile's weights into the new flat field (old
+  `profiles`/`activeProfile` left in place afterward, unused, per this project's existing
+  don't-destructively-edit-SavedVariables policy). `Weights.lua`/`GearEvaluation.lua`: swapped every
+  `GetActiveProfile()` call for `GetCharacterState()` — same `.weights` shape, so no scoring-logic
+  change. `UI.lua`: removed the entire "Profiles" section (header, hint, dropdown button/menu,
+  divider, and their supporting `ToggleProfileMenu`/`RefreshProfileList` code); stat weights now
+  anchor directly below general settings; the Save Settings confirmation message no longer names a
+  profile. `Core.lua`: `InitializeProfileState` renamed `InitializeCharacterState`; removed the
+  "Loaded profile 'X'" boot line; added a new one-time boot chat message explaining that weights
+  don't auto-update on a respec/talent change and must be restored or re-adjusted by hand — the real
+  fix for that is filed as `ROADMAP.md`'s new 0.35 (auto-updating defaults on respec/talent change),
+  with 0.34 ("profile creation dialog") dropped as moot since there's no more profile to name. Also
+  swept every remaining "profile"/"active profile" reference in code comments and docs
+  (`Scoring.lua`, `Priorities.lua`, `DESIGN.md`, `CONVENTIONS.md`, `ROADMAP.md`, `README.md`,
+  `TESTERS.md`, `TEST_PLAN.md`, `bugs/known-bugs.md`) to match the new single-weight-set model.
+  Version bumped to 0.304. `luac -p` and `luacheck` both pass clean on all five touched Lua files.

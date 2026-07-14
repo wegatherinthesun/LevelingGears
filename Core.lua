@@ -2,7 +2,7 @@
 -- The addon's entry point: loads last (see LevelingGears.toc), after every other module has
 -- registered itself on the shared LG namespace. Owns only what's genuinely "core": slash-command
 -- dispatch and the startup sequence that ties the other modules together. Everything else --
--- logging (Debug.lua), SavedVariables/profile data (Settings.lua), weight math (Weights.lua),
+-- logging (Debug.lua), SavedVariables/character data (Settings.lua), weight math (Weights.lua),
 -- the scoring engine (Conversions.lua/Priorities.lua/Scoring.lua), equipped-gear evaluation
 -- (GearEvaluation.lua), and the settings window (UI.lua) -- lives in its own file.
 
@@ -14,10 +14,10 @@ local SafeCall = LG.Debug.SafeCall
 -- Debug bench for the v0.25 scoring engine: prints the derived-stat breakdown and final score for
 -- a shift-clicked item link, scored strictly against Priorities.lua's authored table (not the
 -- player's own hand-adjusted weights), so the priority tables themselves can be sanity-checked
--- independent of any customization. Bug #30's real fix (per the author: shift+left-click an
--- equipped item instead) lives in `GearEvaluation.lua` and uses the player's live profile weights
--- via the same `Scoring:PrintBreakdown` this command calls -- this command remains as the
--- debug-bench fallback for checking the raw priority tables, per DESIGN.md.
+-- independent of any customization. Bug #30's real fix (shift+left-click an equipped item instead)
+-- lives in `GearEvaluation.lua` and uses the character's own live weights via the same
+-- `Scoring:PrintBreakdown` this command calls -- this command remains as the debug-bench fallback
+-- for checking the raw priority tables, per DESIGN.md.
 local function HandleScoreCommand(argText)
 	local itemLink = argText:gsub("^%s+", ""):gsub("%s+$", "")
 	if itemLink == "" then
@@ -68,22 +68,22 @@ local function HandleSlashCommand(msg)
 	end
 end
 
--- Initialize the profile state on load so the settings page reflects the saved character data and
+-- Initialize the character's weight state on load so the settings page reflects the saved data and
 -- current defaults. Relies on LevelingGearsDB.general already existing (Debug.lua/Settings.lua,
 -- both loaded earlier, guard it themselves).
-local function InitializeProfileState()
-	local activeProfile = LG.Settings.GetActiveProfile()
+local function InitializeCharacterState()
 	LG.Weights.EnsureWeights()
 	LG.UI.RefreshGeneralSettingsUI()
-	LG.UI.RefreshProfileList()
 	LG.UI.RefreshWeightLabels()
 	if not LevelingGearsDB.general.bootMessageShown then
 		PrintChat("Loaded.")
 		PrintChat("Type /levelinggears or /lgs to open settings.")
+		-- EnsureWeights only ever seeds a stat the FIRST time it's ever missing -- it does not
+		-- re-seed on a later respec or talent change (that's ROADMAP.md's planned follow-up). Told
+		-- once at boot, not on every respec, so this doesn't become a repeated chat-spam nag.
+		PrintChat("Stat weights are set once per character and won't update automatically if your " ..
+			"spec or talents change later -- use \"Restore Defaults\" or adjust them by hand when they do.")
 		LevelingGearsDB.general.bootMessageShown = true
-	end
-	if activeProfile then
-		PrintChat("Loaded profile '" .. activeProfile.name .. "'.")
 	end
 end
 
@@ -92,5 +92,5 @@ SLASH_LEVELINGGEARS1 = "/levelinggears"
 SLASH_LEVELINGGEARS2 = "/lgs"
 SlashCmdList["LEVELINGGEARS"] = HandleSlashCommand
 
-SafeCall(InitializeProfileState)
+SafeCall(InitializeCharacterState)
 SafeCall(LG.GearEvaluation.UpdateEquippedGearEvaluation)

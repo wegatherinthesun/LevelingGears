@@ -12,9 +12,6 @@ local PrintChat = LG.Debug.PrintChat
 local SafeCall = LG.Debug.SafeCall
 
 local minimapButton = nil
-local profileDropdownButton = nil
-local profileDropdownMenuFrame = nil
-local profileRows = {}
 local generalSettingsCheckbox = nil
 local weightLabels = {}
 
@@ -106,83 +103,18 @@ function UI.SetWeightLabelText(statKey, text)
 	end
 end
 
--- Repaint every visible weight label from the currently active profile so the settings page stays
+-- Repaint every visible weight label from the character's saved weights so the settings page stays
 -- in sync, then re-run the (debounce-free) gear evaluation -- used for coarse-grained refresh
--- moments (window open, profile switch/create, Restore Defaults), never per-click.
+-- moments (window open, Restore Defaults), never per-click.
 function UI.RefreshWeightLabels()
 	LG.Weights.EnsureWeights()
-	local profile = LG.Settings.GetActiveProfile()
+	local characterState = LG.Settings.GetCharacterState()
 	for _, stat in ipairs(LG.Weights.statDefinitions) do
 		if weightLabels[stat.key] then
-			weightLabels[stat.key]:SetText(LG.Weights.FormatWeight(profile.weights[stat.key] or 5))
+			weightLabels[stat.key]:SetText(LG.Weights.FormatWeight(characterState.weights[stat.key] or 5))
 		end
 	end
 	SafeCall(LG.GearEvaluation.UpdateEquippedGearEvaluation)
-end
-
--- The profile picker is a compact dropdown-style menu that keeps the settings page simple.
-local function ToggleProfileMenu()
-	if not profileDropdownMenuFrame or not profileDropdownButton then
-		return
-	end
-	profileDropdownMenuFrame:SetShown(not profileDropdownMenuFrame:IsShown())
-end
-
--- Build and refresh the visible profile list so the current character's profiles are always represented in the UI.
-function UI.RefreshProfileList()
-	local characterState = LG.Settings.GetCharacterState()
-	local profiles = characterState.profiles or {}
-	if not profileDropdownMenuFrame or not profileDropdownButton then
-		return
-	end
-
-	for _, row in ipairs(profileRows) do
-		row:Hide()
-	end
-
-	local index = 1
-	local function AddMenuRow(label, profileId, isDefault)
-		local row = profileRows[index]
-		if not row then
-			row = CreateFrame("Button", nil, profileDropdownMenuFrame, "UIPanelButtonTemplate")
-			row:SetSize(160, 22)
-			profileRows[index] = row
-		end
-
-		row:Show()
-		row:SetText(label)
-		row:SetPoint("TOPLEFT", profileDropdownMenuFrame, "TOPLEFT", 4, -(index - 1) * 24)
-		row:SetScript("OnClick", function()
-			if isDefault then
-				LG.Settings.CreateProfile("Default")
-			elseif profileId == "create_new" then
-				LG.Settings.CreateProfile("Profile " .. tostring((next(profiles) and 1 or 0) + 1))
-			else
-				LG.Settings.SetActiveProfile(profileId)
-			end
-			profileDropdownMenuFrame:Hide()
-		end)
-		row.profileId = profileId
-		index = index + 1
-	end
-
-	AddMenuRow("Default", "default", true)
-	for _, profile in pairs(profiles) do
-		if profile.id ~= "default" then
-			AddMenuRow(profile.name, profile.id, false)
-		end
-	end
-	AddMenuRow("Create new profile", "create_new", false)
-
-	profileDropdownButton:SetEnabled(true)
-	if characterState.activeProfile and profiles[characterState.activeProfile] then
-		profileDropdownButton:SetText(profiles[characterState.activeProfile].name)
-	elseif profiles.default then
-		profileDropdownButton:SetText("Default")
-	else
-		profileDropdownButton:SetText("Select profile")
-	end
-	profileDropdownMenuFrame:SetHeight(math.max(24, (index - 1) * 24))
 end
 
 -- ============================================================================
@@ -228,7 +160,6 @@ LevelingGears:SetScript("OnShow", function(self)
 		-- file load: this guarantees what's on screen always matches what's actually saved,
 		-- regardless of how long ago the addon originally loaded.
 		UI.RefreshGeneralSettingsUI()
-		UI.RefreshProfileList()
 		UI.RefreshWeightLabels()
 	end)
 end)
@@ -291,11 +222,8 @@ saveSettingsButton:SetScript("OnClick", function()
 	-- Re-sync every displayed number from LevelingGearsDB so what's on screen is visibly, provably
 	-- the same as what's saved, rather than just taking a chat message on faith.
 	UI.RefreshGeneralSettingsUI()
-	UI.RefreshProfileList()
 	UI.RefreshWeightLabels()
-	local profile = LG.Settings.GetActiveProfile()
-	local profileName = profile and profile.name or "Default"
-	PrintChat("Saved. Profile '" .. profileName .. "' for this character is stored and will still be here after /reload or a full relog.")
+	PrintChat("Saved. Your settings for this character are stored and will still be here after /reload or a full relog.")
 end)
 
 -- ============================================================================
@@ -334,53 +262,12 @@ divider:SetPoint("TOPLEFT", generalSettingsCheckbox, "BOTTOMLEFT", 0, -12)
 generalSection:SetHeight(92)
 
 -- ============================================================================
--- Profiles section
--- ============================================================================
-
-local profileSection = CreateFrame("Frame", nil, scrollChild)
-profileSection:SetSize(320, 140)
-profileSection:SetPoint("TOPLEFT", generalSection, "BOTTOMLEFT", 0, -20)
-
-local profileHeader = profileSection:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-profileHeader:SetPoint("TOPLEFT", profileSection, "TOPLEFT", 8, -8)
-profileHeader:SetText("Profiles")
-
-local profileHint = profileSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-profileHint:SetPoint("TOPLEFT", profileHeader, "BOTTOMLEFT", 0, -4)
-profileHint:SetWidth(300)
-profileHint:SetJustifyH("LEFT")
-profileHint:SetText("Create and switch profiles per character. These can later be tied to specs or roles.")
-
--- A bare "Default" button reads as ambiguous (easy to mistake for a "restore defaults" action --
--- see bugs/known-bugs.md #28) -- an explicit "Profile:" label makes clear this button IS the
--- profile picker/dropdown, not a reset action.
-local profileDropdownLabel = profileSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-profileDropdownLabel:SetPoint("TOPLEFT", profileHint, "BOTTOMLEFT", 0, -12)
-profileDropdownLabel:SetText("Profile:")
-
-profileDropdownButton = CreateFrame("Button", nil, profileSection, "UIPanelButtonTemplate")
-profileDropdownButton:SetSize(160, 24)
-profileDropdownButton:SetPoint("LEFT", profileDropdownLabel, "RIGHT", 8, 0)
-profileDropdownButton:SetText("Select profile")
-profileDropdownButton:SetScript("OnClick", ToggleProfileMenu)
-
-profileDropdownMenuFrame = CreateFrame("Frame", nil, profileSection)
-profileDropdownMenuFrame:SetSize(180, 100)
-profileDropdownMenuFrame:SetPoint("TOPLEFT", profileDropdownButton, "BOTTOMLEFT", 0, -2)
-profileDropdownMenuFrame:Hide()
-
-local profileDivider = profileSection:CreateTexture(nil, "OVERLAY")
-profileDivider:SetColorTexture(0.6, 0.6, 0.6, 0.4)
-profileDivider:SetSize(300, 1)
-profileDivider:SetPoint("TOPLEFT", profileDropdownMenuFrame, "BOTTOMLEFT", 0, -12)
-
--- ============================================================================
 -- Stat weights section
 -- ============================================================================
 
 local weightSection = CreateFrame("Frame", nil, scrollChild)
 weightSection:SetSize(320, 220)
-weightSection:SetPoint("TOPLEFT", profileSection, "BOTTOMLEFT", 0, -20)
+weightSection:SetPoint("TOPLEFT", generalSection, "BOTTOMLEFT", 0, -20)
 
 local weightHeader = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 weightHeader:SetPoint("TOPLEFT", weightSection, "TOPLEFT", 8, -8)
@@ -500,7 +387,7 @@ local function ReflowStatGroups()
 	end
 
 	weightSection:SetHeight(math.max(220, totalHeight))
-	scrollChild:SetHeight(math.max(760, generalSection:GetHeight() + profileSection:GetHeight() + weightSection:GetHeight() + 40))
+	scrollChild:SetHeight(math.max(760, generalSection:GetHeight() + weightSection:GetHeight() + 40))
 end
 
 for _, group in ipairs(statGroups) do

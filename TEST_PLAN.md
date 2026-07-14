@@ -34,30 +34,36 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.303.** No test report has come in since the first real v0.301 pass, so this
-section covers everything changed across v0.301 → v0.303 in one go. That first pass found bug #27's
-fix largely working (T1/T3/T7 showed clean loads and successful gear scoring — a big improvement)
-but stopped at T15/T16 after hitting three more real issues. v0.302 fixed/mitigated those three;
-v0.303 then replaced v0.302's bug #30 mitigation with the actual requested fix. **Testing
-should resume from T1** to re-confirm everything still works after all of this, then continue on to
-T16-T35, which were never reached last time:
+**Version: v0.304 (the "single-profile" fork).** No test report has come in since the first real
+v0.301 pass, so this section covers everything changed across v0.301 → v0.304 in one go. That first
+pass found bug #27's fix largely working (T1/T3/T7 showed clean loads and successful gear scoring —
+a big improvement) but stopped at T15/T16 after hitting three more real issues, and after reporting
+the profile system itself as a source of "lots of errors." v0.302/v0.303 fixed the first three;
+v0.304 is the response to the profile feedback: **the multi-profile system (create/switch/name
+profiles per character) is removed entirely.** There is now exactly one weight set per character —
+hand-adjust it, or click "Restore Defaults" to reset it to the character's detected spec/mode
+default. **Testing should resume from T1** to re-confirm everything still works after all of this,
+then continue on to T16-T35, which were never reached last time:
 
-1. **Bug #28 (solved): profile picker button read as a "restore defaults" action.** Added a
-   "Profile:" label to the left of the button — re-check T15 with this in mind.
+1. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
+   no more profile picker, no "Create new profile." **T15-T18 below are rewritten** to test the new
+   single-weight-set model instead of profile creation/switching.
 2. **Bug #29 (open, mitigated): window position restores consistently but not to the exact dragged
    spot.** No confirmed root cause yet — added debug logging (`/lgs debug` level 1) to both save and
    restore, plus a defensive pixel-rounding fix. **T11 this round should include the
    `/lgs debug dump` output** covering both a drag and a reopen, so there's real data to compare
    instead of a visual impression.
-3. **Bug #30 (solved): `/lgs score` reported as "too complicated."** The previous round's
-   usage-message mitigation was rejected outright in favor of the real fix: shift-click
-   an equipped item in the character window to print its score to chat, no slash command needed.
-   Built as **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
-   `bugs/known-bugs.md` for the verified Blizzard-click-behavior reasoning). **T8 below now tests
-   this as the primary workflow**; `/lgs score` still works as a debug-bench fallback.
-4. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art, and a real
-   profile-naming dialog were filed in `ROADMAP.md`'s "Testing Phase 1 follow-ups" (0.31, 0.32, 0.34)
-   from feedback in the same report. None of these are testable yet — don't look for them.
+3. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
+   the character window to print its score to chat, no slash command needed. Built as
+   **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
+   `bugs/known-bugs.md` for the verified Blizzard-click-behavior reasoning). **T8 below tests this as
+   the primary workflow**; `/lgs score` still works as a debug-bench fallback.
+4. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
+   change (that's `ROADMAP.md`'s 0.35, not built yet), the addon now tells you this once at boot —
+   look for it and confirm the wording makes sense.
+5. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art (`ROADMAP.md`
+   0.31/0.32) and auto-updating defaults on respec (0.35). None of these are testable yet — don't
+   look for them.
 
 Bug #27 itself (from v0.301) is not fully closed — T20 (spec-aware default seeding across multiple
 classes) still hasn't actually been run. That's still this round's highest-value test.
@@ -86,7 +92,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.303**.
+- Expected: Reads **v0.304**.
 - Result:
 - Notes:
 
@@ -134,7 +140,7 @@ testing into a grind. If you have time to do more on any case, more is always we
   caster cloth item, a trinket).
 - Repeat: 3x (3 different items)
 - Expected: Prints a derived-stat breakdown and a final score to chat, scored against your own
-  profile weights (same weights that drive the gear-outline colors). A plain left-click on the same
+  character weights (same weights that drive the gear-outline colors). A plain left-click on the same
   item still picks it up as normal (don't confirm the drag, just check the cursor picks it up), and a
   plain shift-click (no click type held down beyond Shift) still inserts the item link into an open
   chat edit box as it always has — neither of those should be affected by this change.
@@ -147,8 +153,8 @@ testing into a grind. If you have time to do more on any case, more is always we
   Enter.
 - Repeat: 1x
 - Expected: Prints a derived-stat breakdown and a final score, scored against the raw `Priorities.lua`
-  table rather than your own profile weights (so the numbers may differ slightly from T8 above — that
-  difference is expected, not a bug; see `DESIGN.md`).
+  table rather than your own character weights (so the numbers may differ slightly from T8 above —
+  that difference is expected, not a bug; see `DESIGN.md`).
 - Result:
 - Notes:
 
@@ -204,36 +210,39 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-### Profiles section
+### Single weight set per character (v0.304 — replaces the old "Profiles section")
 
-**T15 — Profile dropdown contents (bug #28 — fixed this round)**
-- Instruction: Look at the profile section, then open the profile dropdown.
+**T15 — No profile picker exists anymore**
+- Instruction: Open the settings window and look at the area between "General settings" and "Stat
+  weights."
 - Repeat: 1x
-- Expected: A "Profile:" label now sits to the left of the button (new this round, so it no longer
-  reads like a "restore defaults" action). Opening it lists "Default," any profiles you've created,
-  and "Create new profile."
+- Expected: No "Profiles" section, no profile picker button, no "Create new profile." The stat
+  weights section starts directly below general settings.
 - Result:
 - Notes:
 
-**T16 — Creating a profile**
-- Instruction: Click "Create new profile" twice in a row (creating two).
-- Repeat: 2x
-- Expected: Each new profile seeds with spec-aware default weights (not a flat 5 — see T20) and
-  switches to it immediately; names increment sensibly.
-- Result:
-- Notes:
-
-**T17 — Switching profiles**
-- Instruction: Switch between two existing profiles a couple of times.
-- Repeat: 2x
-- Expected: Every visible weight label updates to match the newly-selected profile each time.
-- Result:
-- Notes:
-
-**T18 — Profiles are per-character**
-- Instruction: Log into a different character (alt) and open the settings window.
+**T16 — Weights are set once per character, no naming/creation needed**
+- Instruction: Adjust a few stat weights by hand.
 - Repeat: 1x
-- Expected: The alt does not see the first character's profiles.
+- Expected: Values change and stick — there's nothing to name or create, just the one weight set for
+  this character.
+- Result:
+- Notes:
+
+**T17 — Restore Defaults still works**
+- Instruction: Hand-adjust a couple of weights, then click "Restore Defaults."
+- Repeat: 2x
+- Expected: Every weight resets to the character's spec-aware default (not a flat 5 — see T20), and
+  the chat confirmation names the detected spec.
+- Result:
+- Notes:
+
+**T18 — Weights are per-character**
+- Instruction: Log into a different character (alt), adjust a weight there, then log back to the
+  first character.
+- Repeat: 1x
+- Expected: Each character keeps its own weights — the alt's adjustment does not affect the first
+  character's values, and vice versa.
 - Result:
 - Notes:
 
@@ -247,9 +256,9 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Notes:
 
 **T20 — Spec-aware default seeding (bug #27 — highest priority this round)**
-- Instruction: Create a fresh profile (or use Restore Defaults) on at least 3 characters covering
-  different roles — e.g. one clearly melee (Warrior/Rogue), one caster (Mage/Warlock), one healer
-  (Priest/Druid/Paladin).
+- Instruction: On at least 3 characters covering different roles — e.g. one clearly melee
+  (Warrior/Rogue), one caster (Mage/Warlock), one healer (Priest/Druid/Paladin) — either check the
+  weights on first-ever load, or click "Restore Defaults."
 - Repeat: 3x (3 different characters/specs minimum — more is better if you have alts available)
 - Expected: Seeded weights look role-appropriate (e.g. the melee character seeds high Attack Power,
   the caster seeds high Spell Power, not a flat 5 across every stat on any of them).
@@ -315,8 +324,8 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T28 — Save Settings button**
 - Instruction: Click "Save Settings."
 - Repeat: 2x
-- Expected: Every displayed value re-syncs and a chat confirmation names the active profile. Nothing
-  should visibly "jump" (there's nothing to reload).
+- Expected: Every displayed value re-syncs and a chat confirmation appears. Nothing should visibly
+  "jump" (there's nothing to reload).
 - Result:
 - Notes:
 
@@ -354,7 +363,10 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T33 — Outlines update on respec/level-up**
 - Instruction: If feasible this session, respec or level up.
 - Repeat: 1x each (skip whichever isn't feasible)
-- Expected: Outlines re-evaluate afterward (defaults may also change if spec detection changes).
+- Expected: Outlines re-evaluate afterward. Weights themselves do **not** auto-update to the new
+  spec's defaults yet (that's `ROADMAP.md`'s 0.35, not built) — "Restore Defaults" or a hand-adjust is
+  still required if the respec changes what the weights should be. Confirm the boot-time chat message
+  about this still matches actual behavior.
 - Result:
 - Notes:
 
@@ -370,8 +382,8 @@ testing into a grind. If you have time to do more on any case, more is always we
 ### Persistence
 
 **T35 — Full persistence across a real restart**
-- Instruction: Set a distinctive combination of weights, profile, minimap toggle, window position,
-  and debug mode. Fully exit and relaunch the client (not `/reload`).
+- Instruction: Set a distinctive combination of weights, minimap toggle, window position, and debug
+  mode. Fully exit and relaunch the client (not `/reload`).
 - Repeat: 1x
 - Expected: Every one of those survives. This is the real persistence test — `/reload` alone has
   produced false confidence before (see bug #13).

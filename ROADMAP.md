@@ -136,12 +136,23 @@ regression checklist, then come back here.
   shift+left-click as its trigger gesture; shift+left-click is now taken by scoring, so 0.6 needs a
   different gesture (e.g. shift+right-click, alt+click, or a button in the tooltip) decided when that
   milestone is actually scoped — not decided here.
-- **0.34 — Profile creation dialog with a name field.** Clicking "Create new profile" currently
-  auto-names it "Profile N" with no way to customize it. Instead, open a small popup frame over the
-  settings window with a text input for the name, and a tooltip on that input suggesting example
-  names (e.g. "dungeon healing," "hybrid pvp," "solo questing") so new testers have a sense of what
-  a profile name is for. Bundle in clarifying the profile-picker button generally if anything more is
-  needed beyond the "Profile:" label already added (bug #28).
+- ~~**0.34 — Profile creation dialog with a name field.**~~ **Dropped in v0.304.** The v0.304 fork
+  removed the multi-profile system entirely (repeated real bugs, see `bugs/known-bugs.md` #28 and
+  the "single-profile" fork's PROGRESS.md entry) in favor of exactly one hand-adjustable weight set
+  per character. There is no longer a profile to name.
+- **0.35 — Auto-updating default weights on respec/talent change.** Today `EnsureWeights` only ever
+  seeds a stat the FIRST time it's missing (v0.25) and never again — spending a talent point or
+  respeccing does not re-seed the character's weights, even though `DetectSpec` itself already
+  re-runs on `CHARACTER_POINTS_CHANGED`/`PLAYER_LEVEL_UP` (`GearEvaluation.lua`). The player currently
+  has to notice this themselves and click "Restore Defaults" or hand-adjust again (v0.304 added a
+  one-time boot chat message explaining this limitation). This item is the real fix: defaults should
+  update automatically whenever the player spends a talent point or changes spec. Needs a judgment
+  call on scope before building: overwrite EVERY weight on every talent-point spend (matching
+  `RestoreDefaultWeights`'s existing "start clean" behavior, but would also silently discard any
+  hand-adjustment made since the last spec change), or only re-seed stats the player has never
+  hand-touched (needs a new "touched by player" flag per stat, since today there's no way to tell a
+  hand-set 5 apart from a seeded 5) — the second option preserves customization but is more state to
+  track. Decide and record the choice here before implementing.
 
 - **0.4 — Freeze the schema + hand-made sample.** Implement the exact table shapes above as real
   Lua files. Populate with a ~12-item HAND-MADE sample spanning every source kind (drop, quest,
@@ -233,7 +244,9 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
   STA/INT/SPI were removed from the list — see DESIGN.md), seeded with spec-aware defaults on
   first use, and later spec automation just moves these sliders. Since 0.26, steps move in 0.05
   increments (Shift-click for a coarser ±1), and a "Restore Defaults" button in the same section
-  resets the whole active profile back to the spec-aware defaults on demand. **Built.**
+  resets the character's own weights back to the spec-aware defaults on demand. Since v0.304 there
+  is exactly one weight set per character (no profiles — see the "Testing Phase 1 follow-ups"
+  section above); defaults do not yet auto-update on respec (0.35). **Built.**
 - Minimap button on/off. **Built.**
 - Suggestion count (default 3). **Not built** (depends on 0.6 recommendation window).
 - Sort mode default. **Not built** (depends on 0.8).
@@ -250,4 +263,5 @@ into `LevelingGearsDB` the instant it changes; WoW addons have no separate manua
 the client itself flushes SavedVariables to disk on `/reload`, logout, or exit (see
 `CONVENTIONS.md`'s Technical notes). The button does NOT call `ReloadUI()` (an earlier version did,
 briefly — see `PROGRESS.md` bug #18 — but there was nothing left to persist, so it just produced a
-jarring no-op reload). It now only prints an honest chat confirmation of the current profile.
+jarring no-op reload). It now only prints an honest chat confirmation that the character's settings
+are saved.

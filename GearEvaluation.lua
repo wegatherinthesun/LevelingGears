@@ -1,6 +1,6 @@
 -- Leveling Gears -- GearEvaluation.lua
 -- Evaluates each equipped item against the character's own average (using the v0.25/0.26 scoring
--- engine and the active profile's weights) and draws a thin colored outline around its paperdoll
+-- engine and the character's own weights) and draws a thin colored outline around its paperdoll
 -- slot button. See CLAUDE.md's roadmap (0.23) and DESIGN.md for the scoring rationale.
 
 local _, LG = ...
@@ -73,16 +73,16 @@ local function EnsureScoreClickHook(slotButton, slotId)
 		end
 
 		LG.Weights.EnsureWeights()
-		local profile = LG.Settings.GetActiveProfile()
-		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, profile and profile.weights)
+		local characterState = LG.Settings.GetCharacterState()
+		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights)
 		LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
 	end)
 end
 
--- Score a single equipped slot using the v0.25/0.26 engine and the active profile's weights.
+-- Score a single equipped slot using the v0.25/0.26 engine and the character's own weights.
 -- EnsureWeights seeds any never-set stat from the detected spec's Priorities default, then leaves
--- it alone forever -- so the player's own saved profile.weights (post any hand adjustment) is
--- always the right table to score against here, not the raw Priorities table.
+-- it alone forever -- so the player's own saved weights (post any hand adjustment) are always the
+-- right table to score against here, not the raw Priorities table.
 local function GetEquippedItemScore(slotId)
 	if not slotId then
 		return nil
@@ -99,8 +99,8 @@ local function GetEquippedItemScore(slotId)
 	end
 
 	LG.Weights.EnsureWeights()
-	local profile = LG.Settings.GetActiveProfile()
-	return LG.Scoring:ScoreEquippedItem(itemStats, profile and profile.weights)
+	local characterState = LG.Settings.GetCharacterState()
+	return LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights)
 end
 
 -- Convert the gap between an item and the player's current average into a color from red to violet, with green at parity.
