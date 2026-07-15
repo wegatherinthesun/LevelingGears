@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.305), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.306), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -14,8 +14,9 @@ score" required.
 
 - **One settings window** (`/levelinggears` or `/lgs`, or the minimap button) — there is only ever
   one settings screen in this addon.
-- **Weight the stats you care about**, 0–10, by typing directly into each stat's edit box.
-  Covers Spell Power, Healing, Attack Power, Ranged Attack Power, Health, Mana, every combat
+- **Weight the stats you care about** by typing directly into each stat's edit box — the exact
+  number the scoring engine uses, no abstracted rating scale. Covers Spell Power, Healing, Attack
+  Power, Ranged Attack Power, Health, Mana, every combat
   rating (Hit/Crit/Haste/Expertise/Armor Penetration/Defense/Dodge/Parry/Block/Resilience), Block
   Value, MP5, Spell Penetration, Armor, and all 5 resistances.
 - **Spec-aware smart defaults.** Weights are pre-filled from your detected class/talent spec the

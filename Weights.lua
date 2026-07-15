@@ -41,11 +41,12 @@ Weights.statDefinitions = {
 	{ key = "SHADOWRES", name = "Shadow Resistance" },
 }
 
--- Weights are typed directly into an edit box (v0.305 -- see bugs/known-bugs.md #32), on a 0-10
--- scale ("0 = ignore, 10 = highest importance"). There is no forced step size any more; WEIGHT_MIN/
--- MAX just clamp whatever the player types into the valid range.
-Weights.WEIGHT_MIN = 0
-Weights.WEIGHT_MAX = 10
+-- Weights are typed directly into an edit box (v0.305 -- see bugs/known-bugs.md #32) showing the
+-- exact number the scoring engine multiplies a derived stat by (`ComputeScore` in Scoring.lua does
+-- `score = score + derivedStatValue * weight` -- there is no separate "real" value hidden behind an
+-- abstracted 0-10 rating; the number in the box IS the weight). v0.306 removed the artificial 0-10
+-- ceiling this used to enforce -- see bugs/known-bugs.md #33 -- so there is nothing left to clamp:
+-- whatever the player types is exactly what gets used.
 
 -- Rounds to the nearest hundredth purely to hide floating-point noise (e.g. 7.099999999996) --
 -- NOT a step grid the player is restricted to; any value they type is honored as-is once rounded to
@@ -95,8 +96,9 @@ function Weights.EnsureWeights()
 	end
 end
 
--- Set a single weight to an absolute value typed directly into its edit box, clamped to the valid
--- 0-10 range. Updates only the one changed input (via LG.UI.SetWeightLabelText) and debounces the
+-- Set a single weight to the exact value typed directly into its edit box -- no clamping, no
+-- rescaling; this is the literal number ComputeScore multiplies the derived stat by from now on.
+-- Updates only the one changed input (via LG.UI.SetWeightLabelText) and debounces the
 -- gear-evaluation refresh (LG.GearEvaluation.ScheduleGearEvaluation) rather than doing a full,
 -- immediate refresh -- a full RefreshWeightLabels() pass on every edit reintroduced the multi-jump
 -- bug from #20/#21 back when weights changed via rapid-fire +/- clicks; direct entry is naturally
@@ -104,16 +106,10 @@ end
 function Weights.SetWeightValue(statKey, value)
 	Weights.EnsureWeights()
 	local characterState = LG.Settings.GetCharacterState()
-	local newValue = value
-	if newValue < Weights.WEIGHT_MIN then
-		newValue = Weights.WEIGHT_MIN
-	elseif newValue > Weights.WEIGHT_MAX then
-		newValue = Weights.WEIGHT_MAX
-	end
-	characterState.weights[statKey] = newValue
+	characterState.weights[statKey] = value
 
 	if LG.UI and LG.UI.SetWeightLabelText then
-		LG.UI.SetWeightLabelText(statKey, Weights.FormatWeight(newValue))
+		LG.UI.SetWeightLabelText(statKey, Weights.FormatWeight(value))
 	end
 	if LG.GearEvaluation then
 		LG.GearEvaluation.ScheduleGearEvaluation()

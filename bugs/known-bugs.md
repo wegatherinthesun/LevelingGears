@@ -484,3 +484,16 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
   - Kept the existing collapsible group structure (Core stats / Other stats / Resistances) — confirmed with the requester as still wanted; only the per-row control changed, not the section layout.
 - Validation: `luac -p` and `luacheck` clean on `Weights.lua` and `UI.lua`.
 - Follow-up: In-game, confirm typing a value into a stat's box and pressing Enter (or clicking elsewhere) saves it and updates the gear-outline colors; confirm typing garbage text and clicking away reverts to the last real value instead of leaving the bad text on screen; confirm "Restore Defaults" still fills every box with the spec-aware defaults.
+
+### 33. Weight edit box still framed as a 0-10 "importance" scale, not the real value
+- Status: Solved
+- Discovered: 2026-07-14 (report: "I am still seeing the 1-10 system")
+- Version introduced: 0.305 (the edit box itself kept the 0.2-era 0-10 clamp and "0 = ignore, 10 = highest importance" framing)
+- Summary: v0.305 replaced the +/- buttons with an edit box, but still clamped typed input to a 0-10 range (`Weights.WEIGHT_MIN`/`WEIGHT_MAX`) and still labeled it with the original abstracted rating language. Reported as still showing "the 1-10 system" rather than the actual value — the request was to show the real number the program uses and allow adjusting that directly, with no artificial scale.
+- Investigation: Confirmed there is no separate "real" value hidden behind the 0-10 number — `Scoring.lua`'s `ComputeScore` does `score = score + derivedStatValue * weight` using this exact stored number as the multiplier. The 0-10 range was purely a UI-imposed ceiling/floor and framing left over from the original 0.2 design ("0 = ignore, 10 = highest importance"), not a reflection of any actual internal unit.
+- Resolution:
+  - `Weights.lua`: removed `WEIGHT_MIN`/`WEIGHT_MAX` and the clamp in `SetWeightValue` entirely — the value typed is now stored and used exactly as given, with no minimum, maximum, or rescaling.
+  - `UI.lua`: reworded the stat-weights helper text from "0 = ignore, 10 = highest importance..." to describe what the box actually is: the exact weight used when scoring items for that stat.
+  - Updated `ROADMAP.md`/`DESIGN.md`/`README.md` to stop describing this as a "0-10 scale" and instead describe it as the literal scoring multiplier with no imposed range.
+- Validation: `luac -p` and `luacheck` clean on `Weights.lua` and `UI.lua`.
+- Follow-up: In-game, confirm a stat's box can be set above 10 (e.g. 25) or below 0 (e.g. -3) and that the value sticks and scores accordingly; confirm the helper text no longer mentions a 0-10 scale.

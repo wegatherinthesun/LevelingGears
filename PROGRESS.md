@@ -9,7 +9,20 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.305 (same `single-profile` fork) — replaced the stat-weight rows' `+`/`-`
+- **Current step: 0.306 (same `single-profile` fork) — removed the stat-weight edit box's remaining
+  0-10 clamp and "importance scale" framing.** v0.305's edit box still enforced a 0-10 range
+  (`Weights.WEIGHT_MIN`/`WEIGHT_MAX`) and the helper text still read "0 = ignore, 10 = highest
+  importance," so it was reported as still showing "the 1-10 system" instead of the real value.
+  Confirmed there was never a separate hidden "real" value — `Scoring.lua`'s `ComputeScore` already
+  multiplies the derived stat by this exact stored number, so the fix was to stop imposing an
+  artificial range/framing on it, not to expose some other number. `Weights.lua`: removed
+  `WEIGHT_MIN`/`WEIGHT_MAX` entirely and the clamp inside `SetWeightValue` — whatever is typed
+  (positive, negative, above 10, whatever) is stored and used exactly as given. `UI.lua`: reworded
+  the stat-weights helper text to describe the box as showing the exact weight used when scoring,
+  instead of a 0-10 importance rating. Updated `ROADMAP.md`/`DESIGN.md`/`README.md` to stop
+  describing a "0-10 scale." `luac -p`/`luacheck` pass clean on `Weights.lua` and `UI.lua`. Full
+  detail in `bugs/known-bugs.md` #33.
+- **Previous step: 0.305 (same `single-profile` fork) — replaced the stat-weight rows' `+`/`-`
   buttons with a direct-entry edit box per stat.** Reported as "too complicated." Each row is now
   just a label and one `EditBox` (`InputBoxTemplate`) showing `FormatWeight`'s rendering of the
   exact value `characterState.weights` holds — type a value, press Enter (or click away from the
@@ -417,3 +430,18 @@ the current single most important next step — this file has everything behind 
   stat-weights helper text, and every doc describing the old step/Shift-click mechanism
   (`README.md`, `ROADMAP.md`, `DESIGN.md`, `TESTERS.md`, `TEST_PLAN.md`'s T22/T23). Version bumped to
   0.305. `luac -p` and `luacheck` both pass clean on all 9 Lua files.
+- 0.306 completed (same `single-profile` branch): removed the stat-weight edit box's remaining 0-10
+  clamp and "importance scale" framing, reported as still showing "the 1-10 system" rather than the
+  real value. Confirmed there was never a second hidden "real" number to expose — `Scoring.lua`'s
+  `ComputeScore` already multiplies the derived stat by the exact value stored in
+  `characterState.weights`; the 0-10 range and "0 = ignore, 10 = highest importance" wording were
+  purely a UI-imposed ceiling/floor and framing left over from the original 0.2 design, not a
+  reflection of any real internal unit. `Weights.lua`: removed `WEIGHT_MIN`/`WEIGHT_MAX` and the
+  clamp inside `SetWeightValue` — the typed value (positive, negative, above 10, whatever) is now
+  stored and used exactly as given, with `FormatWeight` still only rounding the *display* to a
+  hundredth to hide floating-point noise. `UI.lua`: reworded the stat-weights helper text from
+  "0 = ignore, 10 = highest importance..." to describe the box as showing the exact weight used when
+  scoring items for that stat. Updated `README.md`/`ROADMAP.md`/`DESIGN.md` to stop describing a
+  "0-10 scale," and added `TEST_PLAN.md` T22b to specifically test values outside the old 0-10 range.
+  Logged as `bugs/known-bugs.md` #33. Version bumped to 0.306. `luac -p` and `luacheck` both pass
+  clean on all 9 Lua files.

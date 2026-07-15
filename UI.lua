@@ -278,7 +278,7 @@ local helperText = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighl
 helperText:SetPoint("TOPLEFT", weightHeader, "BOTTOMLEFT", 0, -4)
 helperText:SetWidth(300)
 helperText:SetJustifyH("LEFT")
-helperText:SetText("0 = ignore, 10 = highest importance. Type a value and press Enter (or click away) to save. Values are saved per character.")
+helperText:SetText("Each box shows the exact weight used when scoring items for that stat. Raise it to care more, lower it (or zero it) to care less. Type a value and press Enter (or click away) to save. Values are saved per character.")
 
 local colorLegend = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 colorLegend:SetPoint("TOPLEFT", helperText, "BOTTOMLEFT", 0, -8)

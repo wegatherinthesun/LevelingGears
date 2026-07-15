@@ -34,19 +34,21 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.305.** No test report has come in since the first real v0.301 pass, so this section
-covers everything changed across v0.301 → v0.305 in one go. That first pass found bug #27's fix
+**Version: v0.306.** No test report has come in since the first real v0.301 pass, so this section
+covers everything changed across v0.301 → v0.306 in one go. That first pass found bug #27's fix
 largely working (T1/T3/T7 showed clean loads and successful gear scoring — a big improvement) but
 stopped at T15/T16 after hitting three more real issues, and after reporting the profile system and
 the stat-weight controls as sources of "lots of errors" / "too complicated." v0.302/v0.303 fixed the
 first three bugs; v0.304 removed the multi-profile system entirely (one weight set per character
 now — hand-adjust it, or click "Restore Defaults"); v0.305 replaced the stat rows' value+/-buttons
-with a direct-entry edit box per stat. **Testing should resume from T1** to re-confirm everything
-still works after all of this, then continue on to T16-T35, which were never reached last time:
+with a direct-entry edit box per stat, and v0.306 then removed that edit box's remaining 0-10 clamp
+and "importance scale" framing after it was reported as still not showing the real value. **Testing
+should resume from T1** to re-confirm everything still works after all of this, then continue on to
+T16-T35, which were never reached last time:
 
-1. **Stat weight rows redesigned (v0.305).** Each stat is now a label plus one editable text box
-   showing its exact value — no more `+`/`-` buttons or Shift-click stepping. **T22-T23 below are
-   rewritten** to test direct entry and invalid-input handling instead of stepping.
+1. **Stat weight boxes now show the exact value with no scale (v0.306).** No more 0-10 clamp, no
+   more "0 = ignore, 10 = highest importance" framing — the box shows and accepts the literal number
+   the scoring engine multiplies the stat by. **T22-T23 below are rewritten again** to test this.
 2. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
    no more profile picker, no "Create new profile." **T15-T18 below are rewritten** to test the new
    single-weight-set model instead of profile creation/switching.
@@ -94,7 +96,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.305**.
+- Expected: Reads **v0.306**.
 - Result:
 - Notes:
 
@@ -281,6 +283,15 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Repeat: 3x (3 different stats)
 - Expected: The box keeps showing exactly what you typed (formatted cleanly, e.g. "8.5" not
   "8.500000001"), and the gear-outline colors update shortly after (per the existing 0.2s debounce).
+- Result:
+- Notes:
+
+**T22b — No more 0-10 ceiling (v0.306, bug #33)**
+- Instruction: Type a value clearly outside the old 0-10 range into a stat's box — try both "25" and
+  "-3" — pressing Enter after each.
+- Repeat: 2x (one above 10, one below 0)
+- Expected: Both values are accepted and stick exactly as typed (not clamped back to 10 or 0). The
+  helper text above the stat groups should also no longer say "0 = ignore, 10 = highest importance."
 - Result:
 - Notes:
 

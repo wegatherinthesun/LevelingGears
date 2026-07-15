@@ -159,7 +159,7 @@ link's `|H`/`|h` hyperlink escape pair is case-sensitive, so the `score` subcomm
 against the ORIGINAL casing and the item-link argument is never lowercased, avoiding a real bug that
 would otherwise corrupt every pasted item link.
 
-## Weight entry and Restore Defaults (v0.26, superseded by v0.305)
+## Weight entry and Restore Defaults (v0.26 → v0.306)
 
 The Priorities.lua tables ARE the defaults; `EnsureWeights` only ever seeds a key the player has
 never touched, and a manual edit permanently overrides that key going forward.
@@ -167,15 +167,20 @@ never touched, and a manual edit permanently overrides that key going forward.
 - **Restore Defaults** (`RestoreDefaultWeights` in `Weights.lua`) overwrites the character's ENTIRE
   `weights` table with the current `LG.Scoring:GetDefaultWeights()` result — the explicit
   "undo everything I've changed" action, distinct from `EnsureWeights`'s
-  fill-only-what's-missing behavior. Unchanged by v0.305 below.
+  fill-only-what's-missing behavior. Unchanged across every revision below.
 - **v0.26 (superseded):** introduced a 0.05 step size (`WEIGHT_STEP`) so `+`/`-` buttons moved by
   0.05 instead of a whole integer, plus a Shift-click modifier for a coarser ±1 step (0.05 alone
   would take up to 200 clicks to cross the full bar). Reported as too complicated (needed its own
   helper-text sentence to explain, still slow for large changes) — see `bugs/known-bugs.md` #32.
-- **v0.305 (current):** removed the up/down buttons and `WEIGHT_STEP`/`RoundToStep`/the delta-based
-  `SetWeight` entirely. Each stat is now a plain `EditBox` (`InputBoxTemplate`) showing
+- **v0.305 (superseded):** removed the up/down buttons and `WEIGHT_STEP`/`RoundToStep`/the
+  delta-based `SetWeight` entirely. Each stat became a plain `EditBox` (`InputBoxTemplate`) showing
   `FormatWeight`'s rendering of the exact value `characterState.weights` holds; typing a new value
-  and pressing Enter (or clicking away) calls the new absolute setter
-  `Weights.SetWeightValue(statKey, value)`, clamped to `WEIGHT_MIN`/`WEIGHT_MAX` (0-10). No forced
-  step grid any more — any value the player types is honored as typed (`FormatWeight` still rounds
-  the *display* to a hundredth purely to hide floating-point noise, not to restrict input).
+  and pressing Enter (or clicking away) called the new absolute setter
+  `Weights.SetWeightValue(statKey, value)`. Still clamped input to a 0-10 range at this point, and
+  the helper text still framed it as "0 = ignore, 10 = highest importance" — reported as still
+  reading like the old abstracted rating scale, just with a different input widget.
+- **v0.306 (current):** removed the 0-10 clamp and the "0 = ignore, 10 = highest importance" framing
+  entirely — see `bugs/known-bugs.md` #33. There is no scale any more: the box shows and accepts
+  exactly the number `ComputeScore` (in `Scoring.lua`) multiplies the derived stat by, with no
+  minimum, maximum, or rating-language layered on top. `FormatWeight` still rounds only the
+  *display* to a hundredth purely to hide floating-point noise, not to restrict input.

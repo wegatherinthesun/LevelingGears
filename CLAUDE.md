@@ -22,28 +22,32 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.305 (on the `single-profile` fork) — replaced the stat-weight +/- buttons with direct-entry
-edit boxes.** Reported as "too complicated." Each stat row is now just a label and one editable text
-box showing the exact value the scoring engine uses — type a value, press Enter (or click away) to
-save. The old up/down buttons, the 0.05 step size, and the Shift-click-for-±1 modifier are gone
-entirely (`Weights.SetWeightValue`, an absolute setter, replaces the old delta-based `SetWeight`).
-Invalid (non-numeric) typed text reverts to the real saved value rather than sticking. "Restore
-Defaults" persists unchanged. Full detail in `bugs/known-bugs.md` #32.
+**v0.306 (on the `single-profile` fork) — removed the stat-weight edit box's remaining 0-10 clamp
+and "importance scale" framing.** v0.305's edit box still enforced a 0-10 range and still said
+"0 = ignore, 10 = highest importance," so it was reported as still showing "the 1-10 system" rather
+than the actual value. There is no scale any more: the box shows and accepts exactly the number
+`Scoring.lua`'s `ComputeScore` multiplies the derived stat by, with no minimum, maximum, or
+rating-language on top (`Weights.WEIGHT_MIN`/`WEIGHT_MAX` removed; `SetWeightValue` no longer
+clamps). Full detail in `bugs/known-bugs.md` #33.
 
-**v0.304 (same fork) — removed the multi-profile system entirely.** Reported as "lots of errors in
-the profile." There is now exactly one hand-adjustable weight set per character, restorable to spec
-defaults via "Restore Defaults." Since weights don't auto-update on a respec or talent change (and
-never did — see `ROADMAP.md`'s new 0.35), the addon tells the player this once at boot in chat. Full
-detail in `bugs/known-bugs.md` #31.
+**v0.305 (same fork) — replaced the stat-weight +/- buttons with direct-entry edit boxes.** Each stat
+row is a label and one editable text box; type a value, press Enter (or click away) to save. Invalid
+(non-numeric) typed text reverts to the real saved value rather than sticking. "Restore Defaults"
+persists unchanged. Full detail in `bugs/known-bugs.md` #32.
 
-Both changes happened on the `single-profile` git branch, forked from `main` right after v0.303 was
-committed there. v0.303 (still on `main` and carried into this branch) was bug #30's real fix:
+**v0.304 (same fork) — removed the multi-profile system entirely.** There is now exactly one
+hand-adjustable weight set per character, restorable to spec defaults via "Restore Defaults." Since
+weights don't auto-update on a respec or talent change (and never did — see `ROADMAP.md`'s new
+0.35), the addon tells the player this once at boot in chat. Full detail in `bugs/known-bugs.md` #31.
+
+All three changes happened on the `single-profile` git branch, forked from `main` right after v0.303
+was committed there. v0.303 (still on `main` and carried into this branch) was bug #30's real fix:
 shift+left-click an equipped item in the character window to print its score to chat, replacing
 `/lgs score` for everyday use (`/lgs score` still works as a debug-bench fallback). See
 `bugs/known-bugs.md` #30 for why shift+left-click was used instead of the originally-requested
 shift+right-click.
 
-Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302-v0.305's changes, then continue
+Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302-v0.306's changes, then continue
 through T16-T35, which were never reached. Testers email completed checklists to
 `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
 

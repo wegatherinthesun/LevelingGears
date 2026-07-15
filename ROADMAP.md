@@ -73,12 +73,13 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   The window's body is a **vertically scrolling list** of every TBC gear stat, built from the known
   fixed set (primary stats, spell power/healing, all the ratings, mp5, attack power, resistances,
   etc. — a finite, knowable list, not discovered dynamically). Each stat is a row the player sees and
-  edits directly: the stat's name and its current value, on a **0–10 scale** — **0 = ignore
-  entirely, 1 = lowest importance, 10 = most important.** Default: **every stat equal.** (Originally
-  built with up/down arrows; replaced in v0.305 by a direct-entry edit box per stat — see
-  `bugs/known-bugs.md` #32 — but the 0-10 scale and per-character saving are unchanged.) The 0–10 is
-  what the player sees and controls; internally map it to whatever real multiplier the scorer needs
-  (the math is hidden, the inputs are not). Per-character, saved.
+  edits directly: the stat's name and its current value. Default: **every stat equal.** (Originally
+  built as a 0-10 "importance" scale with up/down arrows; replaced in v0.305 by a direct-entry edit
+  box per stat, then in v0.306 the 0-10 ceiling itself was dropped — see `bugs/known-bugs.md` #32/
+  #33 — since it was still being read as an artificial rating system rather than what it actually
+  is.) What the player sees in the box **is** the real number `Scoring.lua`'s `ComputeScore`
+  multiplies the derived stat by — there is no separate hidden value, and no imposed range.
+  Per-character, saved.
   Every OTHER setting the addon ever gains (minimap toggle, suggestion count, source checkboxes,
   spec dropdown, TomTom row, etc.) also lives on THIS one scrolling page — there is no second
   settings screen anywhere in the app.
@@ -210,12 +211,12 @@ regression checklist, then come back here.
 
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),
-  matches a table of popular builds (hand-made, expanded over time). Its ONLY job is to **move the
-  visible 0–10 sliders on the 0.2 page automatically** to a preset — the player watches them move and
-  can still grab any slider by hand afterward. It never hides or replaces the weight page; it's a
+  matches a table of popular builds (hand-made, expanded over time). Its ONLY job is to **fill in the
+  visible weight boxes on the 0.2 page automatically** to a preset — the player watches them update and
+  can still edit any box by hand afterward. It never hides or replaces the weight page; it's a
   convenience layer on top of it, not a separate scoring path. Dropdown to override the guess; must
   allow off-meta specs (Dreamstate Resto Druid, Shockadin, etc.). A wrong guess just means the player
-  adjusts the same always-visible sliders themselves. (Partially superseded by the v0.25 scoring
+  adjusts the same always-visible boxes themselves. (Partially superseded by the v0.25 scoring
   engine's automatic spec detection and default-weight seeding — see `DESIGN.md` — but a visible
   "assumed spec" indicator/override dropdown in the UI is still not built.)
 - **Proc/effect valuation (optional).** See the proc note under 0.2 — contingent on committing to
@@ -241,15 +242,17 @@ it, and every setting below lives on that single vertically-scrolling page — n
 screen exists anywhere. (The 0.5 recommendation window is a separate frame, but it is NOT settings —
 it is the per-slot upgrade picker opened from "Select Gears." Those are the only two frames.)
 
-- Per-stat weights, 0–10 — the main content of the window, visible and directly editable from early
-  (0.2); since 0.25 these are DERIVED-stat inputs only (primaries STR/AGI/STA/INT/SPI were removed
-  from the list — see DESIGN.md), seeded with spec-aware defaults on first use, and later spec
-  automation just moves these values. Each stat is a direct-entry edit box since v0.305 (replacing
-  the 0.26-era up/down buttons with 0.05 steps and a Shift-click coarser ±1 — see
-  `bugs/known-bugs.md` #32), and a "Restore Defaults" button in the same section resets the
-  character's own weights back to the spec-aware defaults on demand. Since v0.304 there is exactly
-  one weight set per character (no profiles — see the "Testing Phase 1 follow-ups" section above);
-  defaults do not yet auto-update on respec (0.35). **Built.**
+- Per-stat weights — the main content of the window, visible and directly editable from early (0.2);
+  since 0.25 these are DERIVED-stat inputs only (primaries STR/AGI/STA/INT/SPI were removed from the
+  list — see DESIGN.md), seeded with spec-aware defaults on first use, and later spec automation just
+  fills these in. Each stat is a direct-entry edit box since v0.305 (replacing the 0.26-era up/down
+  buttons with 0.05 steps and a Shift-click coarser ±1 — see `bugs/known-bugs.md` #32); v0.306
+  removed the box's artificial 0-10 clamp/framing too, so it shows and accepts the exact number
+  `Scoring.lua` multiplies the stat by, with no imposed scale (see `bugs/known-bugs.md` #33). A
+  "Restore Defaults" button in the same section resets the character's own weights back to the
+  spec-aware defaults on demand. Since v0.304 there is exactly one weight set per character (no
+  profiles — see the "Testing Phase 1 follow-ups" section above); defaults do not yet auto-update on
+  respec (0.35). **Built.**
 - Minimap button on/off. **Built.**
 - Suggestion count (default 3). **Not built** (depends on 0.6 recommendation window).
 - Sort mode default. **Not built** (depends on 0.8).
