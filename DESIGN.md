@@ -11,9 +11,9 @@ The addon is split by responsibility, loaded in this order (see `LevelingGears.t
 3. **`Settings.lua`** — the SavedVariables data layer: general (account-wide) settings and each
    character's own single weight set (`GetCharacterState`). No profiles (removed in v0.304 — see
    `bugs/known-bugs.md` #31).
-4. **`Weights.lua`** — the weightable-stat list (`statDefinitions`) and weight math: 0.05-precision
-   rounding/formatting, seeding defaults (`EnsureWeights`), hand-adjusting (`SetWeight`), and
-   resetting to spec defaults (`RestoreDefaultWeights`).
+4. **`Weights.lua`** — the weightable-stat list (`statDefinitions`) and weight math: display
+   formatting (`FormatWeight`), seeding defaults (`EnsureWeights`), direct-entry hand-adjusting
+   (`SetWeightValue`), and resetting to spec defaults (`RestoreDefaultWeights`).
 5. **`GearEvaluation.lua`** — scores each equipped item and colors its paperdoll slot outline.
 6. **`UI.lua`** — the single settings window: every frame/widget the addon shows, and the
    `Refresh*`/`Set*` functions that keep them in sync with SavedVariables.
@@ -159,25 +159,23 @@ link's `|H`/`|h` hyperlink escape pair is case-sensitive, so the `score` subcomm
 against the ORIGINAL casing and the item-link argument is never lowercased, avoiding a real bug that
 would otherwise corrupt every pasted item link.
 
-## Weight precision and Restore Defaults (v0.26)
+## Weight entry and Restore Defaults (v0.26, superseded by v0.305)
 
 The Priorities.lua tables ARE the defaults; `EnsureWeights` only ever seeds a key the player has
-never touched, and a manual `+`/`-` click permanently overrides that key going forward. v0.26 made
-this reversible and finer-grained without changing that basic model:
+never touched, and a manual edit permanently overrides that key going forward.
 
 - **Restore Defaults** (`RestoreDefaultWeights` in `Weights.lua`) overwrites the character's ENTIRE
   `weights` table with the current `LG.Scoring:GetDefaultWeights()` result — the explicit
   "undo everything I've changed" action, distinct from `EnsureWeights`'s
-  fill-only-what's-missing behavior.
-- **0.05 step size** (`WEIGHT_STEP` in Core.lua): the visible scale and units stay the same simple
-  0-10 bar ("0 = ignore, 10 = highest importance"), but each `+`/`-` click now moves 0.05 instead of
-  a whole integer, rounded via `RoundToStep` to avoid floating-point drift, and displayed via
-  `FormatWeight` with only as many decimals as needed (a whole number shows with none; "9.50" shows
-  as "9.5", never a trailing zero) — keeping the display itself simple even though the underlying
-  precision is finer.
-- **Shift-click coarse step:** 0.05 alone would take up
-  to 200 clicks to cross the full bar. Added a Shift-click modifier on both buttons for a coarser
-  ±1 step, documented in the settings page's own helper text, so quick large adjustments and fine
-  0.05 tuning are both available from the same two buttons rather than adding new UI elements.
-  `WEIGHT_STEP` is a single named constant specifically so an even finer step (e.g. 0.01) is a
-  one-line change later if ever wanted, per "allow for more precision if required."
+  fill-only-what's-missing behavior. Unchanged by v0.305 below.
+- **v0.26 (superseded):** introduced a 0.05 step size (`WEIGHT_STEP`) so `+`/`-` buttons moved by
+  0.05 instead of a whole integer, plus a Shift-click modifier for a coarser ±1 step (0.05 alone
+  would take up to 200 clicks to cross the full bar). Reported as too complicated (needed its own
+  helper-text sentence to explain, still slow for large changes) — see `bugs/known-bugs.md` #32.
+- **v0.305 (current):** removed the up/down buttons and `WEIGHT_STEP`/`RoundToStep`/the delta-based
+  `SetWeight` entirely. Each stat is now a plain `EditBox` (`InputBoxTemplate`) showing
+  `FormatWeight`'s rendering of the exact value `characterState.weights` holds; typing a new value
+  and pressing Enter (or clicking away) calls the new absolute setter
+  `Weights.SetWeightValue(statKey, value)`, clamped to `WEIGHT_MIN`/`WEIGHT_MAX` (0-10). No forced
+  step grid any more — any value the player types is honored as typed (`FormatWeight` still rounds
+  the *display* to a hundredth purely to hide floating-point noise, not to restrict input).

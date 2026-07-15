@@ -13,7 +13,7 @@ local SafeCall = LG.Debug.SafeCall
 
 local minimapButton = nil
 local generalSettingsCheckbox = nil
-local weightLabels = {}
+local weightInputs = {}
 
 -- Apply any previously saved frame position so the window appears where it was last left.
 -- Bug #29 (open): testers report the restored position is consistently in "a similar general
@@ -95,23 +95,24 @@ function UI.RefreshGeneralSettingsUI()
 	end
 end
 
--- Update just the one changed weight label -- used by Weights.SetWeight on every +/- click, kept
--- deliberately cheap (a single SetText, no full repaint or gear-evaluation trigger of its own).
+-- Update just the one changed weight input -- used by Weights.SetWeightValue after a committed
+-- edit, kept deliberately cheap (a single SetText, no full repaint or gear-evaluation trigger of
+-- its own).
 function UI.SetWeightLabelText(statKey, text)
-	if weightLabels[statKey] then
-		weightLabels[statKey]:SetText(text)
+	if weightInputs[statKey] then
+		weightInputs[statKey]:SetText(text)
 	end
 end
 
--- Repaint every visible weight label from the character's saved weights so the settings page stays
+-- Repaint every visible weight input from the character's saved weights so the settings page stays
 -- in sync, then re-run the (debounce-free) gear evaluation -- used for coarse-grained refresh
--- moments (window open, Restore Defaults), never per-click.
+-- moments (window open, Restore Defaults, reverting an invalid typed value), never per-keystroke.
 function UI.RefreshWeightLabels()
 	LG.Weights.EnsureWeights()
 	local characterState = LG.Settings.GetCharacterState()
 	for _, stat in ipairs(LG.Weights.statDefinitions) do
-		if weightLabels[stat.key] then
-			weightLabels[stat.key]:SetText(LG.Weights.FormatWeight(characterState.weights[stat.key] or 5))
+		if weightInputs[stat.key] then
+			weightInputs[stat.key]:SetText(LG.Weights.FormatWeight(characterState.weights[stat.key] or 5))
 		end
 	end
 	SafeCall(LG.GearEvaluation.UpdateEquippedGearEvaluation)
@@ -277,7 +278,7 @@ local helperText = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighl
 helperText:SetPoint("TOPLEFT", weightHeader, "BOTTOMLEFT", 0, -4)
 helperText:SetWidth(300)
 helperText:SetJustifyH("LEFT")
-helperText:SetText("0 = ignore, 10 = highest importance, in steps of 0.05 (hold Shift for +-1). Values are saved per character.")
+helperText:SetText("0 = ignore, 10 = highest importance. Type a value and press Enter (or click away) to save. Values are saved per character.")
 
 local colorLegend = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 colorLegend:SetPoint("TOPLEFT", helperText, "BOTTOMLEFT", 0, -8)
@@ -285,9 +286,10 @@ colorLegend:SetWidth(300)
 colorLegend:SetJustifyH("LEFT")
 colorLegend:SetText("Color guide: red/orange/yellow means below the current gear average, green means around average, and blue/violet means above it.")
 
--- The addon's own spec-aware weights (Priorities.lua) ARE the defaults; any +/- adjustment
--- overrides them from then on (EnsureWeights never overwrites a touched value). This button is the
--- explicit, visible way back to those defaults if the player wants a clean slate.
+-- The addon's own spec-aware weights (Priorities.lua) ARE the defaults; typing a new value into any
+-- stat's edit box overrides that stat from then on (EnsureWeights never overwrites a touched
+-- value). This button persists as the explicit, visible way back to those defaults if the player
+-- wants a clean slate.
 local restoreDefaultsButton = CreateFrame("Button", nil, weightSection, "UIPanelButtonTemplate")
 restoreDefaultsButton:SetSize(140, 20)
 restoreDefaultsButton:SetPoint("TOPLEFT", colorLegend, "BOTTOMLEFT", 0, -8)
@@ -325,6 +327,10 @@ for _, groupLayout in ipairs(STAT_GROUP_LAYOUT) do
 end
 
 -- The stat-weight section uses the same section shape as the other settings blocks: divider, title, short description, then rows.
+-- v0.305 (bugs/known-bugs.md #32): the old label + value + up/down-button row (with a Shift-click
+-- modifier for coarser steps) was reported as too complicated. Replaced with a plain label and a
+-- single edit box showing the exact value the scoring engine uses -- type a new value directly
+-- instead of clicking +/- dozens of times.
 local function CreateStatRow(parent, stat)
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetSize(300, 22)
@@ -333,26 +339,34 @@ local function CreateStatRow(parent, stat)
 	label:SetPoint("LEFT", 0, 0)
 	label:SetText(stat.name)
 
-	local value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	value:SetPoint("CENTER", 0, 0)
-	value:SetText("5")
-	weightLabels[stat.key] = value
+	local input = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+	input:SetSize(50, 20)
+	input:SetPoint("RIGHT", 0, 0)
+	input:SetAutoFocus(false)
+	input:SetJustifyH("CENTER")
+	input:SetText("5")
+	weightInputs[stat.key] = input
 
-	local upButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-	upButton:SetSize(24, 20)
-	upButton:SetPoint("RIGHT", 0, 0)
-	upButton:SetText("+")
-	upButton:SetScript("OnClick", function()
-		LG.Weights.SetWeight(stat.key, IsShiftKeyDown() and 1 or LG.Weights.WEIGHT_STEP)
-	end)
+	-- Parses and commits whatever is currently typed. Invalid (non-numeric) text is not silently
+	-- kept on screen -- reverting to the real saved value makes clear the edit didn't take effect,
+	-- rather than leaving stale-looking text that implies it did.
+	local function CommitValue()
+		local parsed = tonumber(input:GetText())
+		if not parsed then
+			UI.RefreshWeightLabels()
+			return
+		end
+		LG.Weights.SetWeightValue(stat.key, parsed)
+	end
 
-	local downButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-	downButton:SetSize(24, 20)
-	downButton:SetPoint("RIGHT", upButton, "LEFT", -4, 0)
-	downButton:SetText("-")
-	downButton:SetScript("OnClick", function()
-		LG.Weights.SetWeight(stat.key, IsShiftKeyDown() and -1 or -LG.Weights.WEIGHT_STEP)
+	input:SetScript("OnEnterPressed", function(self)
+		CommitValue()
+		self:ClearFocus()
 	end)
+	input:SetScript("OnEscapePressed", function(self)
+		self:ClearFocus()
+	end)
+	input:SetScript("OnEditFocusLost", CommitValue)
 
 	return row
 end

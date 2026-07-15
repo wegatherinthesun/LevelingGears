@@ -34,34 +34,36 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.304 (the "single-profile" fork).** No test report has come in since the first real
-v0.301 pass, so this section covers everything changed across v0.301 → v0.304 in one go. That first
-pass found bug #27's fix largely working (T1/T3/T7 showed clean loads and successful gear scoring —
-a big improvement) but stopped at T15/T16 after hitting three more real issues, and after reporting
-the profile system itself as a source of "lots of errors." v0.302/v0.303 fixed the first three;
-v0.304 is the response to the profile feedback: **the multi-profile system (create/switch/name
-profiles per character) is removed entirely.** There is now exactly one weight set per character —
-hand-adjust it, or click "Restore Defaults" to reset it to the character's detected spec/mode
-default. **Testing should resume from T1** to re-confirm everything still works after all of this,
-then continue on to T16-T35, which were never reached last time:
+**Version: v0.305.** No test report has come in since the first real v0.301 pass, so this section
+covers everything changed across v0.301 → v0.305 in one go. That first pass found bug #27's fix
+largely working (T1/T3/T7 showed clean loads and successful gear scoring — a big improvement) but
+stopped at T15/T16 after hitting three more real issues, and after reporting the profile system and
+the stat-weight controls as sources of "lots of errors" / "too complicated." v0.302/v0.303 fixed the
+first three bugs; v0.304 removed the multi-profile system entirely (one weight set per character
+now — hand-adjust it, or click "Restore Defaults"); v0.305 replaced the stat rows' value+/-buttons
+with a direct-entry edit box per stat. **Testing should resume from T1** to re-confirm everything
+still works after all of this, then continue on to T16-T35, which were never reached last time:
 
-1. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
+1. **Stat weight rows redesigned (v0.305).** Each stat is now a label plus one editable text box
+   showing its exact value — no more `+`/`-` buttons or Shift-click stepping. **T22-T23 below are
+   rewritten** to test direct entry and invalid-input handling instead of stepping.
+2. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
    no more profile picker, no "Create new profile." **T15-T18 below are rewritten** to test the new
    single-weight-set model instead of profile creation/switching.
-2. **Bug #29 (open, mitigated): window position restores consistently but not to the exact dragged
+3. **Bug #29 (open, mitigated): window position restores consistently but not to the exact dragged
    spot.** No confirmed root cause yet — added debug logging (`/lgs debug` level 1) to both save and
    restore, plus a defensive pixel-rounding fix. **T11 this round should include the
    `/lgs debug dump` output** covering both a drag and a reopen, so there's real data to compare
    instead of a visual impression.
-3. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
+4. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
    the character window to print its score to chat, no slash command needed. Built as
    **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
    `bugs/known-bugs.md` for the verified Blizzard-click-behavior reasoning). **T8 below tests this as
    the primary workflow**; `/lgs score` still works as a debug-bench fallback.
-4. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
+5. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
    change (that's `ROADMAP.md`'s 0.35, not built yet), the addon now tells you this once at boot —
    look for it and confirm the wording makes sense.
-5. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art (`ROADMAP.md`
+6. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art (`ROADMAP.md`
    0.31/0.32) and auto-updating defaults on respec (0.35). None of these are testable yet — don't
    look for them.
 
@@ -92,7 +94,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.304**.
+- Expected: Reads **v0.305**.
 - Result:
 - Notes:
 
@@ -273,17 +275,21 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T22 — Fine `+`/`-` stepping**
-- Instruction: Click a stat's `+` button, then its `-` button.
-- Repeat: 3x each direction
-- Expected: Each click moves the value by exactly 0.05, every time.
+**T22 — Direct weight entry (v0.305 — replaces the old +/- buttons, bug #32)**
+- Instruction: Click into a stat's edit box, clear it, type a new value (e.g. "8.5"), then press
+  Enter.
+- Repeat: 3x (3 different stats)
+- Expected: The box keeps showing exactly what you typed (formatted cleanly, e.g. "8.5" not
+  "8.500000001"), and the gear-outline colors update shortly after (per the existing 0.2s debounce).
 - Result:
 - Notes:
 
-**T23 — Shift-click coarse stepping**
-- Instruction: Shift-click a stat's `+` button, then its `-` button.
-- Repeat: 3x each direction
-- Expected: Each click moves the value by exactly 1, every time.
+**T23 — Invalid entry reverts instead of sticking**
+- Instruction: Click into a stat's edit box, clear it, type something non-numeric (e.g. "abc"), then
+  click elsewhere in the window to move focus away.
+- Repeat: 2x
+- Expected: The box reverts to the last real saved value (not left showing "abc" or blank) — the
+  invalid entry should never look like it was accepted.
 - Result:
 - Notes:
 

@@ -1,8 +1,7 @@
 -- Leveling Gears -- Weights.lua
--- The list of weightable derived stats, the 0.05-precision weight math, and the character's single
--- weight-set data logic (seed defaults, hand-adjust, restore defaults). No UI widgets are touched
--- here -- see UI.lua, which owns the actual weight-label widgets and calls into this file's
--- formatting/rounding.
+-- The list of weightable derived stats and the character's single weight-set data logic (seed
+-- defaults, hand-adjust via direct entry, restore defaults). No UI widgets are touched here -- see
+-- UI.lua, which owns the actual weight-input widgets and calls into this file's formatting.
 
 local _, LG = ...
 LG.Weights = LG.Weights or {}
@@ -42,20 +41,18 @@ Weights.statDefinitions = {
 	{ key = "SHADOWRES", name = "Shadow Resistance" },
 }
 
--- Weights are shown on a simple 0-10 bar but move in fine 0.05 steps (v0.26); WEIGHT_STEP is the
--- one place to change if even finer precision is ever wanted later.
+-- Weights are typed directly into an edit box (v0.305 -- see bugs/known-bugs.md #32), on a 0-10
+-- scale ("0 = ignore, 10 = highest importance"). There is no forced step size any more; WEIGHT_MIN/
+-- MAX just clamp whatever the player types into the valid range.
 Weights.WEIGHT_MIN = 0
 Weights.WEIGHT_MAX = 10
-Weights.WEIGHT_STEP = 0.05
 
-function Weights.RoundToStep(value, step)
-	return math.floor((value / step) + 0.5) * step
-end
-
--- Keep the display simple even at 0.05 precision: whole numbers show with no decimals ("5"),
--- fractional values show only as many decimals as the step ever produces (never a trailing zero).
+-- Rounds to the nearest hundredth purely to hide floating-point noise (e.g. 7.099999999996) --
+-- NOT a step grid the player is restricted to; any value they type is honored as-is once rounded to
+-- this display precision. Whole numbers show with no decimals ("5"), fractional values show only as
+-- many decimals as they need (never a trailing zero).
 function Weights.FormatWeight(value)
-	local rounded = Weights.RoundToStep(value, Weights.WEIGHT_STEP)
+	local rounded = math.floor((value * 100) + 0.5) / 100
 	if rounded == math.floor(rounded) then
 		return string.format("%d", rounded)
 	end
@@ -98,15 +95,16 @@ function Weights.EnsureWeights()
 	end
 end
 
--- Update a single weight value. delta is normally +-WEIGHT_STEP (0.05); the settings UI passes a
--- coarser +-1 on Shift-click so a value can still be moved across the whole bar quickly. Updates
--- only the one changed label (via LG.UI.SetWeightLabelText) and debounces the gear-evaluation
--- refresh (LG.GearEvaluation.ScheduleGearEvaluation) rather than doing a full, immediate refresh --
--- a full RefreshWeightLabels() pass on every click reintroduced the multi-jump bug from #20/#21.
-function Weights.SetWeight(statKey, delta)
+-- Set a single weight to an absolute value typed directly into its edit box, clamped to the valid
+-- 0-10 range. Updates only the one changed input (via LG.UI.SetWeightLabelText) and debounces the
+-- gear-evaluation refresh (LG.GearEvaluation.ScheduleGearEvaluation) rather than doing a full,
+-- immediate refresh -- a full RefreshWeightLabels() pass on every edit reintroduced the multi-jump
+-- bug from #20/#21 back when weights changed via rapid-fire +/- clicks; direct entry is naturally
+-- one commit per stat, but the same debounce is kept since nothing about that risk has changed.
+function Weights.SetWeightValue(statKey, value)
 	Weights.EnsureWeights()
 	local characterState = LG.Settings.GetCharacterState()
-	local newValue = Weights.RoundToStep((characterState.weights[statKey] or 5) + delta, Weights.WEIGHT_STEP)
+	local newValue = value
 	if newValue < Weights.WEIGHT_MIN then
 		newValue = Weights.WEIGHT_MIN
 	elseif newValue > Weights.WEIGHT_MAX then

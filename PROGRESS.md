@@ -9,7 +9,22 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.304 (the "single-profile" fork) — removed the multi-profile system entirely.**
+- **Current step: 0.305 (same `single-profile` fork) — replaced the stat-weight rows' `+`/`-`
+  buttons with a direct-entry edit box per stat.** Reported as "too complicated." Each row is now
+  just a label and one `EditBox` (`InputBoxTemplate`) showing `FormatWeight`'s rendering of the
+  exact value `characterState.weights` holds — type a value, press Enter (or click away from the
+  box) to commit it. `Weights.lua`: removed `WEIGHT_STEP`, `RoundToStep`, and the delta-based
+  `SetWeight(statKey, delta)`; added `SetWeightValue(statKey, value)`, an absolute setter clamped to
+  `WEIGHT_MIN`/`WEIGHT_MAX` (0-10). `FormatWeight` still rounds only the *display* to a hundredth to
+  hide floating-point noise — it no longer restricts what a player can type. `UI.lua`'s
+  `CreateStatRow`: removed the value `FontString` and both step buttons; added the `EditBox` with
+  `OnEnterPressed`/`OnEditFocusLost` handlers that parse the typed text and call `SetWeightValue`, or
+  revert the box to the real saved value (via the existing `UI.RefreshWeightLabels()`) if the typed
+  text doesn't parse as a number — invalid input never looks like it was silently accepted. Kept the
+  existing collapsible group structure (Core stats/Other stats/Resistances) and the "Restore
+  Defaults" button, both confirmed as still wanted. `luac -p`/`luacheck` pass clean on `Weights.lua`
+  and `UI.lua`. Full detail in `bugs/known-bugs.md` #32.
+- **Previous step: 0.304 (the "single-profile" fork) — removed the multi-profile system entirely.**
   Reported broadly as "lots of errors in the profile," on top of the already-fixed bug #28 (ambiguous
   picker label). Decision: stop patching the multi-profile system piece by piece and remove it —
   there is now exactly one hand-adjustable weight set per character, no naming/creating/switching.
@@ -383,3 +398,22 @@ the current single most important next step — this file has everything behind 
   (`Scoring.lua`, `Priorities.lua`, `DESIGN.md`, `CONVENTIONS.md`, `ROADMAP.md`, `README.md`,
   `TESTERS.md`, `TEST_PLAN.md`, `bugs/known-bugs.md`) to match the new single-weight-set model.
   Version bumped to 0.304. `luac -p` and `luacheck` both pass clean on all five touched Lua files.
+- 0.305 completed (same `single-profile` branch): replaced the stat-weight rows' value+/-buttons
+  with a direct-entry edit box, reported as "too complicated." `Weights.lua`: removed `WEIGHT_STEP`
+  (the old 0.05 step size), `RoundToStep`, and the delta-based `SetWeight(statKey, delta)`; added
+  `SetWeightValue(statKey, value)`, an absolute setter clamped to `WEIGHT_MIN`/`WEIGHT_MAX` (0-10).
+  `FormatWeight` now rounds only the *display* to a hundredth to hide floating-point noise (e.g.
+  7.099999999996) rather than snapping input to any step grid — whatever the player types is honored
+  as typed. `UI.lua`'s `CreateStatRow`: removed the read-only value `FontString` and the
+  `upButton`/`downButton` pair; added a single `EditBox` (`InputBoxTemplate`) per stat, pre-filled
+  with its current value. `OnEnterPressed` commits and clears focus; `OnEditFocusLost` commits on
+  clicking away; either path parses the typed text with `tonumber` and calls `SetWeightValue` if it's
+  a real number, or calls the existing `UI.RefreshWeightLabels()` to revert the box to the actual
+  saved value if it isn't — an invalid entry never looks like it was accepted. Renamed the module
+  local `weightLabels` to `weightInputs` throughout `UI.lua` to match (same `:SetText()`-compatible
+  shape, so `UI.SetWeightLabelText`/`UI.RefreshWeightLabels` needed no behavioral changes, just the
+  rename). Kept the existing collapsible group structure (Core stats/Other stats/Resistances) and
+  the "Restore Defaults" button — both confirmed as still wanted rather than assumed. Updated the
+  stat-weights helper text, and every doc describing the old step/Shift-click mechanism
+  (`README.md`, `ROADMAP.md`, `DESIGN.md`, `TESTERS.md`, `TEST_PLAN.md`'s T22/T23). Version bumped to
+  0.305. `luac -p` and `luacheck` both pass clean on all 9 Lua files.

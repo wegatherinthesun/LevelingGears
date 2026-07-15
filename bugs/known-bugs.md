@@ -470,3 +470,17 @@ This file is the working bug ledger for Leveling Gears. Keep it updated after ev
   - `ROADMAP.md`'s 0.34 ("profile creation dialog") is dropped as moot; a new 0.35 ("auto-updating default weights on respec/talent change") is filed instead, since that's the actual underlying need a "give my profile a name" feature was dancing around.
 - Validation: `luac -p` and `luacheck` clean on `Settings.lua`, `Weights.lua`, `GearEvaluation.lua`, `UI.lua`, `Core.lua`.
 - Follow-up: In-game, confirm the settings window shows General settings directly above Stat weights with no gap or leftover profile UI, that weights persist and restore-to-default correctly, and that the new boot-time chat message appears once and reads clearly.
+
+### 32. Stat weight rows (value + up/down buttons + Shift-click) reported as too complicated
+- Status: Solved
+- Discovered: 2026-07-14 (report: "The stats adjustment menu is too complicated")
+- Version introduced: 0.2 (the up/down buttons); 0.26 (the 0.05-step/Shift-click-for-±1 refinement that made it worse)
+- Summary: Each stat row showed a read-only value plus separate `+`/`-` buttons, stepping by 0.05 normally or ±1 with Shift held — a convention that needed its own helper-text sentence to explain and required many clicks to move a value far. Requested replacement: list each stat with the actual value the program uses shown directly in an editable text box, and keep the "Restore Defaults" button.
+- Resolution:
+  - `UI.lua`'s `CreateStatRow`: removed the value `FontString` and the `upButton`/`downButton` pair entirely. Each row is now a label plus one `EditBox` (`InputBoxTemplate`, the standard Blizzard single-line input widget) pre-filled with the stat's current value.
+  - Typing a value and pressing Enter, or clicking away (`OnEditFocusLost`), commits it via the new `Weights.SetWeightValue(statKey, value)` (an absolute setter, clamped to 0-10) — replacing the old delta-based `Weights.SetWeight(statKey, delta)`/`WEIGHT_STEP`/`RoundToStep` mechanism entirely, since there's no longer a step to round to.
+  - Invalid (non-numeric) typed text does not silently stick — losing focus with unparsable text reverts the box to the real saved value via the existing `UI.RefreshWeightLabels()`, so the display never implies an edit took effect when it didn't.
+  - "Restore Defaults" (`Weights.RestoreDefaultWeights`) is unchanged and still resets every stat to the character's spec-aware default, per the explicit request that this button persist.
+  - Kept the existing collapsible group structure (Core stats / Other stats / Resistances) — confirmed with the requester as still wanted; only the per-row control changed, not the section layout.
+- Validation: `luac -p` and `luacheck` clean on `Weights.lua` and `UI.lua`.
+- Follow-up: In-game, confirm typing a value into a stat's box and pressing Enter (or clicking elsewhere) saves it and updates the gear-outline colors; confirm typing garbage text and clicking away reverts to the last real value instead of leaving the bad text on screen; confirm "Restore Defaults" still fills every box with the spec-aware defaults.

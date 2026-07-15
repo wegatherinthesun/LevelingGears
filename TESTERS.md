@@ -8,7 +8,7 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.304). The stat-weighting and scoring engine — the settings window, weight
+Leveling Gears is early (v0.305). The stat-weighting and scoring engine — the settings window, weight
 sliders (one set per character), and the equipped-gear outline coloring — is real and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
 no tooltip integration, no recommendation window. If a roadmap item in `ROADMAP.md` is marked "Not
@@ -30,9 +30,9 @@ built," that's expected, not a defect. Only note something as a problem if it sh
 
 - **Reproduce before calling something a solid failure.** If it only happened once and you couldn't
   make it happen again, say so in your notes rather than stating it as a sure thing.
-- **Say what you expected vs. what actually happened**, not just what happened. "Clicking + should
-  raise the value by 0.05; it raised it by 1" is something that can be acted on immediately. "The
-  button is wrong" isn't.
+- **Say what you expected vs. what actually happened**, not just what happened. "I typed 8 into
+  Attack Power's box and pressed Enter; it showed 5 instead" is something that can be acted on
+  immediately. "The box is wrong" isn't.
 - **A stale display is not the same as lost data.** This project has hit that exact false alarm more
   than once (see `bugs/known-bugs.md` #21/#22) — before deciding "my settings didn't save," reopen
   the settings window (or `/reload`) and check again first.
