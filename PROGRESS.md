@@ -9,7 +9,19 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.308 (same `single-profile` fork) — replaced `Priorities.lua`'s anchor-scale
+- **Current step: 0.31 — consolidated release.** Squashes the `single-profile` fork (built and
+  iterated internally as v0.304 through v0.308, detailed as "Previous step" entries below) into one
+  shipped, two-decimal version: one weight set per character (no profiles), direct-entry stat editing
+  with no imposed scale, and `Priorities.lua`'s default weights analytically derived from real TBC
+  combat formulas instead of guessed or rank-derived numbers. The fork has been fast-forward-merged
+  into `main` and the `single-profile` branch deleted — `main` is now the only branch. The individual
+  v0.304-v0.308 version numbers are kept as-is in the Progress log below and in `bugs/known-bugs.md`
+  #31-#35 (the real, accurate history of how 0.31 was built); they are not retroactively renamed.
+  Patches to 0.31 follow the existing thousandths rule (0.311, 0.312… — see `CONVENTIONS.md`'s
+  versioning ladder for why the next patch is 0.311 and not 0.301, which already exists as an
+  unrelated, much earlier bugfix). `ROADMAP.md`'s old "0.31 — minimap drag-to-reposition" entry moved
+  to 0.36 to free the number for this consolidation.
+- **Previous step: 0.308 (same `single-profile` fork) — replaced `Priorities.lua`'s anchor-scale
   weights with values analytically derived from known TBC combat formulas.** v0.307's fix (below)
   was correctly called out as still a shortcut: a real stat-priority ORDER doesn't specify a
   magnitude, only a ranking, and inventing the magnitude (an anchor scale) wasn't "doing the math
@@ -573,3 +585,19 @@ the current single most important next step — this file has everything behind 
   Version bumped to 0.308. `luac -p` and `luacheck` both pass clean on `Priorities.lua`; the
   standalone structural verification script (all 27 specs, both modes, all 25 stat keys) was re-run
   with zero gaps found before being deleted again.
+- **0.31 consolidation completed:** squashed the `single-profile` fork's iterative internal versions
+  (v0.304-v0.308 above) into one shipped two-decimal release, per direct instruction once the fork's
+  work was judged complete and stable enough to merge back. Version strings bumped to 0.31 in
+  `Debug.lua`/`LevelingGears.toc`/`README.md`/`TESTERS.md` (also fixed two remaining stale
+  `README.md` lines that still called `Priorities.lua`'s weights "authored" instead of
+  derived-from-real-formulas). `ROADMAP.md`'s "Testing Phase 1 follow-ups" section: repurposed 0.31
+  for this consolidated release and renumbered the old "minimap drag-to-reposition" item to 0.36 (its
+  entry now explicitly notes the renumbering reason). `CONVENTIONS.md`'s versioning ladder: recorded
+  the 0.31 reclamation with today's date, and clarified that patches to 0.31 follow the existing
+  thousandths rule (0.311, 0.312… — not 0.301, which already exists as an unrelated, much earlier
+  bugfix from before this fork). `CLAUDE.md`'s Current step and this file's Current status section
+  rewritten to present 0.31 as the headline version, with the detailed v0.304-v0.308 history kept
+  exactly as written (not retroactively renamed) both here and in `bugs/known-bugs.md` #31-#35, since
+  that's the accurate record of how 0.31 was actually built. Fast-forward merged the `single-profile`
+  branch into `main` (a clean linear history, no conflicts) and deleted the `single-profile` branch,
+  per instruction that only one branch is needed going forward.

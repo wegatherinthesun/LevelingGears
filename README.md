@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.308), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.31), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -68,8 +68,8 @@ Three deliberately separate layers turn an item's raw stats into a score:
    the game's own API so they're always correct for your character's actual level.
 2. **One hardcoded table** — Attack Power per point of Strength/Agility, per class/form (the one
    thing the API doesn't expose directly).
-3. **Authored priorities** — default weights per class/spec/mode, used only to *seed* your own
-   editable weights.
+3. **Derived priorities** — default weights per class/spec/mode, analytically derived from known TBC
+   combat formulas (see `DESIGN.md`), used only to *seed* your own editable weights.
 
 Keeping these separate is what prevents double-counting (e.g. weighting Agility directly *and* the
 Attack Power/crit/armor it produces). Full rationale and every specific judgment call (rating
@@ -82,7 +82,7 @@ fallbacks, Druid form handling, low-level spec assumptions, etc.) are documented
 |---|---|
 | `Debug.lua` | Chat printing, pcall safety, debug log, addon version |
 | `Conversions.lua` | Live stat conversions + the Attack Power table |
-| `Priorities.lua` | Authored default weights per class/spec/mode |
+| `Priorities.lua` | Default weights per class/spec/mode, derived from real combat formulas |
 | `Scoring.lua` | Combines the above into a single item score |
 | `Settings.lua` | SavedVariables: general settings, each character's own stat weights |
 | `Weights.lua` | The weightable-stat list and weight-value math (set/seed/restore) |

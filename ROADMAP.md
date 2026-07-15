@@ -114,12 +114,23 @@ what already exists. **Do not start any of these until every currently-built fea
 working** — fix what's broken first (see `bugs/known-bugs.md` #28-#30), finish the Phase 1
 regression checklist, then come back here.
 
-- **0.31 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
+- **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
+  analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously
+  tracked internally as v0.304-0.308, kept in `PROGRESS.md`/`bugs/known-bugs.md` #31-#35 as the
+  detailed history of how this was built) into one consolidated version once merged back to `main`.
+  Replaces the multi-profile system with exactly one hand-adjustable weight set per character;
+  replaces the stat-weight +/- buttons with a direct-entry edit box per stat, showing and accepting
+  the exact value the scoring engine uses with no imposed scale; and replaces `Priorities.lua`'s
+  default weights with values analytically derived from real TBC combat formulas (see `DESIGN.md`'s
+  Layer 3 section) instead of either hand-authored guesses or an invented rank-to-number scale.
+  **Built.**
+- **0.36 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
   minimap (the standard convention most players expect from an addon minimap icon); the new position
   persists across sessions the same way window position does. Left-click still opens/closes the
   settings window. A plain right-click (no drag) no longer needs to also open/close the window once
   drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
-  right-click currently doing the same thing; that note goes away once this ships.
+  right-click currently doing the same thing; that note goes away once this ships. (Renumbered from
+  0.31, which this consolidated release now occupies.)
 - **0.32 — Custom art: minimap button icon/border, and the addon's own icon/logo.** The current
   minimap button uses a generic placeholder icon (`INV_Misc_Gear_01`) and the border appears larger
   than the clickable button itself. `CONVENTIONS.md`'s Branding section already calls for "a small

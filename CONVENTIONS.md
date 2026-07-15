@@ -83,12 +83,22 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   stabilization/testing milestone's sub-decimal space** (bugfixes found during Testing Phase 1 use
   the thousandths rule as usual: 0.301, 0.302…; a genuine new sub-feature of this milestone would be
   0.31 — but 0.31 was also the old data-pipeline download step, now renumbered to 0.41, so check
-  `ROADMAP.md` before assuming a two-decimal number is free). **0.31-0.35 are now taken** (Testing
+  `ROADMAP.md` before assuming a two-decimal number is free). **0.31-0.36 are now taken** (Testing
   Phase 1 follow-up features found in the v0.301 test report — see `ROADMAP.md`'s "Testing Phase 1
   follow-ups" section; 0.33 shipped as bug #30's fix in v0.303, 0.34 was dropped as moot when the
-  v0.304 fork removed profiles entirely, and 0.35 — auto-updating default weights on respec/talent
-  change — was filed fresh in that same fork); the next free two-decimal number in this milestone is
-  **0.36**.
+  v0.304 fork removed profiles entirely, 0.35 — auto-updating default weights on respec/talent change
+  — was filed fresh in that same fork, and 0.31 was reclaimed on 2026-07-14 as the consolidated
+  release version for the whole `single-profile` fork's work — see below — bumping the old "minimap
+  drag-to-reposition" item to 0.36); the next free two-decimal number in this milestone is **0.37**.
+- **0.31 consolidation (2026-07-14):** the `single-profile` fork's iterative bugfix-style versions
+  (v0.304 through v0.308 — single-profile removal, direct-entry stat editing, then two passes at
+  fixing `Priorities.lua`'s default weights) were squashed into one consolidated two-decimal release,
+  **0.31**, once merged back into `main`. The individual v0.304-v0.308 numbers remain in
+  `PROGRESS.md`'s Progress log and `bugs/known-bugs.md` #31-#35 as the accurate historical record of
+  how 0.31 was built — they are not retroactively renamed — but the shipped, tested version going
+  forward is 0.31. **Patches to 0.31 follow the existing thousandths rule**: the next one is 0.311,
+  not 0.301 (0.301 already exists — it's the earlier, unrelated bug #27 crash fix from the 0.3
+  baseline milestone, well before this fork existed).
 - **Version A** — first feature-complete **alpha** (no decimal). A.1, A.2 = alpha fixes.
 - **Version B** — **beta**.
 - **1.0** — first shipped release. **1.01** = bug patches. **1.1** = one new feature.

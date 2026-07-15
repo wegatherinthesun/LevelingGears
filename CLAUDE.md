@@ -22,39 +22,33 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.308 (on the `single-profile` fork) — replaced `Priorities.lua`'s anchor-scale weights with
-values analytically derived from known TBC combat formulas.** v0.307's fix was called out as still a
-shortcut: a real priority ORDER doesn't specify a magnitude, and inventing one (10/8/6/3/0) wasn't
-"doing the math right." Confirmed real numeric per-point stat weights require either simulation
-(`wowsims/tbc` has a genuine one, but it's gear/build-dependent and running it means real
-infrastructure work) or analytical derivation from known mechanics — chose the latter, with the
-requester's confirmation. Every weight now comes from verified formulas (14 AP = 1 DPS, crit/haste
-multiplier math, Hit/Expertise's "a miss is zero damage" effect) plus real per-class mechanical
-corrections (Warrior rage-generation normalization, caster crit-multiplier talents, HoT/DoT
-crit-immunity), using the two real published numeric tables found (Warlock's Spell Power
-Equivalency, Resto Shaman's Heal/Haste/MP5/Crit/Int/Stam ratios) directly rather than approximating
-them. Also caught and corrected a conceptual error: guide priority orders blend true marginal value
-with itemization-scarcity advice ("you'll get plenty of this stat anyway") — only the former belongs
-in a per-item scoring weight, so the primary reference stat (AP/RAP/SP/HEAL) is never suppressed by
-that reasoning. Added a `ROADMAP.md` "Past 1.0" entry to revisit whether real simulator-farmed data
-is worth the infrastructure cost later. Full detail in `bugs/known-bugs.md` #35.
+**v0.31 — consolidated release: single weight set per character, direct-entry stat editing,
+analytically-derived defaults.** This squashes the `single-profile` fork (built and iterated
+internally as v0.304-v0.308, now merged back into `main` and deleted) into one shipped version:
 
-**v0.307 (same fork, earlier step)** — the intermediate, still-shortcut fix described above; see
-`bugs/known-bugs.md` #34 for that history.
+- **One weight set per character**, no profiles — create/switch/name-profile UI removed entirely
+  (`bugs/known-bugs.md` #31).
+- **Direct-entry stat editing** — each stat is a label plus an edit box showing and accepting the
+  exact value the scoring engine uses, replacing the old +/- buttons and (after one follow-up fix)
+  the leftover 0-10 clamp/"importance scale" framing (`bugs/known-bugs.md` #32/#33).
+- **`Priorities.lua`'s default weights are now analytically derived** from real, verified TBC combat
+  formulas (14 Attack Power = 1 DPS, crit/haste multiplier math, per-class mechanical corrections
+  like Warrior rage-generation normalization and caster crit-multiplier talents) instead of either
+  hand-authored guesses or an invented rank-to-number scale — see `DESIGN.md`'s Layer 3 section and
+  `bugs/known-bugs.md` #34/#35 for the two-step correction that got here.
 
-**v0.304-0.306 (same fork, earlier steps)** — removed the multi-profile system (one weight set per
-character now), replaced the stat-weight +/- buttons with direct-entry edit boxes, then removed that
-edit box's leftover 0-10 clamp/framing. See `bugs/known-bugs.md` #31/#32/#33.
+The individual v0.304-v0.308 numbers stay in `PROGRESS.md`'s Progress log and the bug ledger as the
+accurate build history — they are not retroactively renamed — but 0.31 is the version going forward.
+**Patches to 0.31 follow the usual thousandths rule: 0.311, 0.312…**, per `CONVENTIONS.md`'s
+versioning ladder.
 
-All of this happened on the `single-profile` git branch, forked from `main` right after v0.303 was
-committed there. v0.303 (still on `main` and carried into this branch) was bug #30's real fix:
-shift+left-click an equipped item in the character window to print its score to chat, replacing
-`/lgs score` for everyday use (`/lgs score` still works as a debug-bench fallback). See
-`bugs/known-bugs.md` #30 for why shift+left-click was used instead of the originally-requested
-shift+right-click.
+v0.303 (also on `main`) was bug #30's real fix: shift+left-click an equipped item in the character
+window to print its score to chat, replacing `/lgs score` for everyday use (`/lgs score` still works
+as a debug-bench fallback). See `bugs/known-bugs.md` #30 for why shift+left-click was used instead of
+the originally-requested shift+right-click.
 
-Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302-v0.308's changes, then continue
-through T16-T35, which were never reached. Testers email completed checklists to
+Next step: resume `TEST_PLAN.md` at T1 to re-confirm everything through 0.31, then continue through
+T16-T35, which were never reached. Testers email completed checklists to
 `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
 
 How to handle a completed test report is a standing rule — see `CONVENTIONS.md`'s Hard process
