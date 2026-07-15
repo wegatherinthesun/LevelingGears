@@ -34,72 +34,28 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.382.** No test report has come in since the first real v0.301 pass, so this section
-covers everything changed across v0.301 → v0.382 in one go — that's a lot, but almost none of it has
-had any live confirmation yet. That first pass found bug #27's fix largely working (T1/T3/T7 showed
-clean loads and successful gear scoring — a big improvement) but stopped at T15/T16 after hitting
-three more real issues, and after reporting the profile system and the stat-weight controls as
-sources of "lots of errors" / "too complicated." **Testing should resume from T1** to re-confirm
-everything still works after all of this, then continue on to T16-T35, which were never reached:
+**Version: v0.383.** See `CHANGELOG.md` for the concise summary. The v0.382 pass (`TEST_RESULTS_
+Helio_v0382.md`) was the first real test run this project has had since the original partial T1-T15
+pass at v0.301 — it got through T1-T22 and found 4 real bugs, all fixed and individually retested
+this version:
 
-1. **`Priorities.lua`'s default weights are now analytically derived from real TBC combat formulas
-   (v0.308, following v0.307's real-but-still-approximate research pass).** Every spec's seeded
-   weights come from verified formulas (14 Attack Power = 1 DPS, crit/haste multiplier math,
-   per-class mechanical corrections like Warrior rage-generation normalization) instead of a guess or
-   an invented rank-to-number scale — see `DESIGN.md`'s Layer 3 section. **T20 below is rewritten**
-   with specific per-role expectations to actually test this, not just "not a flat 5."
-2. **Stat weight boxes show the exact value with no scale (v0.305/v0.306).** No more +/- buttons, no
-   0-10 clamp, no "0 = ignore, 10 = highest importance" framing — the box shows and accepts the
-   literal number the scoring engine multiplies the stat by. **T22-T23 below test this.**
-3. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
-   no more profile picker, no "Create new profile." **T15-T18 below test the new single-weight-set
-   model** instead of profile creation/switching.
-4. **Bug #29 (still open): window position restores consistently but not to the exact dragged
-   spot.** Root cause still unconfirmed — v0.311 added scale diagnostics (`GetScale`/
-   `GetEffectiveScale`) on top of the existing point/x/y logging, in case a UI-scale mismatch between
-   sessions turns out to be the cause. **T11 this round should include the full `/lgs debug dump`**
-   covering both a drag and a reopen — this is the single most valuable piece of data this round,
-   since nothing more can be fixed here without it.
-5. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
-   the character window to print its score to chat, no slash command needed. Built as
-   **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
-   `bugs/resolved-bugs.md`). **T8 below tests this as the primary workflow**; `/lgs score` still works
-   as a debug-bench fallback.
-6. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
-   change (that's `ROADMAP.md`'s 0.35, not built yet), the addon tells you this once at boot — look
-   for it and confirm the wording makes sense.
-7. **New roadmap items, not built yet:** minimap drag-to-reposition (renumbered from 0.31 to 0.36,
-   since 0.31 is now this whole consolidated version — see `ROADMAP.md`), custom art (0.32),
-   auto-updating defaults on respec (0.35), and an in-UI explanation for why primary stats aren't
-   weightable (0.37). None of these are testable yet — don't look for them.
-8. **Bug #36 (solved): equipped-gear evaluation could fire dozens of times per second (v0.313).**
-   Found via real debug-log data (a burst of 61 identical "Gear evaluation" lines in the same second)
-   that opening bags, visiting a vendor, or trading could each trigger many undebounced
-   `UNIT_INVENTORY_CHANGED` events, each one running a full 17-slot re-evaluation. Fixed by routing
-   the event handler and the `CharacterFrame` `OnShow` hook through the same 0.2s debounce
-   (`ScheduleGearEvaluation`) already used for the weight-adjustment path. **T32 below now asks you to
-   open/close bags and visit a vendor a few times with `/lgs debug` on, then dump the log** and confirm
-   you don't see repeated back-to-back "Gear evaluation" lines within the same second.
-9. **New: manual "Spec:" dropdown, plus two rounds of a real auto-detection fix (bug #37, v0.38 →
-   v0.381).** A live report (an Enhancement Shaman scored as Elemental) led to a "Spec" settings
-   section with a "Spec:" dropdown ("Auto-detect" + your class's 3 real specs) that overrides the
-   auto-detected guess, plus a status line showing what's actually being used to score gear right
-   now. A second report immediately after (same character, all 44 points in Enhancement, still
-   detected as Restoration) proved the first fix's theory (a talent-tab tie resolving to tab order)
-   wasn't the whole story, so `DetectSpec`'s entire point-reading method was replaced — it no longer
-   trusts `GetTalentTabInfo`'s own point count at all, instead summing each individual talent's rank
-   directly. **New T20b below tests this directly; T20 itself now has a note about using the
-   dropdown if a spec still looks wrong.**
-10. **New: helper text explaining why primary stats aren't weightable (roadmap item 0.37, shipped
-    v0.382).** The stat-weights section has always shown only derived stats (Attack Power, Spell
-    Power, etc.) — Strength/Agility/Intellect/Stamina/Spirit were never listed, with nothing in the
-    UI explaining why. A new line of small helper text under the existing color-guide text now says
-    so. **T13 below (scrolling/layout) should pay extra attention to this section** — the new line
-    shifted the stat-group starting offset in code (a reasoned estimate, not a measured value).
+1. **Bug #29 (closed): window position now uses two absolute screen coordinates instead of a single
+   point/offset anchor** (the same technique other addons on this client use), replacing the old
+   approach that always logged as correct but never actually landed exactly right. **Retest T11** —
+   should now restore to the exact dragged spot across a real `/reload`/relaunch, not just "close."
+2. **Bug #38 (closed): direct stat-weight entry now commits before "Save Settings" reads it back.**
+   Typing a value and clicking Save directly (no Enter first) used to silently revert the box.
+   **Retest T22, T22b, T23** — these were never reached last round since T22 blocked further testing.
+3. **Bug #39 (closed): scoring an item with no clean numeric stats (e.g. a totem) now explains why**
+   instead of a misleading "try again" message or, for shift-click, no response at all. **Retest
+   T8b** specifically on a totem or similar no-stats item.
+4. **Bug #40 (closed): the "Spec:" control is now a real Blizzard dropdown**, not a custom button
+   with a permanent empty gap below it. **Retest T20b.**
 
-Bug #27 itself (from v0.301) is not fully closed — T20 (spec-aware default seeding across multiple
-classes) still hasn't actually been run. That's still this round's highest-value test, alongside T11
-and the new T20b above.
+**Testing should resume from T22b** (T1-T22 already passed last round, no need to redo those) through
+T35, plus the 4 specific retests called out above. Bug #27's own T20 (spec-aware default seeding
+across multiple classes/specs) was confirmed working last round — no need to repeat unless a new
+class/spec combination is available to check.
 
 ---
 
@@ -125,7 +81,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.382**.
+- Expected: Reads **v0.383**.
 - Result:
 - Notes:
 
@@ -163,7 +119,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T7 — Debug dump**
 - Instruction: Type `/lgs debug dump`.
 - Repeat: 1x
-- Expected: Prints the ring buffer (up to 500 entries, bumped from 50 in v0.312) to chat.
+- Expected: Prints the ring buffer (up to 2000 entries, bumped from 500) to chat.
 - Result:
 - Notes:
 
@@ -180,14 +136,16 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T8b — `/lgs score` still works as a fallback**
+**T8b — `/lgs score` still works as a fallback (bug #39 — closed, retest on a totem)**
 - Instruction: Type `/lgs score ` (with the trailing space, don't press Enter yet), then shift-click
   an equipped or bagged item — this inserts the item link right into that same line — then press
-  Enter.
-- Repeat: 1x
-- Expected: Prints a derived-stat breakdown and a final score, scored against the raw `Priorities.lua`
-  table rather than your own character weights (so the numbers may differ slightly from T8 above —
-  that difference is expected, not a bug; see `DESIGN.md`).
+  Enter. **Try this on a totem (or similar item with no clean numeric stats) specifically**, since
+  that's what exposed bug #39 last round.
+- Repeat: 1x on a normal item, 1x on a totem/no-stats item
+- Expected: Normal item prints a derived-stat breakdown and score, scored against the raw
+  `Priorities.lua` table rather than your own character weights (numbers may differ slightly from T8
+  above — expected, not a bug; see `DESIGN.md`). A totem/no-stats item now prints "This item has no
+  stats this addon can score..." instead of the old misleading "may not be cached yet, try again."
 - Result:
 - Notes:
 
@@ -208,22 +166,17 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ### Window behavior
 
-**T11 — Window position persists (bug #29 — reported imprecise last round)**
+**T11 — Window position persists (bug #29 — closed in v0.383, retest to confirm)**
 - Instruction: Drag the window to a spot you can describe precisely (e.g. "top-left corner flush
   against the minimap"), **then actually reopen the window at least once** (close it and reopen via
-  `/lgs`, or `/reload`, or a full relaunch) before pulling the debug dump — a dump taken right after
-  the drag but before a reopen doesn't capture the comparison this bug needs.
+  `/lgs`, or `/reload`, or a full relaunch).
 - Repeat: 2x (one `/reload`, one full restart)
-- Expected: Window reopens in the *exact* dragged position both times, not just a similar area.
-  Please include `/lgs debug dump` covering both the drag (`SaveWindowPosition` line) AND the
-  reopen (`ApplySavedPosition` line) — real dumps already checked (three separate reads, most recently
-  at 123 total log entries) show 45 clean save/apply pairs across three different anchor points
-  (`CENTER`, `TOPLEFT`, `LEFT`) with **zero drift in any of them** and scale values identical
-  (`1.0000`) every time — UI-scale mismatch is ruled out as the cause, and in-session close/reopen
-  round-trips all look clean. The one thing none of this data has confirmed yet is an actual
-  `/reload` or full client relaunch in between the drag and the reopen (every clean cycle captured so
-  far was an in-session close/reopen) — that's the one piece still missing. If a real reload/relaunch
-  also round-trips clean, this bug can likely be closed outright.
+- Expected: Window reopens in the *exact* dragged position both times. v0.383 replaced the save/
+  restore method with two independent absolute screen coordinates (the same technique other addons on
+  this client use) instead of a single point/offset anchor — note that a saved position from before
+  v0.383 won't carry over (the window will open at its default centered position once, since the old
+  saved format is no longer read); drag it once to establish a position under the new system before
+  judging this test.
 - Result:
 - Notes:
 
@@ -239,9 +192,9 @@ testing into a grind. If you have time to do more on any case, more is always we
   visually overlapping.
 - Repeat: 1x
 - Expected: Smooth scroll, nothing clipped, no section overlaps another (including the "Restore
-  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26; and
-  the new 0.382 primary-stats helper-text line above "Restore Defaults," whose added height is a
-  reasoned estimate, not a measured in-game value).
+  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26; the
+  0.382 primary-stats helper-text line above it; and the "Spec" section's real dropdown, whose sizing
+  changed again in the v0.383 rewrite — all reasoned estimates, not measured in-game values).
 - Result:
 - Notes:
 
@@ -317,17 +270,18 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T20b — Manual spec-override dropdown (bug #37, new in v0.38, auto-detect rewritten in v0.381)**
-- Instruction: Open the new "Spec" section (between "General settings" and "Stat weights"). Note
-  what the "Currently scoring as:" status line says, then open the "Spec:" dropdown and select a
-  different one of your class's 3 specs.
+**T20b — Manual spec-override dropdown (bug #37, v0.38 → v0.381; now a real dropdown, bug #40 in v0.383)**
+- Instruction: Open the "Spec" section (between "General settings" and "Stat weights"). Note what the
+  "Currently scoring as:" status line says, then click the "Spec:" dropdown and select a different one
+  of your class's 3 specs.
 - Repeat: 2x (pick two different specs, and once try "Auto-detect" to switch back)
-- Expected: The dropdown lists exactly your class's 3 real specs plus "Auto-detect." Selecting a
-  spec immediately updates the status line (ending in `[manually set]`), re-seeds every stat weight
-  to that spec's real defaults, and re-colors your equipped gear's outlines to match. Selecting
-  "Auto-detect" goes back to talent-point detection (status line ending in `[assumed - ...]` or no
-  bracketed tag at all if a real spec was read). The new "Spec" section should not visually overlap
-  "Stat weights" below it.
+- Expected: This is now a real Blizzard dropdown widget (previously a custom button) — confirm it
+  looks and opens like a standard WoW dropdown, with no permanent empty gap below it whether open or
+  closed. The dropdown lists exactly your class's 3 real specs plus "Auto-detect." Selecting a spec
+  immediately updates the status line (ending in `[manually set]`), re-seeds every stat weight to that
+  spec's real defaults, and re-colors your equipped gear's outlines to match. Selecting "Auto-detect"
+  goes back to talent-point detection (status line ending in `[assumed - ...]` or no bracketed tag at
+  all if a real spec was read).
 - Result:
 - Notes:
 
@@ -339,12 +293,16 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T22 — Direct weight entry (v0.305 — replaces the old +/- buttons, bug #32)**
+**T22 — Direct weight entry (v0.305 — replaces the old +/- buttons, bug #32; commit-on-save fixed as bug #38 in v0.383)**
 - Instruction: Click into a stat's edit box, clear it, type a new value (e.g. "8.5"), then press
-  Enter.
-- Repeat: 3x (3 different stats)
-- Expected: The box keeps showing exactly what you typed (formatted cleanly, e.g. "8.5" not
-  "8.500000001"), and the gear-outline colors update shortly after (per the existing 0.2s debounce).
+  Enter. Then, separately, type a different value into another stat's box and click **"Save
+  Settings" directly, without pressing Enter or clicking away first** — this exact sequence is what
+  exposed bug #38 last round.
+- Repeat: 3x (3 different stats via Enter), 2x (via clicking Save Settings directly)
+- Expected: Both commit methods work — the box keeps showing exactly what you typed (formatted
+  cleanly, e.g. "8.5" not "8.500000001"), and the gear-outline colors update shortly after. Clicking
+  "Save Settings" directly after typing (no Enter first) should no longer revert the box to its old
+  value.
 - Result:
 - Notes:
 

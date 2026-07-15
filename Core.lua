@@ -32,7 +32,17 @@ local function HandleScoreCommand(argText)
 	if not itemStats or not next(itemStats) then
 		LG.Debug.WriteDebugLog("HandleScoreCommand: GetItemStats returned " ..
 			(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
-		PrintChat("Could not read item stats for that link (item may not be cached yet -- try again in a moment).")
+		if itemStats then
+			-- T8b (v0.382 test pass): a totem reportedly "didn't work" -- GetItemStats returning an
+			-- empty (not nil) table means the client DID read the item, it just has no clean numeric
+			-- stats to score (a totem's only real effect is usually a passive "Equip:" bonus, which
+			-- this addon's v1 policy deliberately doesn't value -- see ROADMAP.md's proc/effect note).
+			-- The old message implied a caching problem for every failure, which is actively
+			-- misleading for this real, legitimate case.
+			PrintChat("This item has no stats this addon can score (only clean numeric stats are counted -- passive \"Equip:\" effects and procs aren't itemized yet).")
+		else
+			PrintChat("Could not read item stats for that link (item may not be cached yet -- try again in a moment).")
+		end
 		return
 	end
 

@@ -9,7 +9,39 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.382 — shipped roadmap item 0.37 (explain why primary stats aren't weightable)
+- **Current step: 0.383 — closed all 4 bugs found in the v0.382 test pass (T1-T22), each fixed and
+  individually retested before this batched version bump.** Per direct instruction, these were built
+  and tested one at a time with no version bump between them (see `queue.md` for the working list
+  this cycle drew from); this entry consolidates all of it into one real version:
+  - **Bug #38 (Solved):** direct-entry stat weights appeared to reject typed values -- actually,
+    clicking "Save Settings" directly (no Enter first) let `RefreshWeightLabels` overwrite the
+    still-uncommitted edit. Fixed by clearing focus on every weight input (forcing pending edits to
+    commit) before that button's refresh runs.
+  - **Bug #29 (Solved):** window position finally restores to the exact dragged spot. Root cause
+    found by comparing against how other addons handle this (per direct instruction) rather than
+    guessing a third time: `AceGUI-3.0`'s Window widget (bundled with Bartender4) saves two
+    independent absolute screen coordinates (`GetLeft()`/`GetTop()`) instead of a single point/
+    relativePoint/offset anchor from `GetPoint(1)`. Rewrote `SaveWindowPosition`/`ApplySavedPosition`
+    to match; confirmed working by direct live retest.
+  - **Bug #39 (Solved):** scoring an item with no clean numeric stats (a totem) looked broken --
+    `/lgs score` gave a misleading "try again" message and shift-click stayed completely silent.
+    Both paths already computed the nil-vs-empty-table distinction needed for their own debug log;
+    now they tell the player the real reason instead of just logging it.
+  - **Bug #40 (Solved), in two steps:** the "Spec:" control was a custom button with a permanently
+    reserved gap for its own hidden menu, reported as "should be a dropdown." First pass fixed the
+    gap/overlay/auto-close behavior on the custom widget; the actual follow-up ask was for a real
+    dropdown, so it was replaced entirely with Blizzard's native `UIDropDownMenuTemplate` + the
+    `UIDropDownMenu_*`/`ToggleDropDownMenu` API -- confirmed safe to call directly on this client (no
+    library shim needed) by finding a real installed addon (`Omen.lua`) doing exactly that.
+  - Also bumped `Debug.lua`'s `DEBUG_LOG_MAX_ENTRIES` 500 -> 2000 (room for a full T1-T35 pass
+    without wrapping) and got real live confirmation that **bug #37 is fully solved** (see the
+    previous step's notes below) via a fresh debug-log read during this same cycle.
+  - Created `CHANGELOG.md`: a concise, version-by-version summary starting at this version --
+    everything before it stays in this Progress log and git history rather than being backfilled.
+  - `bugs/known-bugs.md` now has zero open bugs; all four new bugs (#38-#40) plus #29 (moved) are in
+    `bugs/resolved-bugs.md`.
+  - `luac -p`/`luacheck` clean on all touched files. Version bumped to 0.383 (thousandths patch).
+- **Previous step: 0.382 — shipped roadmap item 0.37 (explain why primary stats aren't weightable)
   and closed out Testing Phase 1 follow-ups, no code left to build before a real test pass.** Part of
   a bug-fix→test→ship cycle: with bug #29 the only remaining open bug (no further code fix possible
   without live evidence), bundled in this small, already-scoped, ungated roadmap item rather than
@@ -862,3 +894,39 @@ the current single most important next step — this file has everything behind 
   pending only a real `TEST_PLAN.md` T1-T35 pass. Deleted a stale, blank, never-filled untracked
   `TEST_RESULTS_Helio_0311` file. `luac -p`/`luacheck` clean on `UI.lua`. Version bumped to 0.382.
   This closes out every currently-known code fix -- see `CLAUDE.md`'s Next step for the test-pass ask.
+- (no version bump, in-session testing tweak) Bumped `Debug.lua`'s `DEBUG_LOG_MAX_ENTRIES` from 500
+  to 2000 for the T1-T35 pass, and read the resulting fresh debug log (184 entries): real, conclusive
+  evidence closed bug #37 (old code was reading texture/icon file IDs as `pointsSpent`; the v0.381
+  rewrite correctly reads real per-tab points post-fix) -- see `bugs/resolved-bugs.md` #37's final
+  update. Same read confirmed zero Lua errors and no regression in bug #36's debounce. Bug #29
+  unchanged, no new drag data yet.
+- 0.383 completed: closed all 4 bugs found in the v0.382 test pass, built and individually retested
+  one at a time (per direct instruction, no version bump between them -- see `queue.md`), then
+  batched into this one real version. Bug #38: direct-entry stat weights looked like they rejected
+  typed values -- actually, clicking "Save Settings" directly without pressing Enter first let
+  `RefreshWeightLabels` overwrite the still-uncommitted edit; fixed by clearing focus on every weight
+  input first, forcing any pending edit to commit via `OnEditFocusLost` before the refresh runs. Bug
+  #29: window position finally restores to the exact dragged spot -- root cause found by comparing
+  against how other addons handle this (per direct instruction) instead of guessing again: `AceGUI-
+  3.0`'s Window widget (bundled with Bartender4, used by many addons here) saves two independent
+  absolute screen coordinates (`GetLeft()`/`GetTop()`) and restores them via two separate anchors tied
+  to fixed screen edges, instead of trusting a single point/relativePoint/offset triple from
+  `GetPoint(1)` the way this addon always had; rewrote `SaveWindowPosition`/`ApplySavedPosition` to
+  match, confirmed working by direct live retest ("Window positioning works"). Bug #39: scoring an
+  item with no clean numeric stats (a totem) looked broken -- `/lgs score` gave a misleading "item may
+  not be cached yet" message and shift-click stayed completely silent; both paths already computed the
+  nil-vs-empty-table distinction needed for their own debug log, so the fix just surfaced that same
+  distinction to the player instead of only logging it. Bug #40: the "Spec:" control was a custom
+  button with a permanently reserved gap for its own hidden menu ("It is still a button. It should be
+  a drop down."); first pass fixed the gap/overlay/auto-close behavior on the custom widget (confirmed
+  working), but the real ask was a native dropdown, so it was replaced entirely with Blizzard's actual
+  `UIDropDownMenuTemplate` + `UIDropDownMenu_*`/`ToggleDropDownMenu` API -- confirmed safe to call
+  directly on this client (no library shim needed, unlike some other addons here) by finding a real,
+  installed, unmodified addon (`Omen.lua`) doing exactly that with no version gating; the template's
+  own built-in button already handles open/close on its own, so no custom click/hover logic was
+  needed. Also bumped `Debug.lua`'s ring buffer 500 -> 2000 for the test pass. Created `CHANGELOG.md`:
+  a concise version-by-version summary starting at v0.383, with everything earlier staying in this
+  Progress log/git history rather than being backfilled. Moved bug #29 to `bugs/resolved-bugs.md` and
+  added #38-#40 there; `bugs/known-bugs.md` now has zero open bugs. `luac -p`/`luacheck` clean on all
+  touched files (`UI.lua`, `Core.lua`, `GearEvaluation.lua`, `Debug.lua`, `.luacheckrc`). Version
+  bumped to 0.383 (thousandths patch).

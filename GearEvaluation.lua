@@ -9,6 +9,7 @@ local GearEvaluation = LG.GearEvaluation
 
 local SafeCall = LG.Debug.SafeCall
 local WriteDebugLog = LG.Debug.WriteDebugLog
+local PrintChat = LG.Debug.PrintChat
 
 -- A small set of Blizzard slot names lets us draw a thin outline around the equipped item buttons.
 -- Shirt/Ammo/Tabard are deliberately excluded (not stat-relevant for gearing). RangedSlot also
@@ -69,6 +70,14 @@ local function EnsureScoreClickHook(slotButton, slotId)
 		if not itemStats or not next(itemStats) then
 			WriteDebugLog("EnsureScoreClickHook: GetItemStats returned " ..
 				(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
+			-- T8b (v0.382 test pass): this used to fail silently (only a debug-log line, no chat
+			-- message), which looks exactly like "the feature is broken" to a player -- e.g.
+			-- shift-clicking a totem, whose only real effect is a passive "Equip:" bonus this addon's
+			-- v1 policy deliberately doesn't score (see ROADMAP.md's proc/effect note), just did
+			-- nothing visible at all. Now says so explicitly, same wording as /lgs score's message.
+			if itemStats then
+				PrintChat("This item has no stats this addon can score (only clean numeric stats are counted -- passive \"Equip:\" effects and procs aren't itemized yet).")
+			end
 			return
 		end
 

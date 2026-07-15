@@ -10,8 +10,6 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 ## Project owner
 
 - Has some coding experience (Python, basic Lua, HTML/JS), not professional.
-- Builds and tests in small increments. STOP after each version step and wait for beta-testing
-  results before continuing.
 
 ## Hard process rules for Claude Code
 

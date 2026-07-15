@@ -15,30 +15,33 @@ local minimapButton = nil
 local generalSettingsCheckbox = nil
 local weightInputs = {}
 local specDropdownButton = nil
-local specDropdownMenuFrame = nil
 local specStatusText = nil
-local specMenuRows = {}
+
+-- Bug #29: testers reported the restored position is consistently in "a similar general area" but
+-- not the exact spot the window was dragged to, even though extensive debug-log evidence showed
+-- this addon's own save/apply values always matched exactly (ruling out a UI-scale mismatch, the
+-- earlier theory). Per direct instruction, compared against how other addons on this client handle
+-- window position before guessing again: AceGUI-3.0's own Window widget (used by Bartender4 and
+-- many other addons here -- see AceGUIContainer-Window.lua) does NOT save a single point/
+-- relativePoint/offset triple from GetPoint(1) the way this file used to. It saves two independent
+-- ABSOLUTE screen coordinates (GetLeft()/GetTop()) and restores them as two separate anchors tied to
+-- opposite fixed screen edges (TOP from UIParent's BOTTOM, LEFT from UIParent's LEFT). That sidesteps
+-- any ambiguity about which single corner/point WoW's drag system happened to pick internally after
+-- StopMovingOrSizing() -- this addon now does the same thing.
 
 -- Apply any previously saved frame position so the window appears where it was last left.
--- Bug #29 (open): testers report the restored position is consistently in "a similar general
--- area" but not the exact spot the window was dragged to -- logged here and in SaveWindowPosition
--- so a real debug-log comparison of saved vs. applied values is possible next test pass, rather
--- than guessing at a fix with no evidence. v0.311 added scale logging alongside the existing
--- point/relativePoint/x/y: a "consistently offset, not random" symptom is exactly the signature a
--- deterministic UI-scale mismatch between the drag session and a later login would produce (a real,
--- known category of WoW addon position bugs) -- if that turns out to be the cause, this makes it
--- provable from the very next debug dump instead of needing a third round of "please get more data."
 local function ApplySavedPosition(frame)
 	local settings = LG.Settings.GetGeneralSettings()
 	local pos = settings.position
-	if pos and pos.point and pos.relativePoint then
+	if pos and pos.left and pos.top then
 		frame:ClearAllPoints()
-		frame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x or 0, pos.y or 0)
+		frame:SetPoint("TOP", UIParent, "BOTTOM", 0, pos.top)
+		frame:SetPoint("LEFT", UIParent, "LEFT", pos.left, 0)
 		if LG.Debug then
 			LG.Debug.WriteDebugLog(string.format(
-				"ApplySavedPosition: point=%s relativePoint=%s x=%.2f y=%.2f frameScale=%.4f " ..
-				"frameEffScale=%.4f uiParentEffScale=%.4f",
-				pos.point, pos.relativePoint, pos.x or 0, pos.y or 0,
+				"ApplySavedPosition: left=%d top=%d frameScale=%.4f frameEffScale=%.4f " ..
+				"uiParentEffScale=%.4f",
+				pos.left, pos.top,
 				frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
 		end
 	end
@@ -46,30 +49,22 @@ end
 
 -- Persist the frame position so the window opens in the same place after reloads.
 local function SaveWindowPosition(frame)
-	local point, relativeTo, relativePoint, xOfs, yOfs = frame:GetPoint(1)
-	if relativeTo ~= UIParent then
-		relativePoint = point or "CENTER"
-		xOfs, yOfs = 0, 0
+	local left = frame:GetLeft()
+	local top = frame:GetTop()
+	if not left or not top then
+		return
 	end
-
-	-- Round to whole pixels: SetPoint/GetPoint round-trips can accumulate tiny floating-point
-	-- drift across repeated save/restore cycles, and WoW positions are effectively pixel-integer
-	-- anyway. Cheap, safe regardless of whether this turns out to be bug #29's actual cause.
-	xOfs = math.floor((xOfs or 0) + 0.5)
-	yOfs = math.floor((yOfs or 0) + 0.5)
 
 	local settings = LG.Settings.GetGeneralSettings()
 	settings.position = {
-		point = point or "CENTER",
-		relativePoint = relativePoint or "CENTER",
-		x = xOfs,
-		y = yOfs,
+		left = math.floor(left + 0.5),
+		top = math.floor(top + 0.5),
 	}
 	if LG.Debug then
 		LG.Debug.WriteDebugLog(string.format(
-			"SaveWindowPosition: point=%s relativePoint=%s x=%d y=%d frameScale=%.4f " ..
-			"frameEffScale=%.4f uiParentEffScale=%.4f",
-			settings.position.point, settings.position.relativePoint, xOfs, yOfs,
+			"SaveWindowPosition: left=%d top=%d frameScale=%.4f frameEffScale=%.4f " ..
+			"uiParentEffScale=%.4f",
+			settings.position.left, settings.position.top,
 			frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
 	end
 end
@@ -107,52 +102,46 @@ function UI.RefreshGeneralSettingsUI()
 	end
 end
 
--- Rebuild the spec dropdown's menu rows ("Auto-detect" + the player's own class's 3 real specs) and
--- refresh the button text/status line from saved state. Cheap to rebuild every refresh (3-4 rows).
-local function BuildSpecMenuRows()
-	if not specDropdownMenuFrame then
-		return
-	end
+-- Builds the dropdown's menu entries fresh every time it's opened ("Auto-detect" + the player's own
+-- class's 3 real specs), via Blizzard's own native dropdown API -- confirmed safe to call directly
+-- on this client (no library shim needed) by finding a real installed addon (Omen.lua) that already
+-- does the same thing: a plain `CreateFrame(..., "UIDropDownMenuTemplate")` with direct
+-- `UIDropDownMenu_*`/`ToggleDropDownMenu` global calls, no version gating.
+local function InitializeSpecDropdown(_, level)
 	local _, class = UnitClass("player")
 	local options = LG.Scoring and LG.Scoring.GetSpecOptions(class) or {}
+	local characterState = LG.Settings.GetCharacterState()
+	local override = characterState.specOverride
 
-	for _, row in ipairs(specMenuRows) do
-		row:Hide()
+	local function OnSelect(self)
+		LG.Settings.SetSpecOverride(self.value)
+		CloseDropDownMenus()
 	end
 
-	local index = 1
-	local function AddRow(label, specKey)
-		local row = specMenuRows[index]
-		if not row then
-			row = CreateFrame("Button", nil, specDropdownMenuFrame, "UIPanelButtonTemplate")
-			row:SetSize(160, 22)
-			specMenuRows[index] = row
-		end
-		row:Show()
-		row:SetText(label)
-		row:SetPoint("TOPLEFT", specDropdownMenuFrame, "TOPLEFT", 4, -(index - 1) * 24)
-		row:SetScript("OnClick", function()
-			LG.Settings.SetSpecOverride(specKey)
-			specDropdownMenuFrame:Hide()
-		end)
-		index = index + 1
-	end
+	local info = UIDropDownMenu_CreateInfo()
+	info.text = "Auto-detect"
+	info.value = nil
+	info.func = OnSelect
+	info.checked = (override == nil)
+	UIDropDownMenu_AddButton(info, level)
 
-	AddRow("Auto-detect", nil)
 	for _, option in ipairs(options) do
-		AddRow(option.label, option.key)
+		info = UIDropDownMenu_CreateInfo()
+		info.text = option.label
+		info.value = option.key
+		info.func = OnSelect
+		info.checked = (override == option.key)
+		UIDropDownMenu_AddButton(info, level)
 	end
-	specDropdownMenuFrame:SetHeight(math.max(24, (index - 1) * 24))
 end
 
--- Refresh the "Spec:" dropdown button text and the status line describing what's actually being
--- used to score gear right now -- called on window open and whenever the override changes, so a
--- player never has to guess whether their choice (or the auto-detected guess) took effect.
+-- Refresh the "Spec:" dropdown's displayed text and the status line describing what's actually
+-- being used to score gear right now -- called on window open and whenever the override changes, so
+-- a player never has to guess whether their choice (or the auto-detected guess) took effect.
 function UI.RefreshSpecUI()
 	if not specDropdownButton then
 		return
 	end
-	BuildSpecMenuRows()
 
 	local _, class = UnitClass("player")
 	local characterState = LG.Settings.GetCharacterState()
@@ -165,7 +154,7 @@ function UI.RefreshSpecUI()
 			break
 		end
 	end
-	specDropdownButton:SetText(buttonLabel)
+	UIDropDownMenu_SetText(specDropdownButton, buttonLabel)
 
 	if specStatusText then
 		local description = "?"
@@ -307,6 +296,16 @@ saveSettingsButton:SetSize(150, 22)
 saveSettingsButton:SetPoint("BOTTOM", LevelingGears, "BOTTOM", 0, 10)
 saveSettingsButton:SetText("Save Settings")
 saveSettingsButton:SetScript("OnClick", function()
+	-- T22 (v0.382 test pass): "resets as soon as I hit save" -- typing a value then clicking this
+	-- button directly (without pressing Enter or clicking elsewhere first) never gave the edit box a
+	-- chance to fire OnEditFocusLost/commit its typed text, so RefreshWeightLabels below immediately
+	-- overwrote the box from the still-old saved value, making a real edit look like it was rejected.
+	-- Clearing focus on every weight input first forces any pending edit to commit before the
+	-- refresh reads back from LevelingGearsDB. ClearFocus on a box that isn't focused is a no-op.
+	for _, input in pairs(weightInputs) do
+		input:ClearFocus()
+	end
+
 	-- Re-sync every displayed number from LevelingGearsDB so what's on screen is visibly, provably
 	-- the same as what's saved, rather than just taking a chat message on faith.
 	UI.RefreshGeneralSettingsUI()
@@ -377,26 +376,25 @@ local specDropdownLabel = specSection:CreateFontString(nil, "OVERLAY", "GameFont
 specDropdownLabel:SetPoint("TOPLEFT", specHint, "BOTTOMLEFT", 0, -12)
 specDropdownLabel:SetText("Spec:")
 
-specDropdownButton = CreateFrame("Button", nil, specSection, "UIPanelButtonTemplate")
-specDropdownButton:SetSize(160, 24)
-specDropdownButton:SetPoint("LEFT", specDropdownLabel, "RIGHT", 8, 0)
-specDropdownButton:SetText("Auto-detect")
-specDropdownButton:SetScript("OnClick", function()
-	if specDropdownMenuFrame then
-		specDropdownMenuFrame:SetShown(not specDropdownMenuFrame:IsShown())
-	end
-end)
+-- A real Blizzard dropdown, not a custom button + hand-rolled menu frame (that approach read as
+-- "just a button" and needed a permanently-reserved gap for its own menu -- reported in the v0.382
+-- test pass). Confirmed `UIDropDownMenuTemplate` + the native `UIDropDownMenu_*`/`ToggleDropDownMenu`
+-- globals are safe to call directly on this client (no library shim needed) by finding a real
+-- installed addon doing exactly that with no version gating: Omen.lua's own right-click menu. The
+-- template's built-in Button already handles click-to-open/close and outside-click-to-close on its
+-- own -- no custom OnClick/OnLeave/auto-close logic needed here at all.
+specDropdownButton = CreateFrame("Frame", "LevelingGearsSpecDropdown", specSection, "UIDropDownMenuTemplate")
+-- The template reserves ~16px of invisible left-padding for its texture; -16 aligns the visible box
+-- with where a plain widget would otherwise start. Standard, long-established convention for this
+-- template, not a guess specific to this addon.
+specDropdownButton:SetPoint("TOPLEFT", specDropdownLabel, "TOPRIGHT", -8, 8)
+UIDropDownMenu_SetWidth(specDropdownButton, 130)
+UIDropDownMenu_SetText(specDropdownButton, "Auto-detect")
+UIDropDownMenu_Initialize(specDropdownButton, InitializeSpecDropdown)
 
-specDropdownMenuFrame = CreateFrame("Frame", nil, specSection)
-specDropdownMenuFrame:SetSize(180, 100)
-specDropdownMenuFrame:SetPoint("TOPLEFT", specDropdownButton, "BOTTOMLEFT", 0, -2)
-specDropdownMenuFrame:Hide()
-
--- Anchored below the (normally hidden) menu frame's full reserved height, not the button directly,
--- so opening the dropdown never overlaps this text -- same layout trick the old (removed) profile
--- picker used for its own divider below profileDropdownMenuFrame.
+-- Directly below the dropdown, matching its actual (not the label's) vertical position.
 specStatusText = specSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-specStatusText:SetPoint("TOPLEFT", specDropdownMenuFrame, "BOTTOMLEFT", -168, -8)
+specStatusText:SetPoint("TOPLEFT", specDropdownLabel, "BOTTOMLEFT", 0, -20)
 specStatusText:SetWidth(300)
 specStatusText:SetJustifyH("LEFT")
 specStatusText:SetText("Currently scoring as: ?")
@@ -406,11 +404,10 @@ specDivider:SetColorTexture(0.6, 0.6, 0.6, 0.4)
 specDivider:SetSize(300, 1)
 specDivider:SetPoint("TOPLEFT", specStatusText, "BOTTOMLEFT", 0, -12)
 
--- Not yet visually confirmed in game that this doesn't overlap the weight section below it (same
--- caveat as every other UI-only change in this ledger, e.g. bug #25) -- a reasoned estimate based on
--- this section's own element stack (header + 2-line hint + label/button row + 100px reserved menu
--- space + status text + divider), not a measured in-game value.
-specSection:SetHeight(210)
+-- Not yet visually confirmed in game (same caveat as every other UI-only change in this ledger, e.g.
+-- bug #25) -- a reasoned estimate; the dropdown template's own extra vertical padding (~20px above
+-- its clickable box) is accounted for in specStatusText's anchor above.
+specSection:SetHeight(130)
 
 -- ============================================================================
 -- Stat weights section
@@ -510,8 +507,21 @@ local function CreateStatRow(parent, stat)
 	-- Parses and commits whatever is currently typed. Invalid (non-numeric) text is not silently
 	-- kept on screen -- reverting to the real saved value makes clear the edit didn't take effect,
 	-- rather than leaving stale-looking text that implies it did.
+	--
+	-- T22 (v0.382 test pass): reported that typed values were not being accepted at all, for any
+	-- stat. Trimmed leading/trailing whitespace before parsing (a real, if unconfirmed, candidate --
+	-- EditBox:GetText() can include incidental whitespace depending on how focus/selection happened)
+	-- and added a debug-log line showing the raw text and parse result, so if this doesn't fully fix
+	-- it, the next attempt has real evidence instead of another guess.
 	local function CommitValue()
-		local parsed = tonumber(input:GetText())
+		local rawText = input:GetText()
+		local trimmed = rawText and rawText:match("^%s*(.-)%s*$") or rawText
+		local parsed = tonumber(trimmed)
+		if LG.Debug then
+			LG.Debug.WriteDebugLog(string.format(
+				"CommitValue: stat=%s rawText=%q parsed=%s",
+				stat.key, tostring(rawText), tostring(parsed)), 1)
+		end
 		if not parsed then
 			UI.RefreshWeightLabels()
 			return

@@ -23,4 +23,7 @@ read_globals = {
 	"CR_HASTE_MELEE", "CR_HASTE_RANGED", "CR_HASTE_SPELL",
 	"CR_EXPERTISE", "CR_RESILIENCE", "CR_ARMOR_PENETRATION",
 	"IsShiftKeyDown",
+	-- v0.383 native "Spec:" dropdown (UI.lua):
+	"UIDropDownMenu_SetWidth", "UIDropDownMenu_SetText", "UIDropDownMenu_Initialize",
+	"UIDropDownMenu_CreateInfo", "UIDropDownMenu_AddButton", "CloseDropDownMenus",
 }

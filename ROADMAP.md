@@ -112,10 +112,10 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
 These came out of the first real test pass (`TEST_PLAN.md`, v0.301) as things to build, not bugs in
 what already exists. **Every item below (0.31-0.38) is now Built** — this list is done. What's left
 before Testing Phase 1 itself is over is **not more building, it's a real `TEST_PLAN.md` T1-T35 pass**
-(see `PROGRESS.md`'s Current status / `CLAUDE.md`'s Next step). Once that pass comes back clean (no
-unresolved Blocker/Critical/Major findings — see `TESTERS.md`'s severity scale) and bug #29 (the one
-remaining open bug — see `bugs/known-bugs.md`) is closed or reclassified with real evidence, the next
-real step is `0.4` below, not before.
+(see `PROGRESS.md`'s Current status / `CLAUDE.md`'s Next step). Bug #29 (window position) is now
+closed — see `bugs/resolved-bugs.md` #29 — and `bugs/known-bugs.md` currently has zero open bugs.
+Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major findings — see
+`TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
 
 - **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
   analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously

@@ -16,16 +16,7 @@ at the moment it's first filed, whichever file it currently lives in.
 
 ## Bug entries
 
-### 29. Window position doesn't restore to the exact dragged spot
-- Status: Open, likely already resolved — extensive debug-log evidence (45+ logged save/apply pairs
-  across three anchor points) shows zero drift, but this has never been confirmed across an actual
-  `/reload` or client relaunch, only in-session close/reopen. Full investigation history is in
-  `PROGRESS.md`'s Progress log (the 0.301/0.311/0.312/0.313 entries).
-- Next step: drag the window, do a real `/reload` or relaunch, and check if it still lands off. If
-  it round-trips clean, close this outright.
-
-## Everything else
-
-Solved or mitigated-with-no-further-code-action — see [`resolved-bugs.md`](resolved-bugs.md) for
-the full history, including several entries whose investigation technique (especially reading the
-on-disk debug log directly) is worth reusing on a new hard-to-pin-down bug.
+None currently open — bug #29 (window position) was confirmed solved during the v0.383 testing
+round. See [`resolved-bugs.md`](resolved-bugs.md) for the full history, including several entries
+whose investigation technique (especially reading the on-disk debug log directly, or comparing
+against how other installed addons handle the same problem) is worth reusing on a new bug.
