@@ -10,7 +10,7 @@ The addon is split by responsibility, loaded in this order (see `LevelingGears.t
    (see below).
 3. **`Settings.lua`** — the SavedVariables data layer: general (account-wide) settings and each
    character's own single weight set (`GetCharacterState`). No profiles (removed in v0.304 — see
-   `bugs/known-bugs.md` #31).
+   `bugs/resolved-bugs.md` #31).
 4. **`Weights.lua`** — the weightable-stat list (`statDefinitions`) and weight math: display
    formatting (`FormatWeight`), seeding defaults (`EnsureWeights`), direct-entry hand-adjusting
    (`SetWeightValue`), and resetting to spec defaults (`RestoreDefaultWeights`).
@@ -29,7 +29,7 @@ mutates SavedVariables directly; it calls `LG.Settings.*`/`LG.Weights.*`. This k
 `Weights.lua` defines `function Weights.SetWeight(...)` and `UI.lua` calls
 `LG.Weights.SetWeight(...)`. A table field is resolved at CALL time, not parse time, so — unlike
 the pre-0.261 single-file `Core.lua`, where several functions needed explicit `local X` forward
-declarations to be callable before their own definition point (see known-bugs.md #11 and #22, both
+declarations to be callable before their own definition point (see resolved-bugs.md #11 and #22, both
 caused by exactly this) — load/definition order among these files only matters for a file's own
 top-level (immediately-executed) code, never for what a function body references, since every
 function body only actually runs after the whole addon has finished loading.
@@ -62,7 +62,7 @@ implemented as specified, not designed from scratch.
    `Priorities.lua`'s own header comment for the full methodology, every formula and constant used,
    and its honest limits (this is derived math, not simulation; Hit/Expertise caps still can't be
    modeled dynamically; "survival" mode is still a documented, undecided leveling-specific adjustment
-   layered on the derived "speed" baseline). See also `bugs/known-bugs.md` #34 and #35 for the full
+   layered on the derived "speed" baseline). See also `bugs/resolved-bugs.md` #34 and #35 for the full
    history of why this replaced first the placeholder numbers, then the anchor-scale ones.
 
 Keeping these in separate files is the point: conversions are game mechanics (Layers 1-2), priorities
@@ -138,12 +138,15 @@ applies.
 
 ## Low-level fallback spec (judgment call)
 
-Under level 10 (0 talent points spent anywhere), no spec can be detected from
-`GetTalentTabInfo`. One assumed default per class is used instead (`Priorities.LOW_LEVEL_DEFAULT_SPEC`):
+Under level 10 (0 talent points spent anywhere, or two-plus trees tied for the most points --
+see `bugs/resolved-bugs.md` #37), no spec can be detected from talent points. One assumed default
+per class is used instead (`Priorities.LOW_LEVEL_DEFAULT_SPEC`):
 Warrior->Fury, Paladin->Protection, Hunter->Beast Mastery, Rogue->Combat, Priest->Shadow,
 Shaman->Enhancement, Mage->Fire, Warlock->Affliction, Druid->Balance. These are commonly-cited easy
 TBC leveling specs, not a claim about optimal play; `DetectSpec` marks the result `assumed = true`
-so a future UI could label it. Easily changed by editing that one table -- no logic depends on the
+(and returns `source = "assumed"`), surfaced in the settings window's "Spec" section status line. A
+player can always override the guess directly via that section's "Spec:" dropdown (v0.38) rather
+than waiting for auto-detection. Easily changed by editing that one table -- no logic depends on the
 specific choices.
 
 ## `ScoreItem` vs `ScoreEquippedItem`
@@ -163,7 +166,7 @@ one, passing the character's own `weights` (one flat set per character since v0.
 ## Slash command: `/lgs score`, not `/lg score`
 
 The task asks for `/lg score [itemLink]`. `/lg` was deliberately removed as a top-level command in
-an earlier version (see `known-bugs.md` bug #5: "the addon now supports only `/levelinggears` and
+an earlier version (see `resolved-bugs.md` bug #5: "the addon now supports only `/levelinggears` and
 `/lgs`"). Implemented as `/lgs score <item link>` (and `/levelinggears score`) instead, as a new
 subcommand of the existing dispatcher, to avoid regressing that decision.
 
@@ -184,7 +187,7 @@ never touched, and a manual edit permanently overrides that key going forward.
 - **v0.26 (superseded):** introduced a 0.05 step size (`WEIGHT_STEP`) so `+`/`-` buttons moved by
   0.05 instead of a whole integer, plus a Shift-click modifier for a coarser ±1 step (0.05 alone
   would take up to 200 clicks to cross the full bar). Reported as too complicated (needed its own
-  helper-text sentence to explain, still slow for large changes) — see `bugs/known-bugs.md` #32.
+  helper-text sentence to explain, still slow for large changes) — see `bugs/resolved-bugs.md` #32.
 - **v0.305 (superseded):** removed the up/down buttons and `WEIGHT_STEP`/`RoundToStep`/the
   delta-based `SetWeight` entirely. Each stat became a plain `EditBox` (`InputBoxTemplate`) showing
   `FormatWeight`'s rendering of the exact value `characterState.weights` holds; typing a new value
@@ -193,7 +196,7 @@ never touched, and a manual edit permanently overrides that key going forward.
   the helper text still framed it as "0 = ignore, 10 = highest importance" — reported as still
   reading like the old abstracted rating scale, just with a different input widget.
 - **v0.306 (current):** removed the 0-10 clamp and the "0 = ignore, 10 = highest importance" framing
-  entirely — see `bugs/known-bugs.md` #33. There is no scale any more: the box shows and accepts
+  entirely — see `bugs/resolved-bugs.md` #33. There is no scale any more: the box shows and accepts
   exactly the number `ComputeScore` (in `Scoring.lua`) multiplies the derived stat by, with no
   minimum, maximum, or rating-language layered on top. `FormatWeight` still rounds only the
   *display* to a hundredth purely to hide floating-point noise, not to restrict input.

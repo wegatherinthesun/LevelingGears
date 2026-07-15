@@ -58,3 +58,36 @@ function Settings.GetCharacterState()
 	end
 	return characterState
 end
+
+-- Manual spec override (v0.38, bug #37): auto-detection reads literal current talent points, which
+-- doesn't reliably reflect a leveling character's intended build (see Scoring.lua's DetectSpec).
+-- Pass a valid specKey for the player's own class to force it, or nil/false to clear the override
+-- and go back to auto-detection. Restoring weights to the (now-correct) spec's defaults afterward is
+-- deliberate: whatever weights were seeded under the wrong detected/assumed spec are very likely
+-- wrong for the real one, so leaving them in place would make the dropdown fix cosmetic only.
+function Settings.SetSpecOverride(specKey)
+	local _, class = UnitClass("player")
+	if specKey then
+		local validOptions = LG.Scoring and LG.Scoring.GetSpecOptions(class) or {}
+		local isValid = false
+		for _, option in ipairs(validOptions) do
+			if option.key == specKey then
+				isValid = true
+				break
+			end
+		end
+		if not isValid then
+			return
+		end
+	end
+
+	local characterState = Settings.GetCharacterState()
+	characterState.specOverride = specKey or nil
+
+	if LG.Weights and LG.Weights.RestoreDefaultWeights then
+		LG.Weights.RestoreDefaultWeights()
+	end
+	if LG.UI and LG.UI.RefreshSpecUI then
+		LG.UI.RefreshSpecUI()
+	end
+end

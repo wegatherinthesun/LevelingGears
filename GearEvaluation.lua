@@ -272,6 +272,13 @@ end
 -- Keep the gear evaluation current when weights or gear change so the outlines remain meaningful.
 -- CHARACTER_POINTS_CHANGED/PLAYER_LEVEL_UP re-trigger it too: a respec or level-up can change the
 -- character's detected spec, which changes which Priorities table scores each item.
+--
+-- Routed through ScheduleGearEvaluation (not a direct SafeCall), same as the weight-adjustment path
+-- -- found via real debug-log data (v0.313) that UNIT_INVENTORY_CHANGED can fire dozens of times
+-- within the same second during ordinary gameplay (a burst of 61 identical "Gear evaluation" log
+-- lines all timestamped the same second was captured live), and every one of those was triggering a
+-- full, undebounced 17-slot re-evaluation. This debounce already existed for exactly this class of
+-- problem (see bug #20/#21) but was only ever wired to the UI click path, not this event path.
 local gearEvaluationFrame = CreateFrame("Frame", nil, UIParent)
 gearEvaluationFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 gearEvaluationFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
@@ -282,7 +289,7 @@ gearEvaluationFrame:SetScript("OnEvent", function(_, event, unit)
 	if event == "UNIT_INVENTORY_CHANGED" and unit ~= "player" then
 		return
 	end
-	SafeCall(GearEvaluation.UpdateEquippedGearEvaluation)
+	GearEvaluation.ScheduleGearEvaluation()
 end)
 
 -- The Character*Slot buttons this addon outlines belong to Blizzard's paperdoll UI, which this
@@ -290,5 +297,5 @@ end)
 -- addon on this same client, which defers all paperdoll work to CharacterFrame's OnShow for the
 -- same reason). Re-run the evaluation once the panel is actually open so the slot buttons exist.
 CharacterFrame:HookScript("OnShow", function()
-	SafeCall(GearEvaluation.UpdateEquippedGearEvaluation)
+	GearEvaluation.ScheduleGearEvaluation()
 end)

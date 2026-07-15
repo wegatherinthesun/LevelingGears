@@ -10,13 +10,17 @@ local Debug = LG.Debug
 
 -- The addon's version string. Lives here (rather than in Core.lua, which loads last) because
 -- UI.lua's version label needs it at UI.lua's own load time, before Core.lua has run.
-LG.ADDON_VERSION = "0.311"
+LG.ADDON_VERSION = "0.382"
 
 LevelingGearsDB = LevelingGearsDB or {}
 LevelingGearsDB.general = LevelingGearsDB.general or {}
 LevelingGearsDB.debugLog = LevelingGearsDB.debugLog or {}
 
-local DEBUG_LOG_MAX_ENTRIES = 50
+-- Bumped from 50 to 500 (v0.312): bug #29's investigation showed the 50-entry buffer wrapping and
+-- evicting position-log entries mid-session (an 11-minute gap with other activity was enough to
+-- roll useful drag/reopen data out before it could be dumped). 500 entries of small strings is still
+-- negligible SavedVariables size, and comfortably covers a full play session with debug mode on.
+local DEBUG_LOG_MAX_ENTRIES = 500
 
 -- Send a message to the player's own chat frame using the addon's standard chat prefix.
 function Debug.PrintChat(message)

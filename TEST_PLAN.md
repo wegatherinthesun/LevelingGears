@@ -34,8 +34,8 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.311.** No test report has come in since the first real v0.301 pass, so this section
-covers everything changed across v0.301 → v0.311 in one go — that's a lot, but almost none of it has
+**Version: v0.382.** No test report has come in since the first real v0.301 pass, so this section
+covers everything changed across v0.301 → v0.382 in one go — that's a lot, but almost none of it has
 had any live confirmation yet. That first pass found bug #27's fix largely working (T1/T3/T7 showed
 clean loads and successful gear scoring — a big improvement) but stopped at T15/T16 after hitting
 three more real issues, and after reporting the profile system and the stat-weight controls as
@@ -63,7 +63,7 @@ everything still works after all of this, then continue on to T16-T35, which wer
 5. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
    the character window to print its score to chat, no slash command needed. Built as
    **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
-   `bugs/known-bugs.md`). **T8 below tests this as the primary workflow**; `/lgs score` still works
+   `bugs/resolved-bugs.md`). **T8 below tests this as the primary workflow**; `/lgs score` still works
    as a debug-bench fallback.
 6. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
    change (that's `ROADMAP.md`'s 0.35, not built yet), the addon tells you this once at boot — look
@@ -72,10 +72,34 @@ everything still works after all of this, then continue on to T16-T35, which wer
    since 0.31 is now this whole consolidated version — see `ROADMAP.md`), custom art (0.32),
    auto-updating defaults on respec (0.35), and an in-UI explanation for why primary stats aren't
    weightable (0.37). None of these are testable yet — don't look for them.
+8. **Bug #36 (solved): equipped-gear evaluation could fire dozens of times per second (v0.313).**
+   Found via real debug-log data (a burst of 61 identical "Gear evaluation" lines in the same second)
+   that opening bags, visiting a vendor, or trading could each trigger many undebounced
+   `UNIT_INVENTORY_CHANGED` events, each one running a full 17-slot re-evaluation. Fixed by routing
+   the event handler and the `CharacterFrame` `OnShow` hook through the same 0.2s debounce
+   (`ScheduleGearEvaluation`) already used for the weight-adjustment path. **T32 below now asks you to
+   open/close bags and visit a vendor a few times with `/lgs debug` on, then dump the log** and confirm
+   you don't see repeated back-to-back "Gear evaluation" lines within the same second.
+9. **New: manual "Spec:" dropdown, plus two rounds of a real auto-detection fix (bug #37, v0.38 →
+   v0.381).** A live report (an Enhancement Shaman scored as Elemental) led to a "Spec" settings
+   section with a "Spec:" dropdown ("Auto-detect" + your class's 3 real specs) that overrides the
+   auto-detected guess, plus a status line showing what's actually being used to score gear right
+   now. A second report immediately after (same character, all 44 points in Enhancement, still
+   detected as Restoration) proved the first fix's theory (a talent-tab tie resolving to tab order)
+   wasn't the whole story, so `DetectSpec`'s entire point-reading method was replaced — it no longer
+   trusts `GetTalentTabInfo`'s own point count at all, instead summing each individual talent's rank
+   directly. **New T20b below tests this directly; T20 itself now has a note about using the
+   dropdown if a spec still looks wrong.**
+10. **New: helper text explaining why primary stats aren't weightable (roadmap item 0.37, shipped
+    v0.382).** The stat-weights section has always shown only derived stats (Attack Power, Spell
+    Power, etc.) — Strength/Agility/Intellect/Stamina/Spirit were never listed, with nothing in the
+    UI explaining why. A new line of small helper text under the existing color-guide text now says
+    so. **T13 below (scrolling/layout) should pay extra attention to this section** — the new line
+    shifted the stat-group starting offset in code (a reasoned estimate, not a measured value).
 
 Bug #27 itself (from v0.301) is not fully closed — T20 (spec-aware default seeding across multiple
 classes) still hasn't actually been run. That's still this round's highest-value test, alongside T11
-above.
+and the new T20b above.
 
 ---
 
@@ -101,7 +125,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.311**.
+- Expected: Reads **v0.382**.
 - Result:
 - Notes:
 
@@ -139,7 +163,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T7 — Debug dump**
 - Instruction: Type `/lgs debug dump`.
 - Repeat: 1x
-- Expected: Prints the ring buffer (up to 50 entries) to chat.
+- Expected: Prints the ring buffer (up to 500 entries, bumped from 50 in v0.312) to chat.
 - Result:
 - Notes:
 
@@ -192,10 +216,14 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Repeat: 2x (one `/reload`, one full restart)
 - Expected: Window reopens in the *exact* dragged position both times, not just a similar area.
   Please include `/lgs debug dump` covering both the drag (`SaveWindowPosition` line) AND the
-  reopen (`ApplySavedPosition` line) — a real dump already checked showed 36 clean opens at the
-  default position with scale values identical every time (UI-scale mismatch is ruled out as the
-  cause), plus one real drag, but no matching reopen afterward — that reopen line is the one piece
-  still missing to actually diagnose this.
+  reopen (`ApplySavedPosition` line) — real dumps already checked (three separate reads, most recently
+  at 123 total log entries) show 45 clean save/apply pairs across three different anchor points
+  (`CENTER`, `TOPLEFT`, `LEFT`) with **zero drift in any of them** and scale values identical
+  (`1.0000`) every time — UI-scale mismatch is ruled out as the cause, and in-session close/reopen
+  round-trips all look clean. The one thing none of this data has confirmed yet is an actual
+  `/reload` or full client relaunch in between the drag and the reopen (every clean cycle captured so
+  far was an in-session close/reopen) — that's the one piece still missing. If a real reload/relaunch
+  also round-trips clean, this bug can likely be closed outright.
 - Result:
 - Notes:
 
@@ -211,7 +239,9 @@ testing into a grind. If you have time to do more on any case, more is always we
   visually overlapping.
 - Repeat: 1x
 - Expected: Smooth scroll, nothing clipped, no section overlaps another (including the "Restore
-  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26).
+  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26; and
+  the new 0.382 primary-stats helper-text line above "Restore Defaults," whose added height is a
+  reasoned estimate, not a measured in-game value).
 - Result:
 - Notes:
 
@@ -278,7 +308,26 @@ testing into a grind. If you have time to do more on any case, more is always we
   seed MP5 *above* Healing Power (a genuinely surprising real ratio from its cited source — this is
   correct, not a bug); a Warlock should seed Hit clearly above Spell Power. If a seeded set of values
   looks backwards or nonsensical for that spec, that's worth reporting in detail (which stats, which
-  spec) rather than just "weights looked wrong."
+  spec) rather than just "weights looked wrong." **If the wrong spec is detected (e.g. this exact
+  report — an Enhancement Shaman seeded with Elemental's Spell-Power-first weights), that's bug #37's
+  territory** — use the new "Spec:" dropdown (T20b below) to force the correct spec rather than
+  reporting it as a dead end; but please still note which class/spec/talent-point distribution
+  triggered the wrong auto-detect, since that's exactly the evidence needed to confirm bug #37's
+  tie-break theory.
+- Result:
+- Notes:
+
+**T20b — Manual spec-override dropdown (bug #37, new in v0.38, auto-detect rewritten in v0.381)**
+- Instruction: Open the new "Spec" section (between "General settings" and "Stat weights"). Note
+  what the "Currently scoring as:" status line says, then open the "Spec:" dropdown and select a
+  different one of your class's 3 specs.
+- Repeat: 2x (pick two different specs, and once try "Auto-detect" to switch back)
+- Expected: The dropdown lists exactly your class's 3 real specs plus "Auto-detect." Selecting a
+  spec immediately updates the status line (ending in `[manually set]`), re-seeds every stat weight
+  to that spec's real defaults, and re-colors your equipped gear's outlines to match. Selecting
+  "Auto-detect" goes back to talent-point detection (status line ending in `[assumed - ...]` or no
+  bracketed tag at all if a real spec was read). The new "Spec" section should not visually overlap
+  "Stat weights" below it.
 - Result:
 - Notes:
 
@@ -383,10 +432,14 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T32 — Outlines update on equipment change**
-- Instruction: Unequip an item, then re-equip it (or equip a different one).
-- Repeat: 2x
-- Expected: Outlines update to reflect the new gear both times.
+**T32 — Outlines update on equipment change (bug #36 — debounce fix, v0.313)**
+- Instruction: Unequip an item, then re-equip it (or equip a different one). Then, with `/lgs debug`
+  enabled, open/close your bags a few times and visit a vendor (buy or just open the vendor window),
+  then run `/lgs debug dump`.
+- Repeat: 2x for the equip change; 1x for the bag/vendor + dump check
+- Expected: Outlines update to reflect the new gear both times. In the dumped log, "Gear evaluation"
+  lines should appear at most about once per 0.2s — not dozens of identical lines stamped the same
+  second (that was bug #36, now routed through the existing debounce).
 - Result:
 - Notes:
 
@@ -454,7 +507,8 @@ Before calling a commit done:
 2. If a feature was added, changed, or removed, add/update/remove its test case so the checklist
    never drifts from what actually exists. Keep the same per-case format (Instruction/Repeat/
    Expected/Result/Notes) so the template stays consistent release to release.
-3. If a past bug's fix is touched again, cross-reference its number from `bugs/known-bugs.md`.
+3. If a past bug's fix is touched again, cross-reference its number from `bugs/known-bugs.md` (if
+   still open) or `bugs/resolved-bugs.md` (if already solved/mitigated).
 4. Keep test case IDs (T1, T2, …) stable once assigned — renumbering breaks cross-references in old
    test reports. Append new cases at the end of their section instead of renumbering.
 5. Collect completed reports from the `wegatherinthesun@gmail.com` inbox as they arrive; there's no

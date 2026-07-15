@@ -1,4 +1,7 @@
 -- Leveling Gears -- Core.lua
+-- First full wow addon created by We Gather in the Sun! Helio is the sole worker and coder at
+-- We Gather in the Sun. I hope you enjoy it, and that there will be more to come!
+-- Contact the developer at wegatherinthesun@gmail.com
 -- The addon's entry point: loads last (see LevelingGears.toc), after every other module has
 -- registered itself on the shared LG namespace. Owns only what's genuinely "core": slash-command
 -- dispatch and the startup sequence that ties the other modules together. Everything else --

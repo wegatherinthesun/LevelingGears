@@ -8,8 +8,8 @@ LG.Scoring = LG.Scoring or {}
 local Scoring = LG.Scoring
 
 -- Talent tab order per class on this client (index 1/2/3 -> spec key). Matching by tab INDEX
--- rather than the tab's displayed name avoids locale issues entirely (GetTalentTabInfo's name
--- field is localized text; the tab order itself is not).
+-- rather than a displayed name avoids locale issues entirely (talent tab/talent names are
+-- localized text; the tab order itself is not).
 local TALENT_TAB_ORDER = {
 	WARRIOR = { "arms", "fury", "protection" },
 	PALADIN = { "holy", "protection", "retribution" },
@@ -21,6 +21,36 @@ local TALENT_TAB_ORDER = {
 	WARLOCK = { "affliction", "demonology", "destruction" },
 	DRUID = { "balance", "feral", "restoration" },
 }
+
+-- Human-readable labels for the manual spec-override dropdown (v0.38, bug #37) -- kept here rather
+-- than guessed from the key itself (e.g. "beastmastery" would title-case wrong) since these are the
+-- exact names players expect from Blizzard's own talent UI.
+Scoring.SPEC_DISPLAY_NAMES = {
+	WARRIOR = { arms = "Arms", fury = "Fury", protection = "Protection" },
+	PALADIN = { holy = "Holy", protection = "Protection", retribution = "Retribution" },
+	HUNTER = { beastmastery = "Beast Mastery", marksmanship = "Marksmanship", survival = "Survival" },
+	ROGUE = { assassination = "Assassination", combat = "Combat", subtlety = "Subtlety" },
+	PRIEST = { discipline = "Discipline", holy = "Holy", shadow = "Shadow" },
+	SHAMAN = { elemental = "Elemental", enhancement = "Enhancement", restoration = "Restoration" },
+	MAGE = { arcane = "Arcane", fire = "Fire", frost = "Frost" },
+	WARLOCK = { affliction = "Affliction", demonology = "Demonology", destruction = "Destruction" },
+	DRUID = { balance = "Balance", feral = "Feral", restoration = "Restoration" },
+}
+
+-- Ordered {key, label} pairs for a class's 3 specs, used to build the manual spec-override dropdown
+-- (UI.lua) without duplicating TALENT_TAB_ORDER's class->spec mapping a second time.
+function Scoring.GetSpecOptions(class)
+	local tabOrder = TALENT_TAB_ORDER[class]
+	if not tabOrder then
+		return {}
+	end
+	local names = Scoring.SPEC_DISPLAY_NAMES[class] or {}
+	local options = {}
+	for _, specKey in ipairs(tabOrder) do
+		table.insert(options, { key = specKey, label = names[specKey] or specKey })
+	end
+	return options
+end
 
 -- Blizzard item stats are exposed through token-based keys, so this maps our stat keys to those
 -- tokens. Moved here (from Core.lua) since Scoring is now the single owner of raw-item-stat
@@ -81,45 +111,97 @@ local function GetApKey(class, specKey, mode)
 	return "DRUID_BEAR" -- Balance/Restoration: "bear/other" per the given AP table
 end
 
--- Detect class/spec/mode from talent points. Returns (class, specKey, mode, assumed) -- assumed is
--- true when the character has 0 points spent anywhere (typically under level 10) and a per-class
--- default had to be guessed instead of read from the character. Defined with an explicit unused
--- `_self` (rather than colon sugar) since this function needs no instance state -- still callable
--- as `LG.Scoring:DetectSpec()` either way, since Lua's colon-call sugar just passes the object as
--- the first argument regardless of what the function itself calls that parameter.
+local lastLoggedSpecSignature = nil
+
+-- Detect class/spec/mode. Returns (class, specKey, mode, assumed, source) -- assumed is true when
+-- no real spec could be pinned down (0 points spent anywhere, typically under level 10, or a tied
+-- talent read -- see below) and a per-class default had to be guessed instead; source is one of
+-- "override" (the player's own manual choice), "detected" (read from talent points), or "assumed"
+-- (the fallback default), for UI/chat text that wants to say which kind of answer this is. Defined
+-- with an explicit unused `_self` (rather than colon sugar) since this function needs no instance
+-- state -- still callable as `LG.Scoring:DetectSpec()` either way, since Lua's colon-call sugar just
+-- passes the object as the first argument regardless of what the function itself calls that
+-- parameter.
 function Scoring.DetectSpec(_self)
 	local _, class = UnitClass("player")
 	local tabOrder = TALENT_TAB_ORDER[class]
 	if not tabOrder then
-		return class, nil, "speed", false
+		return class, nil, "speed", false, "assumed"
 	end
 
+	-- Manual override (v0.38, bug #37): the "Spec:" dropdown in the settings window always wins
+	-- over whatever the talent-point reading below produces. Reading literal current talent points
+	-- can't reliably reflect a leveling character's intended build (a partially-specced or
+	-- early-hybrid talent spread is normal while leveling, well before every point lands in one
+	-- tree) -- the dropdown lets a player just say which spec they actually are.
+	local characterState = LG.Settings and LG.Settings.GetCharacterState()
+	local override = characterState and characterState.specOverride
+	if override and LG.Priorities[class] and LG.Priorities[class][override] then
+		local specEntry = LG.Priorities[class][override]
+		return class, override, specEntry.defaultMode or "speed", false, "override"
+	end
+
+	-- Points spent per tab, summed from each individual talent's own current rank
+	-- (`select(5, GetTalentInfo(tabIndex, talentIndex))`) rather than trusting
+	-- `GetTalentTabInfo`'s own aggregate `pointsSpent` return value (bug #27/#37: that value's exact
+	-- return position has been uncertain on this client -- a live report of an Enhancement Shaman
+	-- with 44 points detected as Restoration proved the position-guessing fallback chain
+	-- (`tonumber(c) or tonumber(d) or tonumber(e)`) that used to live here is not reliable). Summing
+	-- individual talent ranks sidesteps that ambiguity entirely: `GetTalentInfo`'s signature (name,
+	-- icon, tier, column, currentRank, maxRank, ...) is stable and well-established -- confirmed by
+	-- two other real, actively-used addons on this exact client reading `currentRank` the same way:
+	-- ShamanPower's own talent scan (`GetTalentInfo(t, i)`) and PallyPower's paladin-aura talent
+	-- counter (`select(5, GetTalentInfo(tab, loc))`).
 	local bestIndex, bestPoints, totalPoints = nil, -1, 0
-	if GetTalentTabInfo then
+	local tiedWithBest = false
+	local pointsPerTab = { 0, 0, 0 }
+	if GetNumTalents and GetTalentInfo then
 		for tabIndex = 1, 3 do
-			-- pointsSpent's exact return position is uncertain on this client (bug #27): assuming
-			-- the old-style signature (name, icon, pointsSpent, background, ...) put pointsSpent at
-			-- position 3, but the live debug log caught "attempt to perform arithmetic on local
-			-- 'pointsSpent' (a string value)" here -- position 3 is actually a string on this
-			-- client, consistent with a modern-retail-style signature (id, name, icon, pointsSpent,
-			-- background, ...) shifting it to position 4. Rather than commit to either guess, try
-			-- both plausible positions (and position 5, in case a description field is also
-			-- present) and use whichever one is actually numeric.
-			local _, _, c, d, e = GetTalentTabInfo(tabIndex)
-			local pointsSpent = tonumber(c) or tonumber(d) or tonumber(e) or 0
+			local pointsSpent = 0
+			local numTalents = GetNumTalents(tabIndex) or 0
+			for talentIndex = 1, numTalents do
+				pointsSpent = pointsSpent + (tonumber((select(5, GetTalentInfo(tabIndex, talentIndex)))) or 0)
+			end
+			pointsPerTab[tabIndex] = pointsSpent
 			totalPoints = totalPoints + pointsSpent
 			if pointsSpent > bestPoints then
 				bestPoints = pointsSpent
 				bestIndex = tabIndex
+				tiedWithBest = false
+			elseif pointsSpent == bestPoints and bestPoints > 0 then
+				tiedWithBest = true
 			end
 		end
 	end
 
+	-- Logged once per unique reading (not every call -- DetectSpec runs once per equipped slot
+	-- scored, so unconditional logging here would spam the ring buffer the same way bug #36 did).
+	-- Real evidence this per-talent-rank approach is landing on the right numbers, and for bug #37's
+	-- tie theory below.
+	if LG.Debug then
+		local signature = string.format("%s:%d:%d:%d:%s:%s", class, pointsPerTab[1], pointsPerTab[2],
+			pointsPerTab[3], tostring(bestIndex), tostring(tiedWithBest))
+		if signature ~= lastLoggedSpecSignature then
+			lastLoggedSpecSignature = signature
+			LG.Debug.WriteDebugLog(string.format(
+				"DetectSpec: class=%s tab1=%d tab2=%d tab3=%d bestIndex=%s tied=%s",
+				class, pointsPerTab[1], pointsPerTab[2], pointsPerTab[3],
+				tostring(bestIndex), tostring(tiedWithBest)), 1)
+		end
+	end
+
 	local specKey, assumed
-	if totalPoints > 0 and bestIndex then
+	if totalPoints > 0 and bestIndex and not tiedWithBest then
 		specKey = tabOrder[bestIndex]
 		assumed = false
 	else
+		-- No points spent yet, OR two-plus trees are tied for the most points spent (bug #37: a
+		-- real shape for a leveling build -- e.g. an early-leveling Enhancement Shaman who has put
+		-- equal points into Elemental so far). The old code silently resolved a tie to whichever
+		-- tab happened to be checked first (tab order, not intent) -- for Shaman that's Elemental,
+		-- which matches the exact symptom reported (an Enhancement player scored as Elemental).
+		-- Falling back to the documented per-class low-level default is more honest than guessing
+		-- from tab order, though the real fix for a leveling character is the manual override above.
 		specKey = (LG.Priorities.LOW_LEVEL_DEFAULT_SPEC or {})[class]
 		assumed = true
 	end
@@ -127,7 +209,7 @@ function Scoring.DetectSpec(_self)
 	local specEntry = LG.Priorities[class] and LG.Priorities[class][specKey]
 	local mode = specEntry and specEntry.defaultMode or "speed"
 
-	return class, specKey, mode, assumed
+	return class, specKey, mode, assumed, (assumed and "assumed" or "detected")
 end
 
 local loggedMissingWeights = {}
@@ -210,12 +292,16 @@ function Scoring:GetDefaultWeights()
 	return specEntry and specEntry[mode or "speed"]
 end
 
--- Human-readable "Class/spec (mode)" summary for the /lgs score debug command and any future UI.
+-- Human-readable "Class/Spec (mode)" summary for the /lgs score debug command, the settings
+-- window's spec status line, and shift-click score breakdowns.
 function Scoring:DescribeCurrentSpec()
-	local class, specKey, mode, assumed = self:DetectSpec()
-	local label = tostring(class) .. "/" .. tostring(specKey or "?") .. " (" .. tostring(mode) .. ")"
-	if assumed then
-		label = label .. " [assumed - no talent points spent yet]"
+	local class, specKey, mode, _, source = self:DetectSpec()
+	local displayName = specKey and Scoring.SPEC_DISPLAY_NAMES[class] and Scoring.SPEC_DISPLAY_NAMES[class][specKey]
+	local label = tostring(class) .. "/" .. tostring(displayName or specKey or "?") .. " (" .. tostring(mode) .. ")"
+	if source == "override" then
+		label = label .. " [manually set]"
+	elseif source == "assumed" then
+		label = label .. " [assumed - no talent points spent yet, or tied]"
 	end
 	return label
 end

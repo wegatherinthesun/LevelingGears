@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.311), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.382), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -24,6 +24,9 @@ score" required.
   priority guides for that spec (see `Priorities.lua` for sources) — not a flat, meaningless "5" on
   everything. Fully hand-adjustable afterward, and a **Restore Defaults** button resets back to those
   researched values whenever you want a clean slate.
+- **A "Spec:" dropdown** shows which spec is actually being used to score your gear right now, and
+  lets you override the auto-detected guess with one of your class's 3 real specs — useful while
+  leveling, when your talent points don't yet fully reflect your intended build.
 - **Colored outlines on your equipped gear** — each item's slot gets a thin border colored red
   through violet, showing how it stacks up against the average of your *own* current gear (not a
   raid or dungeon standard), using your weights.
@@ -99,8 +102,6 @@ Not built yet (see `CLAUDE.md` for the full staged roadmap):
 - No item database — "where to get this upgrade" (quest, drop, vendor, recipe) isn't implemented.
 - No tooltip integration or recommendation window for unequipped upgrades.
 - No sorting/filtering by source type, accessibility, or faction.
-- No spec auto-detection UI feedback (the engine detects your spec internally, but there's no
-  on-screen "assumed spec" indicator yet).
 
 ## Development
 
@@ -116,7 +117,8 @@ split by purpose so a given change only needs to load the piece it actually need
 - [`DESIGN.md`](DESIGN.md) — the scoring engine's architecture and every judgment call behind it.
 - [`DATA_PIPELINE.md`](DATA_PIPELINE.md) — source URLs, license status, and parser design for the
   future data pipeline (roadmap steps 0.41-0.44).
-- [`bugs/known-bugs.md`](bugs/known-bugs.md) — the working bug ledger (open/solved/mitigated).
+- [`bugs/known-bugs.md`](bugs/known-bugs.md) — still-open bugs only. See also
+  [`bugs/resolved-bugs.md`](bugs/resolved-bugs.md), the archive of everything already solved/mitigated.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — start here if you're testing this addon. A fillable checklist
   template with a "Quick start": save it, fill it in, email it back. Also the living record of what
   changed recently and what's at risk.

@@ -14,6 +14,10 @@ local SafeCall = LG.Debug.SafeCall
 local minimapButton = nil
 local generalSettingsCheckbox = nil
 local weightInputs = {}
+local specDropdownButton = nil
+local specDropdownMenuFrame = nil
+local specStatusText = nil
+local specMenuRows = {}
 
 -- Apply any previously saved frame position so the window appears where it was last left.
 -- Bug #29 (open): testers report the restored position is consistently in "a similar general
@@ -103,6 +107,80 @@ function UI.RefreshGeneralSettingsUI()
 	end
 end
 
+-- Rebuild the spec dropdown's menu rows ("Auto-detect" + the player's own class's 3 real specs) and
+-- refresh the button text/status line from saved state. Cheap to rebuild every refresh (3-4 rows).
+local function BuildSpecMenuRows()
+	if not specDropdownMenuFrame then
+		return
+	end
+	local _, class = UnitClass("player")
+	local options = LG.Scoring and LG.Scoring.GetSpecOptions(class) or {}
+
+	for _, row in ipairs(specMenuRows) do
+		row:Hide()
+	end
+
+	local index = 1
+	local function AddRow(label, specKey)
+		local row = specMenuRows[index]
+		if not row then
+			row = CreateFrame("Button", nil, specDropdownMenuFrame, "UIPanelButtonTemplate")
+			row:SetSize(160, 22)
+			specMenuRows[index] = row
+		end
+		row:Show()
+		row:SetText(label)
+		row:SetPoint("TOPLEFT", specDropdownMenuFrame, "TOPLEFT", 4, -(index - 1) * 24)
+		row:SetScript("OnClick", function()
+			LG.Settings.SetSpecOverride(specKey)
+			specDropdownMenuFrame:Hide()
+		end)
+		index = index + 1
+	end
+
+	AddRow("Auto-detect", nil)
+	for _, option in ipairs(options) do
+		AddRow(option.label, option.key)
+	end
+	specDropdownMenuFrame:SetHeight(math.max(24, (index - 1) * 24))
+end
+
+-- Refresh the "Spec:" dropdown button text and the status line describing what's actually being
+-- used to score gear right now -- called on window open and whenever the override changes, so a
+-- player never has to guess whether their choice (or the auto-detected guess) took effect.
+function UI.RefreshSpecUI()
+	if not specDropdownButton then
+		return
+	end
+	BuildSpecMenuRows()
+
+	local _, class = UnitClass("player")
+	local characterState = LG.Settings.GetCharacterState()
+	local override = characterState.specOverride
+	local options = LG.Scoring and LG.Scoring.GetSpecOptions(class) or {}
+	local buttonLabel = "Auto-detect"
+	for _, option in ipairs(options) do
+		if option.key == override then
+			buttonLabel = option.label
+			break
+		end
+	end
+	specDropdownButton:SetText(buttonLabel)
+
+	if specStatusText then
+		local description = "?"
+		if LG.Scoring then
+			local success, result = SafeCall(function()
+				return LG.Scoring:DescribeCurrentSpec()
+			end)
+			if success and result then
+				description = result
+			end
+		end
+		specStatusText:SetText("Currently scoring as: " .. description)
+	end
+end
+
 -- Update just the one changed weight input -- used by Weights.SetWeightValue after a committed
 -- edit, kept deliberately cheap (a single SetText, no full repaint or gear-evaluation trigger of
 -- its own).
@@ -169,6 +247,7 @@ LevelingGears:SetScript("OnShow", function(self)
 		-- file load: this guarantees what's on screen always matches what's actually saved,
 		-- regardless of how long ago the addon originally loaded.
 		UI.RefreshGeneralSettingsUI()
+		UI.RefreshSpecUI()
 		UI.RefreshWeightLabels()
 	end)
 end)
@@ -231,6 +310,7 @@ saveSettingsButton:SetScript("OnClick", function()
 	-- Re-sync every displayed number from LevelingGearsDB so what's on screen is visibly, provably
 	-- the same as what's saved, rather than just taking a chat message on faith.
 	UI.RefreshGeneralSettingsUI()
+	UI.RefreshSpecUI()
 	UI.RefreshWeightLabels()
 	PrintChat("Saved. Your settings for this character are stored and will still be here after /reload or a full relog.")
 end)
@@ -271,12 +351,74 @@ divider:SetPoint("TOPLEFT", generalSettingsCheckbox, "BOTTOMLEFT", 0, -12)
 generalSection:SetHeight(92)
 
 -- ============================================================================
+-- Spec section (v0.38, bug #37)
+-- ============================================================================
+-- Auto-detection reads literal current talent points, which doesn't reliably reflect a leveling
+-- character's intended build (a partially-specced or early-hybrid talent spread is normal well
+-- before every point lands in one tree -- see Scoring.lua's DetectSpec and bugs/known-bugs.md #37).
+-- This lets a player just say which of their class's 3 specs they actually are, overriding whatever
+-- the talent-point reading below would otherwise guess.
+
+local specSection = CreateFrame("Frame", nil, scrollChild)
+specSection:SetSize(320, 100)
+specSection:SetPoint("TOPLEFT", generalSection, "BOTTOMLEFT", 0, -20)
+
+local specHeader = specSection:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+specHeader:SetPoint("TOPLEFT", specSection, "TOPLEFT", 8, -8)
+specHeader:SetText("Spec")
+
+local specHint = specSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+specHint:SetPoint("TOPLEFT", specHeader, "BOTTOMLEFT", 0, -4)
+specHint:SetWidth(300)
+specHint:SetJustifyH("LEFT")
+specHint:SetText("Auto-detect reads your talent points, which can be unreliable while leveling. Pick your spec directly if the detected one looks wrong.")
+
+local specDropdownLabel = specSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+specDropdownLabel:SetPoint("TOPLEFT", specHint, "BOTTOMLEFT", 0, -12)
+specDropdownLabel:SetText("Spec:")
+
+specDropdownButton = CreateFrame("Button", nil, specSection, "UIPanelButtonTemplate")
+specDropdownButton:SetSize(160, 24)
+specDropdownButton:SetPoint("LEFT", specDropdownLabel, "RIGHT", 8, 0)
+specDropdownButton:SetText("Auto-detect")
+specDropdownButton:SetScript("OnClick", function()
+	if specDropdownMenuFrame then
+		specDropdownMenuFrame:SetShown(not specDropdownMenuFrame:IsShown())
+	end
+end)
+
+specDropdownMenuFrame = CreateFrame("Frame", nil, specSection)
+specDropdownMenuFrame:SetSize(180, 100)
+specDropdownMenuFrame:SetPoint("TOPLEFT", specDropdownButton, "BOTTOMLEFT", 0, -2)
+specDropdownMenuFrame:Hide()
+
+-- Anchored below the (normally hidden) menu frame's full reserved height, not the button directly,
+-- so opening the dropdown never overlaps this text -- same layout trick the old (removed) profile
+-- picker used for its own divider below profileDropdownMenuFrame.
+specStatusText = specSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+specStatusText:SetPoint("TOPLEFT", specDropdownMenuFrame, "BOTTOMLEFT", -168, -8)
+specStatusText:SetWidth(300)
+specStatusText:SetJustifyH("LEFT")
+specStatusText:SetText("Currently scoring as: ?")
+
+local specDivider = specSection:CreateTexture(nil, "OVERLAY")
+specDivider:SetColorTexture(0.6, 0.6, 0.6, 0.4)
+specDivider:SetSize(300, 1)
+specDivider:SetPoint("TOPLEFT", specStatusText, "BOTTOMLEFT", 0, -12)
+
+-- Not yet visually confirmed in game that this doesn't overlap the weight section below it (same
+-- caveat as every other UI-only change in this ledger, e.g. bug #25) -- a reasoned estimate based on
+-- this section's own element stack (header + 2-line hint + label/button row + 100px reserved menu
+-- space + status text + divider), not a measured in-game value.
+specSection:SetHeight(210)
+
+-- ============================================================================
 -- Stat weights section
 -- ============================================================================
 
 local weightSection = CreateFrame("Frame", nil, scrollChild)
 weightSection:SetSize(320, 220)
-weightSection:SetPoint("TOPLEFT", generalSection, "BOTTOMLEFT", 0, -20)
+weightSection:SetPoint("TOPLEFT", specSection, "BOTTOMLEFT", 0, -20)
 
 local weightHeader = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 weightHeader:SetPoint("TOPLEFT", weightSection, "TOPLEFT", 8, -8)
@@ -294,13 +436,23 @@ colorLegend:SetWidth(300)
 colorLegend:SetJustifyH("LEFT")
 colorLegend:SetText("Color guide: red/orange/yellow means below the current gear average, green means around average, and blue/violet means above it.")
 
+-- ROADMAP.md 0.37: nothing previously told a player why familiar primary stats are missing from
+-- this list. Strength/Agility/Intellect/Stamina/Spirit are converted into the derived stats shown
+-- below (Conversions.lua) before any weight is applied -- weighting them directly too would
+-- double-count (see DESIGN.md's double-counting rule).
+local primaryStatsNote = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+primaryStatsNote:SetPoint("TOPLEFT", colorLegend, "BOTTOMLEFT", 0, -8)
+primaryStatsNote:SetWidth(300)
+primaryStatsNote:SetJustifyH("LEFT")
+primaryStatsNote:SetText("Strength, Agility, Intellect, Stamina, and Spirit aren't listed here -- they're automatically converted into the stats below (Attack Power, Crit, Health, Mana, etc.), so weighting them separately would count them twice.")
+
 -- The addon's own spec-aware weights (Priorities.lua) ARE the defaults; typing a new value into any
 -- stat's edit box overrides that stat from then on (EnsureWeights never overwrites a touched
 -- value). This button persists as the explicit, visible way back to those defaults if the player
 -- wants a clean slate.
 local restoreDefaultsButton = CreateFrame("Button", nil, weightSection, "UIPanelButtonTemplate")
 restoreDefaultsButton:SetSize(140, 20)
-restoreDefaultsButton:SetPoint("TOPLEFT", colorLegend, "BOTTOMLEFT", 0, -8)
+restoreDefaultsButton:SetPoint("TOPLEFT", primaryStatsNote, "BOTTOMLEFT", 0, -8)
 restoreDefaultsButton:SetText("Restore Defaults")
 restoreDefaultsButton:SetScript("OnClick", function()
 	SafeCall(LG.Weights.RestoreDefaultWeights)
@@ -380,10 +532,12 @@ local function CreateStatRow(parent, stat)
 end
 
 local function ReflowStatGroups()
-	-- Starting offset accounts for the header, helper text, color legend, and the Restore Defaults
-	-- button above the stat groups; verify in game that the first group's header doesn't overlap
-	-- that button after any font/wrap-width change (see CLAUDE.md's UI-overlap rule).
-	local currentY = -134
+	-- Starting offset accounts for the header, helper text, color legend, the 0.37 primary-stats
+	-- note, and the Restore Defaults button above the stat groups; verify in game that the first
+	-- group's header doesn't overlap that button after any font/wrap-width change (see CLAUDE.md's
+	-- UI-overlap rule). Bumped from -134 to -160 for the new note line (a reasoned estimate, not a
+	-- measured in-game value -- same caveat as every prior change to this offset, e.g. bug #25).
+	local currentY = -160
 	local totalHeight = 0
 
 	for _, group in ipairs(statGroups) do

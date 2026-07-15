@@ -75,7 +75,7 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   etc. — a finite, knowable list, not discovered dynamically). Each stat is a row the player sees and
   edits directly: the stat's name and its current value. Default: **every stat equal.** (Originally
   built as a 0-10 "importance" scale with up/down arrows; replaced in v0.305 by a direct-entry edit
-  box per stat, then in v0.306 the 0-10 ceiling itself was dropped — see `bugs/known-bugs.md` #32/
+  box per stat, then in v0.306 the 0-10 ceiling itself was dropped — see `bugs/resolved-bugs.md` #32/
   #33 — since it was still being read as an artificial rating system rather than what it actually
   is.) What the player sees in the box **is** the real number `Scoring.lua`'s `ComputeScore`
   multiplies the derived stat by — there is no separate hidden value, and no imposed range.
@@ -110,13 +110,16 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
 ### Testing Phase 1 follow-ups (found during v0.301 testing; gated on all current features passing)
 
 These came out of the first real test pass (`TEST_PLAN.md`, v0.301) as things to build, not bugs in
-what already exists. **Do not start any of these until every currently-built feature is confirmed
-working** — fix what's broken first (see `bugs/known-bugs.md` #28-#30), finish the Phase 1
-regression checklist, then come back here.
+what already exists. **Every item below (0.31-0.38) is now Built** — this list is done. What's left
+before Testing Phase 1 itself is over is **not more building, it's a real `TEST_PLAN.md` T1-T35 pass**
+(see `PROGRESS.md`'s Current status / `CLAUDE.md`'s Next step). Once that pass comes back clean (no
+unresolved Blocker/Critical/Major findings — see `TESTERS.md`'s severity scale) and bug #29 (the one
+remaining open bug — see `bugs/known-bugs.md`) is closed or reclassified with real evidence, the next
+real step is `0.4` below, not before.
 
 - **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
   analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously
-  tracked internally as v0.304-0.308, kept in `PROGRESS.md`/`bugs/known-bugs.md` #31-#35 as the
+  tracked internally as v0.304-0.308, kept in `PROGRESS.md`/`bugs/resolved-bugs.md` #31-#35 as the
   detailed history of how this was built) into one consolidated version once merged back to `main`.
   Replaces the multi-profile system with exactly one hand-adjustable weight set per character;
   replaces the stat-weight +/- buttons with a direct-entry edit box per stat, showing and accepting
@@ -130,7 +133,7 @@ regression checklist, then come back here.
   gear meshing with a big gear" — this is where that actually gets designed and built, for the
   minimap button and anywhere else the addon shows its own icon.
 - ~~**0.33 — Shift-click scoring on equipped items, replacing `/lgs score`.**~~ **Built in v0.303**,
-  pulled forward and shipped as bug #30's real fix (`bugs/known-bugs.md` #30) rather than staying
+  pulled forward and shipped as bug #30's real fix (`bugs/resolved-bugs.md` #30) rather than staying
   gated — direct feedback on that bug ("too complicated... shift-click an equipped item to output the
   information about the gear into the chat") superseded the gating for this piece specifically.
   Implemented as **shift+left-click**, not the originally-requested shift+right-click: verified
@@ -144,7 +147,7 @@ regression checklist, then come back here.
   different gesture (e.g. shift+right-click, alt+click, or a button in the tooltip) decided when that
   milestone is actually scoped — not decided here.
 - ~~**0.34 — Profile creation dialog with a name field.**~~ **Dropped in v0.304.** The v0.304 fork
-  removed the multi-profile system entirely (repeated real bugs, see `bugs/known-bugs.md` #28 and
+  removed the multi-profile system entirely (repeated real bugs, see `bugs/resolved-bugs.md` #28 and
   the "single-profile" fork's PROGRESS.md entry) in favor of exactly one hand-adjustable weight set
   per character. There is no longer a profile to name.
 - **0.35 — Auto-updating default weights on respec/talent change.** Today `EnsureWeights` only ever
@@ -167,16 +170,26 @@ regression checklist, then come back here.
   drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
   right-click currently doing the same thing; that note goes away once this ships. (Renumbered from
   0.31, which the consolidated release above now occupies.)
-- **0.37 — Explain, in the settings UI itself, why primary stats aren't weightable.** The stat-weights
-  section only ever shows DERIVED stats (Attack Power, Spell Power, Crit Rating, Armor, Health, Mana,
-  etc.) — Strength/Agility/Intellect/Stamina/Spirit have never had their own rows, since v0.25
-  (`DESIGN.md`'s double-counting rule: primaries are auto-converted into the derived stats already
-  shown, so weighting them directly too would double-count). Nothing in the UI currently says this —
-  a player who opens the section for the first time and doesn't see familiar stats like Strength has
-  no way to know why. Add a small helper-text line (same small font as the existing helper text above
-  the stat groups) explaining this in plain terms, e.g. "Strength, Agility, Intellect, Stamina, and
-  Spirit aren't listed here — they're automatically converted into the stats below (Attack Power,
-  Crit, Health, Mana, etc.), so weighting them separately would count them twice."
+- **0.37 — Explain, in the settings UI itself, why primary stats aren't weightable.** **Built (shipped
+  in v0.382, out of numeric order — see `CONVENTIONS.md`'s versioning ladder for why this two-decimal
+  slot shipped under a thousandths patch number instead of its own).** The stat-weights section only
+  ever shows DERIVED stats (Attack Power, Spell Power, Crit Rating, Armor, Health, Mana, etc.) —
+  Strength/Agility/Intellect/Stamina/Spirit have never had their own rows, since v0.25 (`DESIGN.md`'s
+  double-counting rule: primaries are auto-converted into the derived stats already shown, so
+  weighting them directly too would double-count). Nothing in the UI said this before — a player who
+  opened the section for the first time and didn't see familiar stats like Strength had no way to
+  know why. Added a small helper-text line (`UI.lua`, same small font as the existing helper text)
+  explaining this in plain terms.
+- **0.38 — Manual spec-override dropdown.** **Built.** A live report (an Enhancement Shaman scored
+  as Elemental — spell power recommended instead of attack power) showed `DetectSpec`'s pure
+  talent-point reading isn't reliable for a leveling character whose points aren't yet fully
+  committed to one tree. Added a "Spec:" dropdown to a new "Spec" settings section: "Auto-detect"
+  plus the player's own class's 3 real specs, overriding whatever the talent-point reading would
+  otherwise guess, plus a status line showing which spec is actually being used right now (and
+  whether it's auto-detected, assumed, or manually set). Also fixed a real bug in the auto-detection
+  itself found while investigating this report: a tie between two talent tabs' point counts used to
+  resolve silently to tab order rather than falling back to the documented low-level default — see
+  `bugs/resolved-bugs.md` #37 for the full investigation and fix.
 
 - **0.4 — Freeze the schema + hand-made sample.** Implement the exact table shapes above as real
   Lua files. Populate with a ~12-item HAND-MADE sample spanning every source kind (drop, quest,
@@ -237,9 +250,10 @@ regression checklist, then come back here.
   can still edit any box by hand afterward. It never hides or replaces the weight page; it's a
   convenience layer on top of it, not a separate scoring path. Dropdown to override the guess; must
   allow off-meta specs (Dreamstate Resto Druid, Shockadin, etc.). A wrong guess just means the player
-  adjusts the same always-visible boxes themselves. (Partially superseded by the v0.25 scoring
-  engine's automatic spec detection and default-weight seeding — see `DESIGN.md` — but a visible
-  "assumed spec" indicator/override dropdown in the UI is still not built.)
+  adjusts the same always-visible boxes themselves. (Superseded by the v0.25 scoring engine's
+  automatic spec detection/default-weight seeding plus v0.38's "Spec:" override dropdown and status
+  line — see `DESIGN.md` and `bugs/resolved-bugs.md` #37 — though this item's own "matches a table of
+  popular off-meta builds" idea is broader than what 0.38 built and could still be revisited later.)
 - **Proc/effect valuation (optional).** See the proc note under 0.2 — contingent on committing to
   the second scraped database.
 - **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`); each requires explicit
@@ -250,7 +264,7 @@ regression checklist, then come back here.
   v0.307 sourced real TBC Classic stat *priority orders* (Icy Veins/Warcraft Tavern) and, where no
   numeric table existed (every spec except Warlock), derived weights analytically from known combat
   formulas (rating→% conversions, crit multipliers, attack-frequency math) rather than guessing —
-  see `DESIGN.md`'s Layer 3 section and `bugs/known-bugs.md` #34/#35. This is real derived math, but
+  see `DESIGN.md`'s Layer 3 section and `bugs/resolved-bugs.md` #34/#35. This is real derived math, but
   it is NOT the same as running an actual simulator (e.g. `wowsims/tbc`, which computes true
   per-point DPS deltas for a specific gear/talent/rotation setup) — that would need real
   infrastructure (Go/protobuf/node toolchain, per-spec gear/rotation configs, a chosen reference
@@ -281,9 +295,9 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
   since 0.25 these are DERIVED-stat inputs only (primaries STR/AGI/STA/INT/SPI were removed from the
   list — see DESIGN.md), seeded with spec-aware defaults on first use, and later spec automation just
   fills these in. Each stat is a direct-entry edit box since v0.305 (replacing the 0.26-era up/down
-  buttons with 0.05 steps and a Shift-click coarser ±1 — see `bugs/known-bugs.md` #32); v0.306
+  buttons with 0.05 steps and a Shift-click coarser ±1 — see `bugs/resolved-bugs.md` #32); v0.306
   removed the box's artificial 0-10 clamp/framing too, so it shows and accepts the exact number
-  `Scoring.lua` multiplies the stat by, with no imposed scale (see `bugs/known-bugs.md` #33). A
+  `Scoring.lua` multiplies the stat by, with no imposed scale (see `bugs/resolved-bugs.md` #33). A
   "Restore Defaults" button in the same section resets the character's own weights back to the
   spec-aware defaults on demand. Since v0.304 there is exactly one weight set per character (no
   profiles — see the "Testing Phase 1 follow-ups" section above); defaults do not yet auto-update on
@@ -293,8 +307,8 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
 - Sort mode default. **Not built** (depends on 0.8).
 - Source-type checkboxes (all on by default). **Not built** (depends on 0.8/data pipeline).
 - Alt professions toggle; crafter-search fallback toggle. **Not built** (depends on 0.91).
-- Spec override dropdown (later; adjusts the weights). **Not built** — the scoring engine detects
-  spec automatically (v0.25), but there's no on-screen override control yet.
+- Spec override dropdown (adjusts the weights; also shows what's actually being used to score gear
+  right now). **Built (0.38)** — see `bugs/resolved-bugs.md` #37.
 - TomTom integration (auto-detected; row explains if missing). **Not built** (depends on 0.7).
 
 **Static footer:** a "Save Settings" button lives in a fixed footer below the scroll area (anchored

@@ -8,7 +8,7 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.311). The stat-weighting and scoring engine — the settings window,
+Leveling Gears is early (v0.382). The stat-weighting and scoring engine — the settings window,
 direct-entry stat weights (one set per character), and the equipped-gear outline coloring — is real
 and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
@@ -36,7 +36,7 @@ built," that's expected, not a defect. Only note something as a problem if it sh
   Attack Power's box and pressed Enter; it showed 5 instead" is something that can be acted on
   immediately. "The box is wrong" isn't.
 - **A stale display is not the same as lost data.** This project has hit that exact false alarm more
-  than once (see `bugs/known-bugs.md` #21/#22) — before deciding "my settings didn't save," reopen
+  than once (see `bugs/resolved-bugs.md` #21/#22) — before deciding "my settings didn't save," reopen
   the settings window (or `/reload`) and check again first.
 
 ## Severity levels (optional — only if you want to rate how bad something is)

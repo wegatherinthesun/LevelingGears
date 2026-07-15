@@ -31,7 +31,7 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 7. **A completed test report from the project owner is authoritative and actionable, not just
    informational** (this is different from a report from any other tester, which may need judgment
    about whether/how to act on it). On receiving one: treat confirmed-working items as real
-   confirmation (reflect in `bugs/known-bugs.md`/`PROGRESS.md` where relevant); investigate and
+   confirmation (reflect in `bugs/known-bugs.md`/`bugs/resolved-bugs.md`/`PROGRESS.md` where relevant); investigate and
    fix/mitigate real bugs immediately, not just file them for later — if a root cause can't be
    confirmed by static review, add targeted debug logging and ask for specific evidence in the
    retest rather than guessing at a fix; file genuine new feature ideas in `ROADMAP.md` at the next
@@ -46,9 +46,23 @@ specific client. Read this before writing or editing any code. See `PROGRESS.md`
 - When editing UI, favor Blizzard-style spacing, hierarchy, labels, textures, and button behavior over custom or improvised visuals; the addon should look like it belongs in WoW rather than like a generic app window.
 - Keep `PROGRESS.md` current after every change with what was built, why it changed, the current version, and the next step.
 - Keep the Lua code annotated as part of the work; every major helper, UI section, and saved-data path should have comments explaining purpose and WoW-specific behavior.
-- Keep the bug ledger current after every fix or regression with a summary, root cause, attempted fixes, resolution status, validation, and follow-up.
 - Every bug must be recorded as either Open, Solved, or Mitigated, with discovery time and resolution time when applicable.
-- The bug file must be a working list, not a dated archive; use a stable filename such as `bugs/known-bugs.md` and update it continuously as the project evolves.
+- **The bug ledger is split across two files, by status, with two different formats:**
+  - `bugs/known-bugs.md` holds only still-open bugs (or a Mitigated bug with a concrete next action
+    left) — kept **short and simple**: a title, a one-line Status, a one- or two-line Summary, and a
+    one-line Next step. No tester-attribution detail (quoted reports, "test report, T##," dated
+    "Update" logs, investigation blow-by-blow) — that level of detail belongs in `PROGRESS.md`'s
+    Progress log (while still open) or the bug's own `resolved-bugs.md` entry (once moved there).
+  - `bugs/resolved-bugs.md` is the append-only archive of everything Solved or
+    Mitigated-with-nothing-further-to-do, and keeps the **full** format: summary, root cause,
+    investigation, attempted fixes, resolution, validation, and follow-up. This detail is
+    deliberately preserved here (not simplified) since past investigations — especially ones that
+    needed real on-disk debug-log evidence, not just code review — are often the fastest way to
+    recognize a recurring root cause in a new, hard-to-pin-down bug.
+  - Move an entry from `known-bugs.md` to `resolved-bugs.md` the moment its status crosses that
+    line — expanding it to the full format as part of the move — never leave a closed bug sitting in
+    `known-bugs.md`, and never delete a resolved entry. Bug numbers are shared across both files and
+    never renumbered — a bug keeps its original number after it moves.
 - Every change should include a short note in the bug ledger if it affects startup, addon loading, slash commands, UI initialization, SavedVariables, or version metadata.
 - Follow WoW addon conventions at every step: use Classic-compatible APIs, keep the settings UI on a single window, store data in SavedVariables, register slash commands and events safely, avoid fragile UI patterns that can break initialization, and keep the visual language aligned with the existing Blizzard UI.
 - Never leave a change unrecorded just because it is small; log it in `PROGRESS.md` and the bug ledger before moving on.
@@ -90,13 +104,16 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   — was filed fresh in that same fork, 0.31 was reclaimed on 2026-07-14 as the consolidated release
   version for the whole `single-profile` fork's work — see below — bumping the old "minimap
   drag-to-reposition" item to 0.36, and 0.37 — explaining in the settings UI why primary stats aren't
-  weightable — was filed the same day); the next free two-decimal number in this milestone is
-  **0.38**.
+  weightable — was filed the same day). **0.38 is now also taken:** a manual "Spec:" dropdown
+  (override the auto-detected class spec with one of the class's 3 real specs) plus a real fix to
+  `DetectSpec`'s tab-tie-break logic, both built the same day in response to a live report of an
+  Enhancement Shaman being scored as Elemental — see `bugs/resolved-bugs.md` #37. The next free
+  two-decimal number in this milestone is **0.39**.
 - **0.31 consolidation (2026-07-14):** the `single-profile` fork's iterative bugfix-style versions
   (v0.304 through v0.308 — single-profile removal, direct-entry stat editing, then two passes at
   fixing `Priorities.lua`'s default weights) were squashed into one consolidated two-decimal release,
   **0.31**, once merged back into `main`. The individual v0.304-v0.308 numbers remain in
-  `PROGRESS.md`'s Progress log and `bugs/known-bugs.md` #31-#35 as the accurate historical record of
+  `PROGRESS.md`'s Progress log and `bugs/resolved-bugs.md` #31-#35 as the accurate historical record of
   how 0.31 was built — they are not retroactively renamed — but the shipped, tested version going
   forward is 0.31. **Patches to 0.31 follow the existing thousandths rule**: the next one is 0.311,
   not 0.301 (0.301 already exists — it's the earlier, unrelated bug #27 crash fix from the 0.3
@@ -114,7 +131,7 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   profiles. A player can hand-adjust any weight or restore the whole set to the character's detected
   spec/mode default; there is nothing else to manage. The earlier multi-profile design (profiles
   keyed by id, an "active profile" pointer, create/switch/name UI) was a real source of bugs
-  (`bugs/known-bugs.md` #28) for flexibility this addon's design never actually needed.
+  (`bugs/resolved-bugs.md` #28) for flexibility this addon's design never actually needed.
 - The implementation uses a simple structure: `LevelingGearsDB.general` for universal settings and `LevelingGearsDB.characters[characterKey].weights` for the character's own stat weights.
 
 ---
@@ -461,7 +478,7 @@ After every non-trivial edit, stop treating the task as complete and perform a f
   not 2). `Armor Penetration Rating` was not itemized until patch 3.0.2 (after TBC's own content
   patches), so `CR_ARMOR_PENETRATION` may not exist or may never be populated on this client —
   guarded the same way as every other rating, contributing 0 if absent.
-- Slash: `/levelinggears` + `/lgs` primary; `/lg` was deliberately removed (see `bugs/known-bugs.md`
+- Slash: `/levelinggears` + `/lgs` primary; `/lg` was deliberately removed (see `bugs/resolved-bugs.md`
   #5) — do not reintroduce it as a top-level command.
 - SavedVariables: settings account-wide with per-character overrides; per-character selected
   upgrades, weights, and alt profession data.
@@ -476,7 +493,7 @@ After every non-trivial edit, stop treating the task as complete and perform a f
   addon can work around. Because of this, addons conventionally do NOT ship a manual "Save"/"Apply"
   button — there's nothing for it to do that isn't already happening. The addon's "Save Settings"
   footer button does NOT call `ReloadUI()` (an earlier version did, briefly — see
-  `bugs/known-bugs.md` #18 — but there was nothing left to persist, so it just produced a jarring
+  `bugs/resolved-bugs.md` #18 — but there was nothing left to persist, so it just produced a jarring
   no-op reload); it only re-syncs the display and prints a confirmation, purely for reassurance.
 - Also note: a `.toc` metadata change (e.g. adding a `## SavedVariables` line, changing dependencies)
   is only read when the client fully starts up — `/reload` does not re-parse the `.toc`. Test any

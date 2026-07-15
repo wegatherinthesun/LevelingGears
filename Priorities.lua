@@ -92,8 +92,8 @@
 --    its own. Where a cited source ranks Spirit, that emphasis is folded into MP5 (the closest
 --    available proxy: both represent mana-sustain-over-time value).
 --
--- Spec key format: "CLASS/spec", e.g. "WARRIOR/arms". Spec name order per class matches
--- GetTalentTabInfo(1..3) tab order on this client.
+-- Spec key format: "CLASS/spec", e.g. "WARRIOR/arms". Spec name order per class matches the
+-- client's talent tab order (tab index 1..3) on this client.
 
 local _, LG = ...
 LG.Priorities = LG.Priorities or {}

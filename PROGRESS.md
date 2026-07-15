@@ -9,7 +9,106 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: documentation consistency pass (no version bump — docs/roadmap only, no code
+- **Current step: 0.382 — shipped roadmap item 0.37 (explain why primary stats aren't weightable)
+  and closed out Testing Phase 1 follow-ups, no code left to build before a real test pass.** Part of
+  a bug-fix→test→ship cycle: with bug #29 the only remaining open bug (no further code fix possible
+  without live evidence), bundled in this small, already-scoped, ungated roadmap item rather than
+  shipping a bugfix-only patch. Added a helper-text line to the stat-weights section (`UI.lua`)
+  explaining that Strength/Agility/Intellect/Stamina/Spirit aren't listed because they're
+  auto-converted into the derived stats shown (`DESIGN.md`'s double-counting rule) — closing a real
+  gap where a first-time player had no way to know why familiar stats were missing. Bumped
+  `ReflowStatGroups`'s starting offset (-134 to -160) to make room, a reasoned estimate pending visual
+  confirmation, same caveat as every prior change to that offset (bug #25). `ROADMAP.md` updated: 0.37
+  marked Built (shipped out of numeric order under a thousandths patch, same precedent as 0.33/v0.303);
+  two stale "not built" references to the spec-override dropdown fixed (it shipped in 0.38); the
+  "Testing Phase 1 follow-ups" section's intro rewritten to state plainly that every item in it is now
+  Built and the section is done pending only a real test pass. Deleted a stale, blank, never-filled
+  untracked `TEST_RESULTS_Helio_0311` file (leftover from an earlier attempt, no real data in it).
+  `luac -p`/`luacheck` clean on `UI.lua`. Version bumped to 0.382 (thousandths patch). **Every
+  currently-known code fix is now in — the sole next step is a real `TEST_PLAN.md` T1-T35 pass.**
+- **Previous step: 0.381 — replaced `DetectSpec`'s entire talent-point-reading method.** Reported
+  again immediately after 0.38 shipped: the same Enhancement Shaman, now with all 44 points in
+  Enhancement (no ambiguity, definitely not a tie), was still auto-detected as Restoration. This
+  disproved 0.38's tie-break theory as the sole explanation — with one tab holding all 44 points, the
+  comparison loop can't mis-pick a different tab unless the underlying per-tab counts it compares are
+  themselves wrong. That pointed back at what bug #27 already flagged as uncertain:
+  `GetTalentTabInfo`'s aggregate `pointsSpent` return value, whose exact position was only ever a
+  guess (`tonumber(c) or tonumber(d) or tonumber(e)`). Rather than guess a fourth position, replaced
+  the whole method: `DetectSpec` now sums each individual talent's own `currentRank`
+  (`select(5, GetTalentInfo(tabIndex, talentIndex))` for `talentIndex = 1, GetNumTalents(tabIndex)`)
+  instead of trusting `GetTalentTabInfo`'s aggregate at all — confirmed as a real, working pattern
+  (not another guess) by finding two other installed, actively-used addons on this exact client doing
+  precisely this: `ShamanPower.lua`'s own talent scan and `PallyPower.lua`'s talent-point counter.
+  `GetTalentTabInfo` is no longer called anywhere in the addon. `luac -p`/`luacheck` clean on
+  `Scoring.lua`. Version bumped to 0.381 (thousandths patch — a bugfix, not a new sub-feature, per
+  direct instruction). Full detail in `bugs/resolved-bugs.md` #37's second update.
+- **Previous step: 0.38 — manual "Spec:" dropdown, plus a first (incomplete) fix to `DetectSpec`'s
+  tie-break logic.** Direct live report: playing an Enhancement Shaman, the addon recommended Spell
+  Power (Elemental's reference stat) instead of Attack Power. Investigated `Scoring.DetectSpec`'s
+  talent-tab comparison and found a real bug: ties between two tabs' point counts silently resolved
+  to tab order (tab 1 = Elemental for Shaman) rather than anything meaningful — a real shape for a
+  leveling build that hasn't yet committed every point to one tree, exactly matching the report at
+  the time. Fixed the tie-break to fall back to the documented low-level default instead of guessing
+  from tab order (superseded by 0.381 above, which found this wasn't the whole story). Shipped the
+  directly requested fix regardless of root-cause certainty: a new "Spec" section in the settings
+  window with a "Spec:" dropdown (`Scoring.GetSpecOptions`/`Scoring.SPEC_DISPLAY_NAMES`) listing
+  "Auto-detect" plus the player's class's 3 real specs, wired through `Settings.SetSpecOverride`
+  (stores `characterState.specOverride`, restores weights to the newly-correct spec's defaults,
+  refreshes the UI) and read first by `DetectSpec` before any talent-point logic. Added a status line
+  ("Currently scoring as: ...") and a `source` return value (`"override"`/`"detected"`/`"assumed"`)
+  so `DescribeCurrentSpec()` can say `[manually set]` instead of leaving the source of a spec guess
+  invisible — this also closes `ROADMAP.md`'s old 0.37-adjacent gap of "no spec auto-detection UI
+  feedback." `luac -p`/`luacheck` clean on `Scoring.lua`, `Settings.lua`, `UI.lua`. Version bumped to
+  0.38 (next free two-decimal slot per `CONVENTIONS.md`'s versioning ladder — this is a real new
+  sub-feature, not a thousandths bugfix). Full detail in `bugs/resolved-bugs.md` #37.
+- **Previous step: bug ledger split into `bugs/known-bugs.md` (open only) and `bugs/resolved-bugs.md`
+  (the append-only archive), no version bump.** Requested directly: outstanding bugs should live in
+  `known-bugs.md`, resolved ones get their own file, since resolved history is genuinely useful when
+  troubleshooting a new hard-to-pin-down bug (this project has repeated the same root-cause shapes —
+  stale forward-declarations, an undebounced event handler, a client API returning an unexpected
+  type — more than once, and a past entry's investigation technique, especially reading the on-disk
+  debug log directly, is often the fastest way into a similar-looking new one). Moved bugs #1-28 and
+  #30-36 to the new `bugs/resolved-bugs.md` (35 entries, original numbers kept, nothing renumbered);
+  `bugs/known-bugs.md` now holds only bug #29, the sole entry still genuinely `Open`. Updated every
+  cross-reference to a moved bug number across `CONVENTIONS.md`, `DESIGN.md`, `ROADMAP.md`,
+  `README.md`, `TESTERS.md`, `TEST_PLAN.md`, `CLAUDE.md`, and this file's own Progress log to point at
+  `bugs/resolved-bugs.md` instead — historical decision-log entries that just name which files were
+  touched at a past point in time were left as-is, since `resolved-bugs.md` didn't exist yet at that
+  point. `CLAUDE.md`'s "Read when relevant" table now lists both files, and its Current step section
+  has a new standing note to check `bugs/resolved-bugs.md` first when troubleshooting a difficult
+  bug, per the direct request. `CONVENTIONS.md`'s Mandatory maintenance rules updated to describe the
+  two-file split and when to move an entry across.
+- **Previous step: 0.313 — found and fixed a real debounce gap (bug #36), and reinforced bug #29's
+  evidence with a third read.** Re-reading the on-disk debug log after the 0.312 ring-buffer bump
+  showed it had grown to 123 total entries (confirming the bump works) with bug #29's position data
+  now at 45 clean save/apply pairs across three anchor points (`CENTER`/`TOPLEFT`/`LEFT`), every one
+  matching exactly — zero drift anywhere, still the strongest evidence yet that save/restore itself is
+  sound (the one gap left is a real `/reload`/relaunch round-trip, not yet captured). The same read
+  also turned up something new: a burst of 61 identical "Gear evaluation: 17/17 slot buttons found, 14
+  items scored." lines all timestamped the same second. Traced to `GearEvaluation.lua`'s own event
+  handler (`PLAYER_ENTERING_WORLD`/`PLAYER_EQUIPMENT_CHANGED`/`UNIT_INVENTORY_CHANGED`/
+  `CHARACTER_POINTS_CHANGED`/`PLAYER_LEVEL_UP`) and the `CharacterFrame:HookScript("OnShow", ...)` hook
+  both calling `SafeCall(GearEvaluation.UpdateEquippedGearEvaluation)` directly — bypassing
+  `ScheduleGearEvaluation()`, the 0.2s debounce bug #20/#21 already built for exactly this class of
+  problem, which was only ever wired to the UI's weight-adjustment click path, not this event path.
+  Fixed by routing both call sites through `ScheduleGearEvaluation()` instead. `luac -p`/`luacheck`
+  clean on `GearEvaluation.lua`. Version bumped to 0.313. Full detail in `bugs/resolved-bugs.md` #36
+  (new) and `bugs/known-bugs.md` #29 (third update).
+- **Previous step: 0.312 — increased the debug log ring buffer from 50 to 500 entries.** Directly
+  motivated by bug #29: reading the on-disk debug log twice in the same session showed the 50-entry
+  cap had already wrapped once, evicting whatever came before ~20:24 that session (including however
+  it started). The second read (after the ring buffer had rolled further) did turn up real signal
+  despite this: three clean drag-then-reopen round-trips, all matching exactly, at three different
+  anchor points, with `frame:GetScale()`/`GetEffectiveScale()`/`UIParent:GetEffectiveScale()` all
+  exactly `1.0000` throughout — strong evidence the save/restore mechanism itself is sound. Bumped
+  `Debug.lua`'s `DEBUG_LOG_MAX_ENTRIES` to 500 (still a negligible SavedVariables size for small
+  strings) so a full play session with debug mode on doesn't lose data before it can be dumped.
+  Updated `bugs/known-bugs.md` #29 with the full second-read findings and downgraded its status from
+  "root cause unconfirmed" to "may already be resolved, pending direct confirmation" — the one thing
+  still worth checking is whether an actual `/reload` (not just an in-session close/reopen) also
+  round-trips clean. Updated `TEST_PLAN.md` T7's expected ring-buffer size. `luac -p`/`luacheck` clean
+  on `Debug.lua`. Version bumped to 0.312.
+- **Previous step: documentation consistency pass (no version bump — docs/roadmap only, no code
   changed).** Prompted by a direct question ("when was the last time README.md was updated?") into
   auditing every doc for drift after the recent burst of versions (0.304-0.311). `README.md` itself
   was already current (last touched in the 0.31 consolidation). Found one real gap: `TEST_PLAN.md`'s
@@ -26,8 +125,9 @@ the current single most important next step — this file has everything behind 
   to mark 0.37 taken and 0.38 as the next free two-decimal slot. `DATA_PIPELINE.md` checked and found
   already current (its 0.41-0.44 references are untouched by the 0.31-range renumbering).
 - **Previous step: 0.311 — surveyed the bug ledger for what's genuinely still open, closed two
-  research gaps, and armed bug #29 with more diagnostics.** Every entry in `bugs/known-bugs.md`
-  except bug #29 (window position drift) is Solved or Mitigated pending the next live test pass —
+  research gaps, and armed bug #29 with more diagnostics.** Every bug in the ledger except #29
+  (window position drift) is Solved or Mitigated pending the next live test pass — see
+  `bugs/resolved-bugs.md` for the full archive —
   confirmed this by reading the whole ledger rather than assuming. Found and cited a real
   Defense-rating breakpoint for Feral Druid Bear Tank (~156 rating: raid bosses have a 5.6% chance to
   crit a tank, Survival of the Fittest suppresses 3% of that, the remaining 2.6% needs 2.4 Defense
@@ -44,14 +144,14 @@ the current single most important next step — this file has everything behind 
   sessions would produce; if that theory is right, the next debug dump proves it immediately instead
   of needing a third round-trip. `luac -p`/`luacheck` clean on `UI.lua` and `Priorities.lua`. Version
   bumped to 0.311 (first patch under 0.31's thousandths rule). Full detail in `bugs/known-bugs.md`
-  #29's updated "Attempts to fix" and #34's new update note.
+  #29's updated "Attempts to fix" and `bugs/resolved-bugs.md` #34's new update note.
 - **Previous step: 0.31 — consolidated release.** Squashes the `single-profile` fork (built and
   iterated internally as v0.304 through v0.308, detailed as "Previous step" entries below) into one
   shipped, two-decimal version: one weight set per character (no profiles), direct-entry stat editing
   with no imposed scale, and `Priorities.lua`'s default weights analytically derived from real TBC
   combat formulas instead of guessed or rank-derived numbers. The fork has been fast-forward-merged
   into `main` and the `single-profile` branch deleted — `main` is now the only branch. The individual
-  v0.304-v0.308 version numbers are kept as-is in the Progress log below and in `bugs/known-bugs.md`
+  v0.304-v0.308 version numbers are kept as-is in the Progress log below and in `bugs/resolved-bugs.md`
   #31-#35 (the real, accurate history of how 0.31 was built); they are not retroactively renamed.
   Patches to 0.31 follow the existing thousandths rule (0.311, 0.312… — see `CONVENTIONS.md`'s
   versioning ladder for why the next patch is 0.311 and not 0.301, which already exists as an
@@ -91,7 +191,7 @@ the current single most important next step — this file has everything behind 
   the addon is otherwise stable. `DESIGN.md`'s Layer 3 description updated to match. `luac -p`/
   `luacheck` pass clean on `Priorities.lua`; the structural verification script (all 27 specs, all 25
   stat keys, both modes) was re-run with zero gaps before being deleted again. Full detail in
-  `bugs/known-bugs.md` #35.
+  `bugs/resolved-bugs.md` #35.
 - **Previous step: 0.307 (same fork) — replaced `Priorities.lua`'s hand-authored default weights
   with values sourced from real, cited TBC Classic stat-priority research.** The
   file's own original header admitted these numbers were placeholders ("a design choice... not a
@@ -119,7 +219,7 @@ the current single most important next step — this file has everything behind 
   `Priorities.lua` in isolation, confirms all 27 specs have both speed/survival tables with all 25
   stat keys present, zero gaps) before deleting it. `DESIGN.md`'s Layer 3 description updated to
   match, replacing the old "authored design choices" framing. `luac -p`/`luacheck` pass clean on
-  `Priorities.lua`. Full detail in `bugs/known-bugs.md` #34.
+  `Priorities.lua`. Full detail in `bugs/resolved-bugs.md` #34.
 - **Previous step: 0.306 (same `single-profile` fork) — removed the stat-weight edit box's remaining
   0-10 clamp and "importance scale" framing.** v0.305's edit box still enforced a 0-10 range
   (`Weights.WEIGHT_MIN`/`WEIGHT_MAX`) and the helper text still read "0 = ignore, 10 = highest
@@ -132,7 +232,7 @@ the current single most important next step — this file has everything behind 
   the stat-weights helper text to describe the box as showing the exact weight used when scoring,
   instead of a 0-10 importance rating. Updated `ROADMAP.md`/`DESIGN.md`/`README.md` to stop
   describing a "0-10 scale." `luac -p`/`luacheck` pass clean on `Weights.lua` and `UI.lua`. Full
-  detail in `bugs/known-bugs.md` #33.
+  detail in `bugs/resolved-bugs.md` #33.
 - **Previous step: 0.305 (same `single-profile` fork) — replaced the stat-weight rows' `+`/`-`
   buttons with a direct-entry edit box per stat.** Reported as "too complicated." Each row is now
   just a label and one `EditBox` (`InputBoxTemplate`) showing `FormatWeight`'s rendering of the
@@ -147,7 +247,7 @@ the current single most important next step — this file has everything behind 
   text doesn't parse as a number — invalid input never looks like it was silently accepted. Kept the
   existing collapsible group structure (Core stats/Other stats/Resistances) and the "Restore
   Defaults" button, both confirmed as still wanted. `luac -p`/`luacheck` pass clean on `Weights.lua`
-  and `UI.lua`. Full detail in `bugs/known-bugs.md` #32.
+  and `UI.lua`. Full detail in `bugs/resolved-bugs.md` #32.
 - **Previous step: 0.304 (the "single-profile" fork) — removed the multi-profile system entirely.**
   Reported broadly as "lots of errors in the profile," on top of the already-fixed bug #28 (ambiguous
   picker label). Decision: stop patching the multi-profile system piece by piece and remove it —
@@ -167,7 +267,7 @@ the current single most important next step — this file has everything behind 
   that is filed as `ROADMAP.md`'s new 0.35, not built yet). `ROADMAP.md`'s 0.34 ("profile creation
   dialog") is dropped as moot. `luac -p`/`luacheck` pass clean on all five touched files
   (`Settings.lua`, `Weights.lua`, `GearEvaluation.lua`, `UI.lua`, `Core.lua`). Full detail in
-  `bugs/known-bugs.md` #31.
+  `bugs/resolved-bugs.md` #31.
 - **Previous step: 0.303 — bug #30's real fix: shift+left-click an equipped item to score it.**
   v0.302's usage-message mitigation for bug #30 was rejected outright as too complicated; the
   requested fix was direct: when the character window is open showing equipped gear, shift-click an
@@ -190,7 +290,7 @@ the current single most important next step — this file has everything behind 
   `ROADMAP.md`'s previously-gated 0.33 item; see that file for the consequence to the future 0.6
   "suggest gear" flow (shift+left-click is no longer available as its trigger gesture). Bugs #28/#29
   are untouched from v0.302. `luac -p`/`luacheck` pass clean on all three touched files
-  (`GearEvaluation.lua`, `Scoring.lua`, `Core.lua`). Full detail in `bugs/known-bugs.md` #30.
+  (`GearEvaluation.lua`, `Scoring.lua`, `Core.lua`). Full detail in `bugs/resolved-bugs.md` #30.
 - **Previous step: 0.302 — processed the first real test report (T1-T15 of 35).** v0.301 was tested
   in game, `TEST_PLAN.md` filled in through T15, and testing stopped early on purpose after finding
   enough broken things to warrant fixing before continuing. Outcome — confirmed working: addon load, both
@@ -208,7 +308,7 @@ the current single most important next step — this file has everything behind 
   forward — see 0.303 above). `TEST_PLAN.md` updated so the next
   pass resumes at T1 (to re-confirm these fixes) and continues through T16-T35 (never reached last
   round). `luac -p`/`luacheck` pass on the two touched files (`UI.lua`, `Core.lua`). Full detail in
-  `bugs/known-bugs.md` #28-#30.
+  `bugs/resolved-bugs.md` #28-#30.
 - **Previous step: 0.301 — first Testing Phase 1 bugfix (bug #27)**, and **0.3 — "stable, reorganized
   baseline," entering Testing Phase 1** (the static conflict audit, the CLAUDE.md split, and
   `TESTERS.md`/`TEST_PLAN.md`'s original creation). See the Progress log below for full detail on
@@ -384,7 +484,7 @@ the current single most important next step — this file has everything behind 
   untouched by this change — "any adjustment the player makes overrides the default" still holds
   exactly as before. Bumped `ReflowStatGroups`' starting offset to make room for the new button row
   — **not yet visually confirmed in game that the first stat group doesn't overlap it** (see the
-  in-code comment and known-bugs.md #25). `luac -p` and `luacheck` both pass.
+  in-code comment and resolved-bugs.md #25). `luac -p` and `luacheck` both pass.
 - **0.261 completed (reorganization, not a feature change): split `Core.lua` into 9 focused
   files.** `Core.lua` needed to stay small, with logic/UI/debugging moved to wherever they
   belong, since it had grown to over 1100 lines covering everything from debug logging to window
@@ -437,7 +537,7 @@ the current single most important next step — this file has everything behind 
   one manually adjusted during 0.05/Shift-click testing). Fixed defensively rather than by guessing a
   single position: capture positions 3/4/5 and use `tonumber(c) or tonumber(d) or tonumber(e) or 0`,
   so whichever position is actually numeric on this client wins, without needing certainty about the
-  exact signature. `luac -p`/`luacheck` pass. Not yet re-verified live — see `bugs/known-bugs.md` #27
+  exact signature. `luac -p`/`luacheck` pass. Not yet re-verified live — see `bugs/resolved-bugs.md` #27
   and `TEST_PLAN.md` for the specific follow-up check (does a melee spec now seed high Attack Power
   instead of a flat 5 across every stat?).
 - **0.302 completed: processed the first real test report (T1-T15 of 35; testing stopped early on
@@ -495,7 +595,7 @@ the current single most important next step — this file has everything behind 
   through one implementation instead of two. This pulls forward and closes `ROADMAP.md`'s previously-
   gated 0.33 item ahead of the rest of the Testing Phase 1 follow-ups (0.31/0.32/0.34 remain gated);
   noted in `ROADMAP.md` that the future 0.6 "suggest gear" flow will need a different trigger gesture
-  now that shift+left-click is taken. Updated `bugs/known-bugs.md` #30 to Solved and `TEST_PLAN.md`'s
+  now that shift+left-click is taken. Updated `bugs/resolved-bugs.md` #30 to Solved and `TEST_PLAN.md`'s
   T8 to test the new shift+left-click interaction as primary (added T8b for the `/lgs score`
   fallback). Version bumped to 0.303 in `Debug.lua`/`LevelingGears.toc`/`README.md`/`TESTERS.md`.
   `luac -p` and `luacheck` both pass clean on all three touched files (`GearEvaluation.lua`,
@@ -554,7 +654,7 @@ the current single most important next step — this file has everything behind 
   "0 = ignore, 10 = highest importance..." to describe the box as showing the exact weight used when
   scoring items for that stat. Updated `README.md`/`ROADMAP.md`/`DESIGN.md` to stop describing a
   "0-10 scale," and added `TEST_PLAN.md` T22b to specifically test values outside the old 0-10 range.
-  Logged as `bugs/known-bugs.md` #33. Version bumped to 0.306. `luac -p` and `luacheck` both pass
+  Logged as `bugs/resolved-bugs.md` #33. Version bumped to 0.306. `luac -p` and `luacheck` both pass
   clean on all 9 Lua files.
 - 0.307 completed (same `single-profile` branch): replaced `Priorities.lua`'s hand-authored default
   weights with values sourced from real, cited TBC Classic (Burning Crusade Classic, 2.5.x) PvE
@@ -633,7 +733,7 @@ the current single most important next step — this file has everything behind 
   thousandths rule (0.311, 0.312… — not 0.301, which already exists as an unrelated, much earlier
   bugfix from before this fork). `CLAUDE.md`'s Current step and this file's Current status section
   rewritten to present 0.31 as the headline version, with the detailed v0.304-v0.308 history kept
-  exactly as written (not retroactively renamed) both here and in `bugs/known-bugs.md` #31-#35, since
+  exactly as written (not retroactively renamed) both here and in `bugs/resolved-bugs.md` #31-#35, since
   that's the accurate record of how 0.31 was actually built. Fast-forward merged the `single-profile`
   branch into `main` (a clean linear history, no conflicts) and deleted the `single-profile` branch,
   per instruction that only one branch is needed going forward.
@@ -658,3 +758,107 @@ the current single most important next step — this file has everything behind 
   needing a third round of "please get more data." Updated `bugs/known-bugs.md` #29's "Attempts to
   fix"/"Follow-up" and added a #34 update note. Version bumped to 0.311. `luac -p`/`luacheck` both
   pass clean on `UI.lua` and `Priorities.lua`.
+- 0.312 completed: increased `Debug.lua`'s debug log ring buffer (`DEBUG_LOG_MAX_ENTRIES`) from 50 to
+  500 entries, directly motivated by bug #29. Reading the on-disk debug log a second time (after the
+  first read used in the 0.311 entry above) found the buffer had rolled forward and turned up real
+  signal: three clean drag-then-reopen round-trips, all matching exactly at three different anchor
+  points (`TOPLEFT`, `LEFT`, back to `TOPLEFT`), with `frame:GetScale()`/`GetEffectiveScale()`/
+  `UIParent:GetEffectiveScale()` all exactly `1.0000` throughout — strong evidence the save/restore
+  mechanism itself is sound, though not yet confirmed across an actual `/reload` or client relaunch
+  (an ~11-minute gap in the log has no matching reopen entry, and none of the captured cycles were
+  confirmed to span a real reload — the original report specifically emphasized "reloads and
+  relogs"). The 50-entry cap had also already fully wrapped once during this same session, evicting
+  whatever came before it started being visible — the actual motivation for this version: bump the
+  cap generously (500 entries of short strings is still a negligible SavedVariables size) so a full
+  debug-enabled play session doesn't lose data before it can be dumped. Updated `bugs/known-bugs.md`
+  #29 with the full second-read findings and downgraded its status from "root cause unconfirmed" to
+  "may already be resolved, pending direct confirmation." Updated `TEST_PLAN.md` T7's expected
+  ring-buffer size to match. `luac -p` and `luacheck` both pass clean on `Debug.lua`.
+- 0.313 completed: a third read of the on-disk debug log (now 123 entries, confirming the 0.312
+  ring-buffer bump is working) reinforced bug #29's evidence further — 45 total position log lines
+  now on record, still zero drift across three different anchor points (`CENTER`, `TOPLEFT`, `LEFT`),
+  scale still exactly `1.0000` throughout. The same read surfaced a genuinely new bug: 61 identical
+  "Gear evaluation: 17/17 slot buttons found, 14 items scored." log lines all timestamped the same
+  second (`grep -c "Gear evaluation"` showed 78 total occurrences; `sed`/`sort`/`uniq -c` isolated the
+  burst). Root cause: `GearEvaluation.lua`'s own game-event handler and the `CharacterFrame` `OnShow`
+  hook both called `SafeCall(GearEvaluation.UpdateEquippedGearEvaluation)` directly instead of through
+  `ScheduleGearEvaluation()` — the same 0.2s debounce bug #20/#21 built for rapid-fire weight-adjust
+  clicks, which had never been wired to this event path. `UNIT_INVENTORY_CHANGED` alone can fire many
+  times within the same second during ordinary play (bag/vendor/trade interactions), and every firing
+  was triggering a full, undebounced 17-slot re-evaluation. Fixed by routing both call sites through
+  `GearEvaluation.ScheduleGearEvaluation()` instead of a direct `SafeCall`. `luac -p`/`luacheck` clean
+  on `GearEvaluation.lua`. Version bumped to 0.313. Full detail in `bugs/resolved-bugs.md` #36 (new)
+  and `bugs/known-bugs.md` #29's third update.
+- Bug ledger split completed (documentation-only, no version bump): requested directly that resolved
+  bugs get their own file so outstanding bugs are easier to find, and because resolved history is
+  genuinely useful evidence when troubleshooting a new hard-to-pin-down bug. Created
+  `bugs/resolved-bugs.md` holding bugs #1-28 and #30-36 (35 entries total, original numbers kept,
+  nothing renumbered); `bugs/known-bugs.md` now holds only bug #29, the sole remaining `Open` entry.
+  Updated every live cross-reference to a moved bug number in `CONVENTIONS.md`, `DESIGN.md`,
+  `ROADMAP.md`, `README.md`, `TESTERS.md`, `TEST_PLAN.md`, `CLAUDE.md`, and this file's own Progress
+  log to point at `bugs/resolved-bugs.md` — left alone the handful of historical decision-log entries
+  that just name which files were touched at a past point in time, since `resolved-bugs.md` didn't
+  exist yet then. `CLAUDE.md`'s file table now lists both files, and its Current step section carries
+  a standing instruction to check `bugs/resolved-bugs.md` first when troubleshooting a difficult bug.
+  `CONVENTIONS.md`'s Mandatory maintenance rules updated to describe the two-file split and exactly
+  when an entry should move from one to the other.
+- 0.38 completed: live report of an Enhancement Shaman scored as Elemental (Spell Power recommended
+  instead of Attack Power). Investigated `Scoring.DetectSpec`'s talent-tab comparison loop and found
+  a real bug: two tabs tied on points spent resolved silently to tab order (tab 1 = Elemental for
+  Shaman) instead of anything meaningful -- a real shape for a leveling build with points not yet
+  fully committed to one tree, matching the report exactly. Fixed the tie-break to fall back to the
+  documented `LOW_LEVEL_DEFAULT_SPEC` per-class default instead of trusting tab order, and added
+  debug logging of all 3 tabs' raw point counts plus whether a tie was hit -- logged once per unique
+  reading (not every call, since `DetectSpec` runs once per equipped slot scored and unconditional
+  logging would reintroduce bug #36's spam) so a real `/lgs debug dump` can confirm the theory
+  directly. Shipped the directly-requested fix in parallel: a new "Spec" settings section with a
+  "Spec:" dropdown listing "Auto-detect" plus the player's class's 3 real specs (new
+  `Scoring.SPEC_DISPLAY_NAMES`/`Scoring.GetSpecOptions`), wired through a new
+  `Settings.SetSpecOverride` (stores `characterState.specOverride`, restores weights to the newly-
+  correct spec's defaults so stale wrong-spec weights don't linger, refreshes the UI) which
+  `DetectSpec` now checks before any talent-point reading. Added a `source` return value
+  (`"override"`/`"detected"`/`"assumed"`) alongside the existing `assumed` boolean so
+  `DescribeCurrentSpec()` and a new settings-window status line ("Currently scoring as: ...") can say
+  `[manually set]` rather than leaving a spec guess's origin invisible. Updated `README.md` (new
+  feature bullet; removed the now-stale "no spec auto-detection UI feedback" limitation) and
+  `ROADMAP.md` (new 0.38 entry, marked Built). `luac -p`/`luacheck` clean on `Scoring.lua`,
+  `Settings.lua`, `UI.lua`. Version bumped to 0.38 (a real new sub-feature, not a thousandths
+  bugfix -- see `CONVENTIONS.md`'s versioning ladder, next free slot now 0.39). Full detail in
+  `bugs/resolved-bugs.md` #37.
+- 0.381 completed: reported again right after 0.38 shipped -- same Enhancement Shaman, now with all
+  44 points in Enhancement (no ambiguity, not a tie), still auto-detected as Restoration. Disproved
+  0.38's tie-break theory as the sole explanation: with one tab holding all 44 points, the comparison
+  loop's own logic cannot mis-pick a different tab unless the per-tab point counts it's comparing are
+  themselves wrong. Checked the real on-disk debug log for the new `DetectSpec:` line added in
+  0.38 -- none were present, meaning the report likely predates the client picking up 0.38's code (a
+  `/reload`/relaunch is required after any Lua file change). Regardless, this pointed back at what
+  bug #27 already flagged as uncertain: `GetTalentTabInfo`'s aggregate `pointsSpent` return value,
+  whose exact position this addon was only ever guessing at (`tonumber(c) or tonumber(d) or
+  tonumber(e)`). Rather than guess a fourth position, replaced the whole method: `DetectSpec` now
+  sums each individual talent's own `currentRank` (`select(5, GetTalentInfo(tabIndex, talentIndex))`
+  for `talentIndex = 1, GetNumTalents(tabIndex)`) instead of trusting `GetTalentTabInfo`'s aggregate
+  at all. Verified this is a real, working pattern rather than another guess by finding two other
+  installed, actively-used addons on this exact client already doing exactly this: `ShamanPower.lua`'s
+  own talent scan (`for i = 1, GetNumTalents(t) do ... GetTalentInfo(t, i) ... end`) and
+  `PallyPower.lua`'s talent-point counter (`select(5, GetTalentInfo(tab, loc))`). `GetTalentTabInfo`
+  is no longer called anywhere in the addon (removed from `.luacheckrc`'s globals; `GetNumTalents`/
+  `GetTalentInfo` added instead). Updated stale `GetTalentTabInfo` references in code comments
+  (`Scoring.lua`, `Priorities.lua`) and `DESIGN.md`'s low-level-fallback section. `luac -p`/`luacheck`
+  clean on `Scoring.lua`. Version bumped to 0.381 (thousandths patch per direct instruction -- a
+  bugfix, not a new sub-feature). Full detail in `bugs/resolved-bugs.md` #37's second update.
+- 0.382 completed: first cycle of a bug-fix -> test -> ship loop the author asked to set up and
+  repeat until ready for the database milestone (0.4). With bug #29 the only open bug and no further
+  code fix possible without live evidence, bundled in roadmap item 0.37 (confirmed with the author)
+  since it was small, fully scoped, and ungated. Added a helper-text line to the stat-weights section
+  (`UI.lua`) explaining why Strength/Agility/Intellect/Stamina/Spirit aren't listed (auto-converted
+  into the derived stats shown, per `DESIGN.md`'s double-counting rule) -- a real gap where a
+  first-time player had no way to know why familiar stats were missing. Bumped
+  `ReflowStatGroups`'s starting offset from -134 to -160 to make room for the new line (a reasoned
+  estimate, not a measured value -- flagged in `TEST_PLAN.md`'s T13 for the upcoming test pass).
+  `ROADMAP.md` cleanup: marked 0.37 Built (shipped under a thousandths patch rather than its own
+  two-decimal slot, matching the 0.33/v0.303 precedent); fixed two stale "not built" references to the
+  spec-override dropdown, which actually shipped in 0.38; rewrote the "Testing Phase 1 follow-ups"
+  intro to state plainly that every item in it (0.31-0.38) is now Built and the section is done
+  pending only a real `TEST_PLAN.md` T1-T35 pass. Deleted a stale, blank, never-filled untracked
+  `TEST_RESULTS_Helio_0311` file. `luac -p`/`luacheck` clean on `UI.lua`. Version bumped to 0.382.
+  This closes out every currently-known code fix -- see `CLAUDE.md`'s Next step for the test-pass ask.

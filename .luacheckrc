@@ -15,7 +15,8 @@ read_globals = {
 	-- v0.25 scoring engine (Conversions.lua/Priorities.lua/Scoring.lua):
 	"UnitClass", "UnitStat", "GetCritChanceFromAgility", "GetSpellCritChanceFromIntellect",
 	"ARMOR_PER_AGILITY", "MANA_PER_INTELLECT",
-	"GetCombatRating", "GetCombatRatingBonus", "GetTalentTabInfo",
+	"GetCombatRating", "GetCombatRatingBonus",
+	"GetNumTalents", "GetTalentInfo",
 	"CR_DEFENSE_SKILL", "CR_DODGE", "CR_PARRY", "CR_BLOCK",
 	"CR_HIT_MELEE", "CR_HIT_RANGED", "CR_HIT_SPELL",
 	"CR_CRIT_MELEE", "CR_CRIT_RANGED", "CR_CRIT_SPELL",
