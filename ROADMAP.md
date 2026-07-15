@@ -124,13 +124,6 @@ regression checklist, then come back here.
   default weights with values analytically derived from real TBC combat formulas (see `DESIGN.md`'s
   Layer 3 section) instead of either hand-authored guesses or an invented rank-to-number scale.
   **Built.**
-- **0.36 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
-  minimap (the standard convention most players expect from an addon minimap icon); the new position
-  persists across sessions the same way window position does. Left-click still opens/closes the
-  settings window. A plain right-click (no drag) no longer needs to also open/close the window once
-  drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
-  right-click currently doing the same thing; that note goes away once this ships. (Renumbered from
-  0.31, which this consolidated release now occupies.)
 - **0.32 — Custom art: minimap button icon/border, and the addon's own icon/logo.** The current
   minimap button uses a generic placeholder icon (`INV_Misc_Gear_01`) and the border appears larger
   than the clickable button itself. `CONVENTIONS.md`'s Branding section already calls for "a small
@@ -167,6 +160,23 @@ regression checklist, then come back here.
   hand-touched (needs a new "touched by player" flag per stat, since today there's no way to tell a
   hand-set 5 apart from a seeded 5) — the second option preserves customization but is more state to
   track. Decide and record the choice here before implementing.
+- **0.36 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
+  minimap (the standard convention most players expect from an addon minimap icon); the new position
+  persists across sessions the same way window position does. Left-click still opens/closes the
+  settings window. A plain right-click (no drag) no longer needs to also open/close the window once
+  drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
+  right-click currently doing the same thing; that note goes away once this ships. (Renumbered from
+  0.31, which the consolidated release above now occupies.)
+- **0.37 — Explain, in the settings UI itself, why primary stats aren't weightable.** The stat-weights
+  section only ever shows DERIVED stats (Attack Power, Spell Power, Crit Rating, Armor, Health, Mana,
+  etc.) — Strength/Agility/Intellect/Stamina/Spirit have never had their own rows, since v0.25
+  (`DESIGN.md`'s double-counting rule: primaries are auto-converted into the derived stats already
+  shown, so weighting them directly too would double-count). Nothing in the UI currently says this —
+  a player who opens the section for the first time and doesn't see familiar stats like Strength has
+  no way to know why. Add a small helper-text line (same small font as the existing helper text above
+  the stat groups) explaining this in plain terms, e.g. "Strength, Agility, Intellect, Stamina, and
+  Spirit aren't listed here — they're automatically converted into the stats below (Attack Power,
+  Crit, Health, Mana, etc.), so weighting them separately would count them twice."
 
 - **0.4 — Freeze the schema + hand-made sample.** Implement the exact table shapes above as real
   Lua files. Populate with a ~12-item HAND-MADE sample spanning every source kind (drop, quest,

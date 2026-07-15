@@ -22,34 +22,21 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.31 — consolidated release: single weight set per character, direct-entry stat editing,
-analytically-derived defaults.** This squashes the `single-profile` fork (built and iterated
-internally as v0.304-v0.308, now merged back into `main` and deleted) into one shipped version:
+**Current version: v0.311.** Consolidated release 0.31 (single weight set per character,
+direct-entry stat editing, analytically-derived `Priorities.lua` defaults — see `PROGRESS.md`'s
+Current status for the full summary and `bugs/known-bugs.md` #31-#35 for how it was built), plus
+0.311's follow-up: closed two `Priorities.lua` research gaps and added scale diagnostics to bug #29
+(`bugs/known-bugs.md` #29's update note, #34's update note). Patches to 0.31 follow the usual
+thousandths rule (0.311, 0.312…), per `CONVENTIONS.md`'s versioning ladder.
 
-- **One weight set per character**, no profiles — create/switch/name-profile UI removed entirely
-  (`bugs/known-bugs.md` #31).
-- **Direct-entry stat editing** — each stat is a label plus an edit box showing and accepting the
-  exact value the scoring engine uses, replacing the old +/- buttons and (after one follow-up fix)
-  the leftover 0-10 clamp/"importance scale" framing (`bugs/known-bugs.md` #32/#33).
-- **`Priorities.lua`'s default weights are now analytically derived** from real, verified TBC combat
-  formulas (14 Attack Power = 1 DPS, crit/haste multiplier math, per-class mechanical corrections
-  like Warrior rage-generation normalization and caster crit-multiplier talents) instead of either
-  hand-authored guesses or an invented rank-to-number scale — see `DESIGN.md`'s Layer 3 section and
-  `bugs/known-bugs.md` #34/#35 for the two-step correction that got here.
-
-The individual v0.304-v0.308 numbers stay in `PROGRESS.md`'s Progress log and the bug ledger as the
-accurate build history — they are not retroactively renamed — but 0.31 is the version going forward.
-**Patches to 0.31 follow the usual thousandths rule: 0.311, 0.312…**, per `CONVENTIONS.md`'s
-versioning ladder.
-
-v0.303 (also on `main`) was bug #30's real fix: shift+left-click an equipped item in the character
-window to print its score to chat, replacing `/lgs score` for everyday use (`/lgs score` still works
-as a debug-bench fallback). See `bugs/known-bugs.md` #30 for why shift+left-click was used instead of
-the originally-requested shift+right-click.
-
-Next step: resume `TEST_PLAN.md` at T1 to re-confirm everything through 0.31, then continue through
-T16-T35, which were never reached. Testers email completed checklists to
-`wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
+**Next step: a real `TEST_PLAN.md` T1-T35 pass against v0.311 — not more code.** Everything from
+v0.301 onward is implemented and statically validated but has had no live confirmation since the
+very first test report. Only bug #29 (window position drift) is still genuinely open in the bug
+ledger; a real on-disk debug log already ruled out the UI-scale-mismatch theory for it and captured
+one real drag with no matching reopen yet — the next test pass just needs to reopen the window after
+dragging it before pulling `/lgs debug dump` (see `bugs/known-bugs.md` #29's latest update). Nothing
+further should be built or "fixed" blindly until a test pass happens. Testers email completed
+checklists to `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
 
 How to handle a completed test report is a standing rule — see `CONVENTIONS.md`'s Hard process
 rules.

@@ -19,7 +19,11 @@ local weightInputs = {}
 -- Bug #29 (open): testers report the restored position is consistently in "a similar general
 -- area" but not the exact spot the window was dragged to -- logged here and in SaveWindowPosition
 -- so a real debug-log comparison of saved vs. applied values is possible next test pass, rather
--- than guessing at a fix with no evidence.
+-- than guessing at a fix with no evidence. v0.311 added scale logging alongside the existing
+-- point/relativePoint/x/y: a "consistently offset, not random" symptom is exactly the signature a
+-- deterministic UI-scale mismatch between the drag session and a later login would produce (a real,
+-- known category of WoW addon position bugs) -- if that turns out to be the cause, this makes it
+-- provable from the very next debug dump instead of needing a third round of "please get more data."
 local function ApplySavedPosition(frame)
 	local settings = LG.Settings.GetGeneralSettings()
 	local pos = settings.position
@@ -28,8 +32,10 @@ local function ApplySavedPosition(frame)
 		frame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.x or 0, pos.y or 0)
 		if LG.Debug then
 			LG.Debug.WriteDebugLog(string.format(
-				"ApplySavedPosition: point=%s relativePoint=%s x=%.2f y=%.2f",
-				pos.point, pos.relativePoint, pos.x or 0, pos.y or 0), 1)
+				"ApplySavedPosition: point=%s relativePoint=%s x=%.2f y=%.2f frameScale=%.4f " ..
+				"frameEffScale=%.4f uiParentEffScale=%.4f",
+				pos.point, pos.relativePoint, pos.x or 0, pos.y or 0,
+				frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
 		end
 	end
 end
@@ -57,8 +63,10 @@ local function SaveWindowPosition(frame)
 	}
 	if LG.Debug then
 		LG.Debug.WriteDebugLog(string.format(
-			"SaveWindowPosition: point=%s relativePoint=%s x=%d y=%d",
-			settings.position.point, settings.position.relativePoint, xOfs, yOfs), 1)
+			"SaveWindowPosition: point=%s relativePoint=%s x=%d y=%d frameScale=%.4f " ..
+			"frameEffScale=%.4f uiParentEffScale=%.4f",
+			settings.position.point, settings.position.relativePoint, xOfs, yOfs,
+			frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
 	end
 end
 

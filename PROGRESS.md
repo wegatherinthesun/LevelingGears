@@ -9,7 +9,43 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.31 — consolidated release.** Squashes the `single-profile` fork (built and
+- **Current step: documentation consistency pass (no version bump — docs/roadmap only, no code
+  changed).** Prompted by a direct question ("when was the last time README.md was updated?") into
+  auditing every doc for drift after the recent burst of versions (0.304-0.311). `README.md` itself
+  was already current (last touched in the 0.31 consolidation). Found one real gap: `TEST_PLAN.md`'s
+  "Recent changes to focus on" section and T2 still referenced v0.306, with no mention of v0.307's
+  research pass, v0.308's analytical derivation, the 0.31 consolidation, or 0.311's bug-ledger
+  work — rewrote that section, fixed T2's version expectation, updated T11 to mention the new scale
+  diagnostics, and updated T20 with specific per-role weight expectations (e.g. a Restoration Shaman
+  should seed MP5 *above* Healing Power — that's the real, correct ratio, not a bug) instead of the
+  generic "not a flat 5." Also reordered `ROADMAP.md`'s Testing Phase 1 follow-ups list back into
+  ascending numeric order (0.31 through 0.37 had drifted out of sequence across several edits). Added
+  a new roadmap item, 0.37, per direct request: explain in the settings UI itself why primary stats
+  (Strength/Agility/Intellect/Stamina/Spirit) aren't shown as weightable — nothing currently tells a
+  player why familiar stats are missing from the list. `CONVENTIONS.md`'s versioning ladder updated
+  to mark 0.37 taken and 0.38 as the next free two-decimal slot. `DATA_PIPELINE.md` checked and found
+  already current (its 0.41-0.44 references are untouched by the 0.31-range renumbering).
+- **Previous step: 0.311 — surveyed the bug ledger for what's genuinely still open, closed two
+  research gaps, and armed bug #29 with more diagnostics.** Every entry in `bugs/known-bugs.md`
+  except bug #29 (window position drift) is Solved or Mitigated pending the next live test pass —
+  confirmed this by reading the whole ledger rather than assuming. Found and cited a real
+  Defense-rating breakpoint for Feral Druid Bear Tank (~156 rating: raid bosses have a 5.6% chance to
+  crit a tank, Survival of the Fittest suppresses 3% of that, the remaining 2.6% needs 2.4 Defense
+  Rating per 0.1% — a genuine, Druid-specific number distinct from the Warrior/Paladin ~490 Defense
+  Skill figure, since Druids have a crit-suppression talent those classes lack), closing one of the
+  two "honest gap" flags from bug #34/#35. Re-checked Discipline Priest's citation: re-attempted a
+  direct fetch of the Warcraft Tavern source (still 403s) and checked Wowhead's equivalent page
+  (client-rendered, no static text to fetch) — no better source exists, so the original proxy-sourced
+  numbers stay, now noting that a separate, independent search result corroborated the Spirit-to-
+  Healing ratio exactly. For bug #29, added `frame:GetScale()`/`GetEffectiveScale()`/
+  `UIParent:GetEffectiveScale()` logging to `SaveWindowPosition`/`ApplySavedPosition` alongside the
+  existing point/x/y capture — pure additional diagnostics, not a guessed fix, since a "consistently
+  offset, not random" symptom is exactly the signature a deterministic UI-scale mismatch between
+  sessions would produce; if that theory is right, the next debug dump proves it immediately instead
+  of needing a third round-trip. `luac -p`/`luacheck` clean on `UI.lua` and `Priorities.lua`. Version
+  bumped to 0.311 (first patch under 0.31's thousandths rule). Full detail in `bugs/known-bugs.md`
+  #29's updated "Attempts to fix" and #34's new update note.
+- **Previous step: 0.31 — consolidated release.** Squashes the `single-profile` fork (built and
   iterated internally as v0.304 through v0.308, detailed as "Previous step" entries below) into one
   shipped, two-decimal version: one weight set per character (no profiles), direct-entry stat editing
   with no imposed scale, and `Priorities.lua`'s default weights analytically derived from real TBC
@@ -601,3 +637,24 @@ the current single most important next step — this file has everything behind 
   that's the accurate record of how 0.31 was actually built. Fast-forward merged the `single-profile`
   branch into `main` (a clean linear history, no conflicts) and deleted the `single-profile` branch,
   per instruction that only one branch is needed going forward.
+- 0.311 completed: surveyed the full bug ledger to find what's genuinely still open before calling
+  0.31 done. Result: only bug #29 (window position drift) is `Open`; every other entry is `Solved` or
+  `Mitigated` pending the next live test pass, not more code. Closed two research gaps flagged during
+  the 0.31 `Priorities.lua` rework (bug #34/#35): found a real Defense-rating breakpoint for Feral
+  Druid Bear Tank via a fresh search (raid bosses have a 5.6% crit chance against a tank; Survival of
+  the Fittest suppresses 3%; the remaining 2.6% needs 2.4 Defense Rating per 0.1%, i.e. ~156 rating
+  for full immunity through Defense alone — a real, Druid-specific number, distinct from the Warrior/
+  Paladin ~490 Defense Skill figure since Druids have an equivalent crit-suppression talent those
+  classes don't) and updated `Priorities.lua`'s comment to cite it; re-attempted Discipline Priest's
+  citation (Warcraft Tavern's page still 403s a direct fetch, Wowhead's equivalent page is
+  client-rendered with no static text to fetch) — no better source found, so the existing numbers
+  stay, now noting a separate search result independently corroborated the Spirit-to-Healing ratio
+  exactly. For bug #29, added `frame:GetScale()`/`frame:GetEffectiveScale()`/
+  `UIParent:GetEffectiveScale()` logging to `SaveWindowPosition`/`ApplySavedPosition` (`UI.lua`)
+  alongside the existing point/relativePoint/x/y capture — pure additional diagnostic capture, not a
+  guessed fix, since the bug's "consistently offset, not random" symptom is exactly what a
+  deterministic UI-scale mismatch between the drag session and a later login would produce; this way
+  the next test pass's debug dump either confirms or rules out that theory immediately instead of
+  needing a third round of "please get more data." Updated `bugs/known-bugs.md` #29's "Attempts to
+  fix"/"Follow-up" and added a #34 update note. Version bumped to 0.311. `luac -p`/`luacheck` both
+  pass clean on `UI.lua` and `Priorities.lua`.

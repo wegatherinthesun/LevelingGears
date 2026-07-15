@@ -8,8 +8,9 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.31). The stat-weighting and scoring engine — the settings window, weight
-sliders (one set per character), and the equipped-gear outline coloring — is real and testable. The longer-term
+Leveling Gears is early (v0.311). The stat-weighting and scoring engine — the settings window,
+direct-entry stat weights (one set per character), and the equipped-gear outline coloring — is real
+and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
 no tooltip integration, no recommendation window. If a roadmap item in `ROADMAP.md` is marked "Not
 built," that's expected, not a defect. Only note something as a problem if it should work today
@@ -22,7 +23,8 @@ built," that's expected, not a defect. Only note something as a problem if it sh
 - **Install:** per `README.md`'s Installation section. Confirm `/levelinggears` or `/lgs` opens the
   settings window before starting — if it doesn't, that's worth noting right away.
 - **Test across more than one class/spec if you can.** The scoring engine's default weights
-  (`Priorities.lua`) are authored per class/spec/mode — 9 classes × up to 3 specs × 2 modes.
+  (`Priorities.lua`) are analytically derived per class/spec/mode from real TBC combat formulas —
+  9 classes × up to 3 specs × 2 modes, each with its own real per-spec details (see `DESIGN.md`).
   Coverage across different characters is more valuable here than repeat runs on one. (`TEST_PLAN.md`
   already asks for this on the specific test case where it matters most.)
 

@@ -34,43 +34,48 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.306.** No test report has come in since the first real v0.301 pass, so this section
-covers everything changed across v0.301 → v0.306 in one go. That first pass found bug #27's fix
-largely working (T1/T3/T7 showed clean loads and successful gear scoring — a big improvement) but
-stopped at T15/T16 after hitting three more real issues, and after reporting the profile system and
-the stat-weight controls as sources of "lots of errors" / "too complicated." v0.302/v0.303 fixed the
-first three bugs; v0.304 removed the multi-profile system entirely (one weight set per character
-now — hand-adjust it, or click "Restore Defaults"); v0.305 replaced the stat rows' value+/-buttons
-with a direct-entry edit box per stat, and v0.306 then removed that edit box's remaining 0-10 clamp
-and "importance scale" framing after it was reported as still not showing the real value. **Testing
-should resume from T1** to re-confirm everything still works after all of this, then continue on to
-T16-T35, which were never reached last time:
+**Version: v0.311.** No test report has come in since the first real v0.301 pass, so this section
+covers everything changed across v0.301 → v0.311 in one go — that's a lot, but almost none of it has
+had any live confirmation yet. That first pass found bug #27's fix largely working (T1/T3/T7 showed
+clean loads and successful gear scoring — a big improvement) but stopped at T15/T16 after hitting
+three more real issues, and after reporting the profile system and the stat-weight controls as
+sources of "lots of errors" / "too complicated." **Testing should resume from T1** to re-confirm
+everything still works after all of this, then continue on to T16-T35, which were never reached:
 
-1. **Stat weight boxes now show the exact value with no scale (v0.306).** No more 0-10 clamp, no
-   more "0 = ignore, 10 = highest importance" framing — the box shows and accepts the literal number
-   the scoring engine multiplies the stat by. **T22-T23 below are rewritten again** to test this.
-2. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
-   no more profile picker, no "Create new profile." **T15-T18 below are rewritten** to test the new
-   single-weight-set model instead of profile creation/switching.
-3. **Bug #29 (open, mitigated): window position restores consistently but not to the exact dragged
-   spot.** No confirmed root cause yet — added debug logging (`/lgs debug` level 1) to both save and
-   restore, plus a defensive pixel-rounding fix. **T11 this round should include the
-   `/lgs debug dump` output** covering both a drag and a reopen, so there's real data to compare
-   instead of a visual impression.
-4. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
+1. **`Priorities.lua`'s default weights are now analytically derived from real TBC combat formulas
+   (v0.308, following v0.307's real-but-still-approximate research pass).** Every spec's seeded
+   weights come from verified formulas (14 Attack Power = 1 DPS, crit/haste multiplier math,
+   per-class mechanical corrections like Warrior rage-generation normalization) instead of a guess or
+   an invented rank-to-number scale — see `DESIGN.md`'s Layer 3 section. **T20 below is rewritten**
+   with specific per-role expectations to actually test this, not just "not a flat 5."
+2. **Stat weight boxes show the exact value with no scale (v0.305/v0.306).** No more +/- buttons, no
+   0-10 clamp, no "0 = ignore, 10 = highest importance" framing — the box shows and accepts the
+   literal number the scoring engine multiplies the stat by. **T22-T23 below test this.**
+3. **Profile system removed (v0.304).** The "Profiles" section is gone from the settings window —
+   no more profile picker, no "Create new profile." **T15-T18 below test the new single-weight-set
+   model** instead of profile creation/switching.
+4. **Bug #29 (still open): window position restores consistently but not to the exact dragged
+   spot.** Root cause still unconfirmed — v0.311 added scale diagnostics (`GetScale`/
+   `GetEffectiveScale`) on top of the existing point/x/y logging, in case a UI-scale mismatch between
+   sessions turns out to be the cause. **T11 this round should include the full `/lgs debug dump`**
+   covering both a drag and a reopen — this is the single most valuable piece of data this round,
+   since nothing more can be fixed here without it.
+5. **Bug #30 (solved): `/lgs score` reported as "too complicated."** Shift-click an equipped item in
    the character window to print its score to chat, no slash command needed. Built as
    **shift+left-click** (not the literally-requested shift+right-click — see bug #30 in
-   `bugs/known-bugs.md` for the verified Blizzard-click-behavior reasoning). **T8 below tests this as
-   the primary workflow**; `/lgs score` still works as a debug-bench fallback.
-5. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
-   change (that's `ROADMAP.md`'s 0.35, not built yet), the addon now tells you this once at boot —
-   look for it and confirm the wording makes sense.
-6. **New roadmap items, not built yet:** minimap drag-to-reposition + custom art (`ROADMAP.md`
-   0.31/0.32) and auto-updating defaults on respec (0.35). None of these are testable yet — don't
-   look for them.
+   `bugs/known-bugs.md`). **T8 below tests this as the primary workflow**; `/lgs score` still works
+   as a debug-bench fallback.
+6. **New chat notice on first load:** since weights no longer auto-update on a respec or talent
+   change (that's `ROADMAP.md`'s 0.35, not built yet), the addon tells you this once at boot — look
+   for it and confirm the wording makes sense.
+7. **New roadmap items, not built yet:** minimap drag-to-reposition (renumbered from 0.31 to 0.36,
+   since 0.31 is now this whole consolidated version — see `ROADMAP.md`), custom art (0.32),
+   auto-updating defaults on respec (0.35), and an in-UI explanation for why primary stats aren't
+   weightable (0.37). None of these are testable yet — don't look for them.
 
 Bug #27 itself (from v0.301) is not fully closed — T20 (spec-aware default seeding across multiple
-classes) still hasn't actually been run. That's still this round's highest-value test.
+classes) still hasn't actually been run. That's still this round's highest-value test, alongside T11
+above.
 
 ---
 
@@ -96,7 +101,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.306**.
+- Expected: Reads **v0.311**.
 - Result:
 - Notes:
 
@@ -181,13 +186,16 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 **T11 — Window position persists (bug #29 — reported imprecise last round)**
 - Instruction: Drag the window to a spot you can describe precisely (e.g. "top-left corner flush
-  against the minimap"), then `/reload`. Repeat once more but fully exit and relaunch the client
-  instead of `/reload`.
+  against the minimap"), **then actually reopen the window at least once** (close it and reopen via
+  `/lgs`, or `/reload`, or a full relaunch) before pulling the debug dump — a dump taken right after
+  the drag but before a reopen doesn't capture the comparison this bug needs.
 - Repeat: 2x (one `/reload`, one full restart)
 - Expected: Window reopens in the *exact* dragged position both times, not just a similar area.
-  Please include `/lgs debug dump` covering both the drag and the reopen — new logging this round
-  prints the exact saved/restored coordinates, which is the hard evidence needed to actually
-  pin down last round's "close but not exact" report.
+  Please include `/lgs debug dump` covering both the drag (`SaveWindowPosition` line) AND the
+  reopen (`ApplySavedPosition` line) — a real dump already checked showed 36 clean opens at the
+  default position with scale values identical every time (UI-scale mismatch is ruled out as the
+  cause), plus one real drag, but no matching reopen afterward — that reopen line is the one piece
+  still missing to actually diagnose this.
 - Result:
 - Notes:
 
@@ -264,8 +272,13 @@ testing into a grind. If you have time to do more on any case, more is always we
   (Warrior/Rogue), one caster (Mage/Warlock), one healer (Priest/Druid/Paladin) — either check the
   weights on first-ever load, or click "Restore Defaults."
 - Repeat: 3x (3 different characters/specs minimum — more is better if you have alts available)
-- Expected: Seeded weights look role-appropriate (e.g. the melee character seeds high Attack Power,
-  the caster seeds high Spell Power, not a flat 5 across every stat on any of them).
+- Expected: Seeded weights match that spec's real, cited stat priority (see `Priorities.lua`), not
+  just "not a flat 5" — e.g. a Fury Warrior should seed Hit and Expertise as its two highest values
+  with Haste near zero (a real TBC rage-mechanic quirk, not a mistake); a Restoration Shaman should
+  seed MP5 *above* Healing Power (a genuinely surprising real ratio from its cited source — this is
+  correct, not a bug); a Warlock should seed Hit clearly above Spell Power. If a seeded set of values
+  looks backwards or nonsensical for that spec, that's worth reporting in detail (which stats, which
+  spec) rather than just "weights looked wrong."
 - Result:
 - Notes:
 

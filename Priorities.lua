@@ -323,9 +323,14 @@ Priorities.ROGUE = {
 Priorities.PRIEST = {}
 
 -- Source (Discipline): https://www.warcrafttavern.com/tbc/guides/pve-discipline-healing-priest-stat-priority/
--- LOWER CONFIDENCE THAN OTHER ENTRIES: Icy Veins has no dedicated TBC Classic Discipline page; this
--- Warcraft Tavern page returned an HTTP 403 to a direct fetch during research and was retrieved via
--- a text-extraction proxy -- spot-check the live page before treating this as final. Priority:
+-- LOWER CONFIDENCE THAN OTHER ENTRIES: Icy Veins has no dedicated TBC Classic Discipline page, and
+-- Wowhead's equivalent page (wowhead.com/tbc/guide/classes/priest/healer-stat-priority-attributes-pve)
+-- is client-rendered with no static text to fetch -- the Warcraft Tavern page above remains the only
+-- source found, retrieved via a text-extraction proxy after it 403'd a direct fetch (re-confirmed
+-- still 403ing as of the v0.311 re-check). Partially independently corroborated, though: a separate
+-- plain-text search result (not the same proxy) independently gave the identical Spirit-to-Healing
+-- ratio ("1 Spirit = 0.35 Healing Power & Spell damage with both buffs"), matching this file's number
+-- exactly -- some confidence, but the full ranked order below is still only single-sourced. Priority:
 -- Spell Haste > Healing Power > Spell Crit > Spirit > Intellect > MP5 > Stamina -- unusually, Haste
 -- ranks ABOVE Healing Power itself (source: "biggest increase to healing output"), reflected here by
 -- weighting Haste above the HEAL reference, following the caster-template ratios (Haste ~1.35x SP
@@ -649,9 +654,14 @@ Priorities.DRUID.balance = {
 -- Source (Feral -- Bear Tank): https://www.icy-veins.com/tbc-classic/feral-druid-tank-pve-stat-priority
 -- Priority: Expertise (6.5%) > Agility > Stamina (an explicit ~1.7x effective multiplier in Dire
 -- Bear Form + Heart of the Wild + Blessing of Kings is cited) > Hit (9%) > Strength > Crit > Haste >
--- Dodge > Defense > Attack Power > Resilience > Armor > Armor Penetration. NOTE: this source gives
--- no exact Defense-rating breakpoint for crit immunity (unlike the Warrior/Paladin tank sources) --
--- an honest gap, not filled with an invented number.
+-- Dodge > Defense > Attack Power > Resilience > Armor > Armor Penetration.
+-- Defense-rating crit-immunity breakpoint (found v0.311, was an honest gap in v0.307/v0.308):
+-- Warcraft Tavern's Feral tank cap page (warcrafttavern.com/tbc/guides/pve-feral-druid-tank-stat-priority)
+-- gives Druid-specific numbers distinct from the Warrior/Paladin "~490 Defense Skill" figure already
+-- used elsewhere in this file: raid bosses have a 5.6% chance to crit a tank, Survival of the Fittest
+-- (Feral talent) suppresses 3% of that, leaving 2.6% to cover via Defense; at 2.4 Defense Rating per
+-- 0.1% suppression, full crit immunity through Defense Rating alone needs ~156 rating (lower than
+-- Warrior/Paladin's requirement precisely because they lack an equivalent crit-suppression talent).
 Priorities.DRUID.feral = {
 	offense = "melee", defaultMode = "speed",
 	speed = {
