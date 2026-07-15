@@ -49,8 +49,21 @@ implemented as specified, not designed from scratch.
 2. **Conversions.lua, Layer 2 (the one static table)** -- Attack Power per point of Strength/Agility,
    per class/form. The API has no clean way to expose this, so it's the one deliberately hardcoded
    piece of conversion data.
-3. **Priorities.lua, Layer 3 (authored)** -- how much each DERIVED stat matters, per class/spec/mode.
-   These are design choices from TBC leveling knowledge, not a lookup or a sim result.
+3. **Priorities.lua, Layer 3 (analytically derived, v0.308)** -- how much each DERIVED stat matters,
+   per class/spec/mode. Went through three real revisions: hand-authored placeholder numbers (v0.25);
+   real, cited TBC Classic stat-priority guides converted to numbers via an invented anchor scale
+   (v0.307, still a shortcut -- a ranked list doesn't specify a *magnitude*, only an order); and now
+   (v0.308) every weight is DERIVED from known, verified TBC combat formulas -- 14 Attack Power = 1
+   DPS, a physical crit's +100% damage bonus, Haste's direct attack-frequency scaling, Hit/Expertise's
+   "a miss is zero damage" effect, plus real per-class mechanical corrections (Warrior rage-generation
+   normalization, casters' crit-multiplier talents, HoT/DoT crit-immunity) -- and the two real
+   published numeric tables found during research (Warlock's Spell Power Equivalency values, Resto
+   Shaman's Heal/Haste/MP5/Crit/Int/Stam ratios) are used directly rather than approximated. See
+   `Priorities.lua`'s own header comment for the full methodology, every formula and constant used,
+   and its honest limits (this is derived math, not simulation; Hit/Expertise caps still can't be
+   modeled dynamically; "survival" mode is still a documented, undecided leveling-specific adjustment
+   layered on the derived "speed" baseline). See also `bugs/known-bugs.md` #34 and #35 for the full
+   history of why this replaced first the placeholder numbers, then the anchor-scale ones.
 
 Keeping these in separate files is the point: conversions are game mechanics (Layers 1-2), priorities
 are opinions (Layer 3). Mixing them is exactly how double-counting bugs happen -- e.g. weighting

@@ -22,32 +22,38 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**v0.306 (on the `single-profile` fork) — removed the stat-weight edit box's remaining 0-10 clamp
-and "importance scale" framing.** v0.305's edit box still enforced a 0-10 range and still said
-"0 = ignore, 10 = highest importance," so it was reported as still showing "the 1-10 system" rather
-than the actual value. There is no scale any more: the box shows and accepts exactly the number
-`Scoring.lua`'s `ComputeScore` multiplies the derived stat by, with no minimum, maximum, or
-rating-language on top (`Weights.WEIGHT_MIN`/`WEIGHT_MAX` removed; `SetWeightValue` no longer
-clamps). Full detail in `bugs/known-bugs.md` #33.
+**v0.308 (on the `single-profile` fork) — replaced `Priorities.lua`'s anchor-scale weights with
+values analytically derived from known TBC combat formulas.** v0.307's fix was called out as still a
+shortcut: a real priority ORDER doesn't specify a magnitude, and inventing one (10/8/6/3/0) wasn't
+"doing the math right." Confirmed real numeric per-point stat weights require either simulation
+(`wowsims/tbc` has a genuine one, but it's gear/build-dependent and running it means real
+infrastructure work) or analytical derivation from known mechanics — chose the latter, with the
+requester's confirmation. Every weight now comes from verified formulas (14 AP = 1 DPS, crit/haste
+multiplier math, Hit/Expertise's "a miss is zero damage" effect) plus real per-class mechanical
+corrections (Warrior rage-generation normalization, caster crit-multiplier talents, HoT/DoT
+crit-immunity), using the two real published numeric tables found (Warlock's Spell Power
+Equivalency, Resto Shaman's Heal/Haste/MP5/Crit/Int/Stam ratios) directly rather than approximating
+them. Also caught and corrected a conceptual error: guide priority orders blend true marginal value
+with itemization-scarcity advice ("you'll get plenty of this stat anyway") — only the former belongs
+in a per-item scoring weight, so the primary reference stat (AP/RAP/SP/HEAL) is never suppressed by
+that reasoning. Added a `ROADMAP.md` "Past 1.0" entry to revisit whether real simulator-farmed data
+is worth the infrastructure cost later. Full detail in `bugs/known-bugs.md` #35.
 
-**v0.305 (same fork) — replaced the stat-weight +/- buttons with direct-entry edit boxes.** Each stat
-row is a label and one editable text box; type a value, press Enter (or click away) to save. Invalid
-(non-numeric) typed text reverts to the real saved value rather than sticking. "Restore Defaults"
-persists unchanged. Full detail in `bugs/known-bugs.md` #32.
+**v0.307 (same fork, earlier step)** — the intermediate, still-shortcut fix described above; see
+`bugs/known-bugs.md` #34 for that history.
 
-**v0.304 (same fork) — removed the multi-profile system entirely.** There is now exactly one
-hand-adjustable weight set per character, restorable to spec defaults via "Restore Defaults." Since
-weights don't auto-update on a respec or talent change (and never did — see `ROADMAP.md`'s new
-0.35), the addon tells the player this once at boot in chat. Full detail in `bugs/known-bugs.md` #31.
+**v0.304-0.306 (same fork, earlier steps)** — removed the multi-profile system (one weight set per
+character now), replaced the stat-weight +/- buttons with direct-entry edit boxes, then removed that
+edit box's leftover 0-10 clamp/framing. See `bugs/known-bugs.md` #31/#32/#33.
 
-All three changes happened on the `single-profile` git branch, forked from `main` right after v0.303
-was committed there. v0.303 (still on `main` and carried into this branch) was bug #30's real fix:
+All of this happened on the `single-profile` git branch, forked from `main` right after v0.303 was
+committed there. v0.303 (still on `main` and carried into this branch) was bug #30's real fix:
 shift+left-click an equipped item in the character window to print its score to chat, replacing
 `/lgs score` for everyday use (`/lgs score` still works as a debug-bench fallback). See
 `bugs/known-bugs.md` #30 for why shift+left-click was used instead of the originally-requested
 shift+right-click.
 
-Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302-v0.306's changes, then continue
+Next step: resume `TEST_PLAN.md` at T1 to re-confirm all of v0.302-v0.308's changes, then continue
 through T16-T35, which were never reached. Testers email completed checklists to
 `wegatherinthesun@gmail.com` per `TEST_PLAN.md`'s own Quick start.
 

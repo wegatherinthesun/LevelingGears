@@ -224,6 +224,20 @@ regression checklist, then come back here.
 - **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`); each requires explicit
   approval before starting.
 
+### Past 1.0 — revisit later
+- **Re-evaluate whether to "farm" `Priorities.lua`'s stat weights the real way: an actual simulator.**
+  v0.307 sourced real TBC Classic stat *priority orders* (Icy Veins/Warcraft Tavern) and, where no
+  numeric table existed (every spec except Warlock), derived weights analytically from known combat
+  formulas (rating→% conversions, crit multipliers, attack-frequency math) rather than guessing —
+  see `DESIGN.md`'s Layer 3 section and `bugs/known-bugs.md` #34/#35. This is real derived math, but
+  it is NOT the same as running an actual simulator (e.g. `wowsims/tbc`, which computes true
+  per-point DPS deltas for a specific gear/talent/rotation setup) — that would need real
+  infrastructure (Go/protobuf/node toolchain, per-spec gear/rotation configs, a chosen reference
+  gear baseline, and materially more time) that wasn't justified for a leveling addon's first pass.
+  Once the addon is otherwise feature-complete and stable (post-1.0), it's worth revisiting whether
+  the accuracy gain from real simulated weights is worth that infrastructure cost, or whether the
+  analytical approximation has held up fine in practice by then.
+
 ---
 
 ## The color system (used addon-wide, unanimously)

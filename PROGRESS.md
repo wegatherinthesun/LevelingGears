@@ -9,7 +9,70 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.306 (same `single-profile` fork) — removed the stat-weight edit box's remaining
+- **Current step: 0.308 (same `single-profile` fork) — replaced `Priorities.lua`'s anchor-scale
+  weights with values analytically derived from known TBC combat formulas.** v0.307's fix (below)
+  was correctly called out as still a shortcut: a real stat-priority ORDER doesn't specify a
+  magnitude, only a ranking, and inventing the magnitude (an anchor scale) wasn't "doing the math
+  right." Investigated what real numeric stat weights actually require: confirmed by direct fetch
+  that `wowsims/tbc` has a genuine simulated "Stat Weight Calculation" feature (real per-point DPS
+  deltas), but it's gear/talent/rotation-dependent and running it would mean standing up a Go/
+  protobuf/node toolchain and authoring per-spec configs — real infrastructure, not a quick task.
+  Also confirmed by fetching several class pages directly that only the Warlock guides publish an
+  actual numeric table; every other class checked (Fury Warrior, Elemental Shaman, Retribution
+  Paladin, Restoration Druid) is rank-order only, with the Elemental Shaman page explicitly saying
+  "real stat weights depend heavily on your current gear... use the Wowsims module for precise
+  calculations." Confirmed with the requester: derive weights analytically from known combat
+  mechanics rather than build/run a full simulator. Rewrote every one of `Priorities.lua`'s 54
+  speed/survival tables using verified formulas (14 Attack Power = 1 DPS; a physical crit's +100%
+  damage bonus and Haste's direct attack-frequency scaling place Crit/Haste at ~1.0x the spec's
+  reference stat per 1%; Hit/Expertise's "a miss/dodge/parry is zero damage" effect places them at
+  ~1.3x; Armor Penetration's nonlinear, target-armor-dependent curve discounts it to ~0.5x), plus
+  real, cited per-class mechanical corrections: Warriors' rage-generation formula is normalized for
+  attack speed in TBC (discounting Haste to ~0.3x, boosting Crit to ~1.2x since crit-generated rage
+  closes gaps between special-ability casts); caster crit-multiplier talents (Elemental Fury for
+  Elemental Shaman, Vengeance for Balance Druid) genuinely double the crit bonus; Shadow Priest's and
+  every HoT-healer's periodic damage/healing cannot crit in TBC. Used the two real published numeric
+  tables found (Warlock's Spell Power Equivalency values, Restoration Shaman's Heal/Haste/MP5/Crit/
+  Int/Stam ratios) directly rather than approximating them. Caught and fixed a real conceptual error
+  in the process: guide priority orders blend a stat's true marginal value with plain
+  itemization-scarcity advice ("grab this when you see it, you'll get plenty of the other stat
+  naturally" — e.g. Warrior guides explicitly deprioritize Strength/AP because it's "abundant on
+  gear," not because it's worth less DPS); only the former belongs in a per-item scoring weight, so
+  the primary reference stat (AP/RAP/SP/HEAL) is never suppressed by that reasoning in any spec.
+  Added a `ROADMAP.md` "Past 1.0 — revisit later" entry to reconsider building a real simulator once
+  the addon is otherwise stable. `DESIGN.md`'s Layer 3 description updated to match. `luac -p`/
+  `luacheck` pass clean on `Priorities.lua`; the structural verification script (all 27 specs, all 25
+  stat keys, both modes) was re-run with zero gaps before being deleted again. Full detail in
+  `bugs/known-bugs.md` #35.
+- **Previous step: 0.307 (same fork) — replaced `Priorities.lua`'s hand-authored default weights
+  with values sourced from real, cited TBC Classic stat-priority research.** The
+  file's own original header admitted these numbers were placeholders ("a design choice... not a
+  lookup or a simulation result"), and after bug #33 confirmed the edit box already shows the exact
+  value used (no hidden layer), the follow-up ask was direct: make that exact value a real one.
+  Dispatched three parallel research passes (one per group of 3 classes) that fetched Icy Veins' (and
+  one Warcraft Tavern) TBC-Classic-specific PvE stat-priority guides for all 27 specs, each returning
+  a cited priority order, cap/breakpoint numbers, and avoid/situational notes per spec. Converted
+  every spec's real priority order into a number via one documented anchor scale (10 = top-priority/
+  cap stat, 8 = very important, 6 = good, 3 = minor, 0 = explicitly low-value or not itemized),
+  applied consistently across all 27 specs × 2 modes (54 tables), with the source URL cited directly
+  above every table in `Priorities.lua`. Corrected real inaccuracies the old guesses had (e.g. Fury
+  Warrior was previously assumed to value Haste more than Arms; the real source gives both specs an
+  identical priority that explicitly says not to stack Haste for either). Documented the honest
+  limits directly in the file: rank-derived from real sources, not precise per-point sim multipliers;
+  Hit/Expertise are cap-then-worthless stats this addon can't model dynamically (items score
+  statically, no running total-vs-cap state), so they're weighted at pre-cap importance; "survival"
+  (leveling) mode still has no real source to cite and stays a documented, unsourced defensive
+  adjustment on top of the sourced "speed" baseline; Spirit still has no derived-stat key of its own
+  (per the existing double-counting rule) so its priority is folded into MP5 as the closest proxy.
+  Flagged rather than papered over two honest gaps: Discipline Priest's only available source
+  (Warcraft Tavern) blocked a direct fetch during research (retrieved via proxy, recommended for
+  manual spot-check), and Feral Druid Bear Tank's source doesn't give an exact Defense-rating
+  crit-immunity breakpoint. Wrote and ran a standalone structural-verification script (loads
+  `Priorities.lua` in isolation, confirms all 27 specs have both speed/survival tables with all 25
+  stat keys present, zero gaps) before deleting it. `DESIGN.md`'s Layer 3 description updated to
+  match, replacing the old "authored design choices" framing. `luac -p`/`luacheck` pass clean on
+  `Priorities.lua`. Full detail in `bugs/known-bugs.md` #34.
+- **Previous step: 0.306 (same `single-profile` fork) — removed the stat-weight edit box's remaining
   0-10 clamp and "importance scale" framing.** v0.305's edit box still enforced a 0-10 range
   (`Weights.WEIGHT_MIN`/`WEIGHT_MAX`) and the helper text still read "0 = ignore, 10 = highest
   importance," so it was reported as still showing "the 1-10 system" instead of the real value.
@@ -445,3 +508,68 @@ the current single most important next step — this file has everything behind 
   "0-10 scale," and added `TEST_PLAN.md` T22b to specifically test values outside the old 0-10 range.
   Logged as `bugs/known-bugs.md` #33. Version bumped to 0.306. `luac -p` and `luacheck` both pass
   clean on all 9 Lua files.
+- 0.307 completed (same `single-profile` branch): replaced `Priorities.lua`'s hand-authored default
+  weights with values sourced from real, cited TBC Classic (Burning Crusade Classic, 2.5.x) PvE
+  stat-priority research, per direct request after bug #33 ("show the actual weights... it was data
+  we searched the internet for... research done on simulators"). Dispatched three parallel research
+  passes (Warrior/Paladin/Hunter, Rogue/Priest/Shaman, Mage/Warlock/Druid), each fetching Icy Veins'
+  TBC-Classic-specific guide pages (Warcraft Tavern for Discipline Priest, which Icy Veins doesn't
+  cover as its own page) and returning a cited priority order + cap/breakpoint numbers + avoid/
+  situational notes per spec. Converted all 27 specs' real priority orders into numbers using one
+  documented anchor scale (10/8/6/3/0, defined once in `Priorities.lua`'s header and applied
+  consistently), citing the source URL directly above every one of the 54 speed/survival tables.
+  Corrected real errors the old guessed placeholders had (e.g. Fury Warrior was previously assumed to
+  value Haste above Arms; the actual cited source gives both specs the identical priority and
+  explicitly says not to stack Haste for either spec). Documented the engine's honest limits directly
+  in the file: these are rank-derived from real sources, not precise per-point sim multipliers;
+  Hit/Expertise are cap-then-worthless stats that this addon's static per-item scoring cannot model
+  dynamically, so they're weighted at their pre-cap importance; "survival" mode still has no real
+  leveling-specific source to cite and remains a documented, unsourced defensive adjustment layered
+  on the sourced "speed" baseline (same qualitative transform as before, just applied to real numbers
+  now); Spirit still has no derived-stat key of its own (unchanged double-counting rule) so its
+  priority is folded into MP5. Flagged two honest research gaps rather than inventing values:
+  Discipline Priest's only found source (Warcraft Tavern) blocked a direct fetch and was retrieved
+  via a proxy (flagged for manual spot-check), and Feral Druid Bear Tank's source gives no exact
+  Defense-rating crit-immunity breakpoint. Wrote a standalone Lua verification script that loads
+  `Priorities.lua` in isolation and confirms all 27 specs have complete `speed`/`survival` tables
+  with all 25 required stat keys (zero gaps found), then deleted the script. Updated `DESIGN.md`'s
+  Layer 3 description to match, replacing the old "authored design choices, not a lookup or a
+  simulation result" framing. Version bumped to 0.307. `luac -p` and `luacheck` both pass clean on
+  `Priorities.lua`.
+- 0.308 completed (same `single-profile` branch): replaced `Priorities.lua`'s anchor-scale weights
+  with values analytically derived from known TBC combat formulas, per direct feedback that v0.307
+  was still a shortcut ("Why are we taking shortcuts instead of doing the math right"). Investigated
+  what real numeric stat weights require: `wowsims/tbc` genuinely computes them via simulation
+  (confirmed by direct fetch of its "Stat Weight Calculation" feature), but they're gear/talent/
+  rotation-dependent and running it means standing up a Go/protobuf/node toolchain plus per-spec
+  configs; also confirmed, by fetching Fury Warrior/Elemental Shaman/Retribution Paladin/Restoration
+  Druid's pages directly, that only Warlock's guides publish a real numeric table -- every other
+  class is rank-order only (Elemental Shaman's page explicitly recommends the Wowsims module "for
+  precise calculations" since "real stat weights depend heavily on your current gear"). Confirmed the
+  path forward directly: derive analytically rather than build a full simulator. Rewrote all 54
+  speed/survival tables using verified formulas -- 14 Attack Power = 1 DPS (cited, cross-checked
+  across multiple sources); a physical crit's +100% damage bonus and Haste's direct attack-frequency
+  scaling place Crit/Haste at ~1.0x a spec's reference stat per 1%; Hit/Expertise's "a miss/dodge/
+  parry is zero damage" effect (plus, for resource-based classes, forfeited resource/proc generation)
+  places them at ~1.3x; Armor Penetration's nonlinear, target-armor-dependent mitigation curve
+  discounts it to ~0.5x -- plus real, cited per-class corrections: Warriors' TBC rage-generation
+  formula is normalized for attack speed (confirmed via research into the actual mechanic), so Haste
+  is discounted to ~0.3x and Crit boosted to ~1.2x (crit-generated rage closes gaps between
+  special-ability casts, letting more abilities fire); Elemental Shaman's Elemental Fury and Balance
+  Druid's Vengeance talents genuinely double their nuke's crit bonus, boosting Crit's ratio; Shadow
+  Priest's periodic damage and every HoT-healer's periodic healing cannot crit in TBC, discounting
+  their Crit ratio. Used the two real published numeric tables found directly rather than
+  approximating them: Warlock's Icy Veins "Spell Power Equivalency" table (Hit 1.901 SP, Haste 1.353
+  SP, Crit 0.829 SP, Intellect 0.245 SP, Stamina 0 SP, Spirit 0.110 SP w/ Improved Drain Soul) and
+  Restoration Shaman's explicit ratios (Heal 1.0, Haste 1.5, MP5 2.0, Crit 0.6, Intellect 0.5, Stamina
+  0.2), both scaled consistently so each spec's primary throughput stat sits at a fixed reference of
+  10. Caught and corrected a real conceptual error along the way: a guide's priority order blends true
+  marginal value with itemization-scarcity advice ("you'll get plenty of this stat anyway," e.g.
+  Warrior guides explicitly deprioritizing Strength/AP for being "abundant on gear," not for being
+  worth less DPS) -- only the former belongs in a per-item scoring weight, so every spec's primary
+  reference stat is kept at its full, un-suppressed value regardless of how a source ranked it. Added
+  a `ROADMAP.md` "Past 1.0 — revisit later" entry to reconsider building a real simulator once the
+  addon is otherwise feature-complete and stable. `DESIGN.md`'s Layer 3 description updated to match.
+  Version bumped to 0.308. `luac -p` and `luacheck` both pass clean on `Priorities.lua`; the
+  standalone structural verification script (all 27 specs, both modes, all 25 stat keys) was re-run
+  with zero gaps found before being deleted again.

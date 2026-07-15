@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.306), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.308), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -19,10 +19,11 @@ score" required.
   Power, Ranged Attack Power, Health, Mana, every combat
   rating (Hit/Crit/Haste/Expertise/Armor Penetration/Defense/Dodge/Parry/Block/Resilience), Block
   Value, MP5, Spell Penetration, Armor, and all 5 resistances.
-- **Spec-aware smart defaults.** Weights are pre-filled from your detected class/talent spec the
-  first time you touch them, so you're not starting from a flat, meaningless "5" on everything.
-  Fully hand-adjustable afterward, and a **Restore Defaults** button resets back to those spec-aware
-  values whenever you want a clean slate.
+- **Spec-aware smart defaults, sourced from real TBC Classic theorycrafting.** Weights are pre-filled
+  from your detected class/talent spec the first time you touch them, based on real, cited stat
+  priority guides for that spec (see `Priorities.lua` for sources) — not a flat, meaningless "5" on
+  everything. Fully hand-adjustable afterward, and a **Restore Defaults** button resets back to those
+  researched values whenever you want a clean slate.
 - **Colored outlines on your equipped gear** — each item's slot gets a thin border colored red
   through violet, showing how it stacks up against the average of your *own* current gear (not a
   raid or dungeon standard), using your weights.
