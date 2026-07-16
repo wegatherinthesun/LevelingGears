@@ -13,7 +13,8 @@ score" required.
 ## What it does today
 
 - **One settings window** (`/levelinggears` or `/lgs`, or the minimap button) — there is only ever
-  one settings screen in this addon.
+  one settings screen in this addon. Resizable by dragging its bottom-left or bottom-right corner
+  (look for the grip icon in the bottom-right) if the default size doesn't suit you.
 - **Weight the stats you care about** by typing directly into each stat's edit box — the exact
   number the scoring engine uses, no abstracted rating scale. Covers Spell Power, Healing, Attack
   Power, Ranged Attack Power, Health, Mana, every combat
@@ -32,8 +33,9 @@ score" required.
   raid or dungeon standard), using your weights.
 - **One weight set per character**, saved and restored automatically — hand-adjust it or click
   "Restore Defaults" any time.
-- **Shift+left-click an equipped item** in the character window to print its full derived-stat
-  breakdown and score to chat.
+- **Shift+right-click an equipped item** in the character window to pop open a small box beside it
+  showing its full derived-stat breakdown and score — close it with its own X button or by clicking
+  anywhere else.
 - **`/lgs score <item link>`** — a debug command that prints the same kind of breakdown for any
   item link (scored against the raw default priorities, not your own weights), so the underlying
   priority tables can be sanity-checked independent of any hand-adjustment.
