@@ -14,6 +14,12 @@ section is the rationale/target-shape overview; see [`DATA_PIPELINE.md`](DATA_PI
 actionable download links, confirmed license status, and parser design for turning one into the
 other.)
 
+**This shape is now real, not just planned** — `pipeline/big_data.py --build-database` (cmangos
+source only; Questie still license-blocked) produces real `Items`/`Sources`/`Quests`/`Chains`/
+`Recipes`/`BySlot` Lua files exactly in this shape (`pipeline/output/`, not yet wired into the
+addon). See `ROADMAP.md`'s own `0.41-0.44` entry below and `DATA_PIPELINE.md`'s Status note for real
+numbers and known gaps (recipe reagents, zone names, the shared-loot-pool size cap).
+
 **How the source data is shaped now:**
 - cmangos tbc-db (SQL): organized by *creature* — `creature_loot_template` rows say "creature X
   drops item Y at Z%." World drops and shared tables hide behind `reference_loot_template` (a

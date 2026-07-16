@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """big_data.py -- Leveling Gears data pipeline entry point.
 
-Downloads cmangos tbc-db's current loot/quest/vendor/recipe SQL dump, confirms its real table/column
-structure, and reports findings -- the scaffold DATA_PIPELINE.md called for before any real extraction
-parser gets written against guessed schema names. Questie is intentionally NOT included yet: its
-source license is unresolved (see DATA_PIPELINE.md) and that's being resolved separately.
+Downloads cmangos tbc-db's current loot/quest/vendor/recipe SQL dump and, with --build-database,
+extracts it into the real Items/Sources/Quests/Chains/Recipes/BySlot Lua files ROADMAP.md's 0.4 step
+calls for (see pipeline/output/). Questie is intentionally NOT included yet: its source license is
+unresolved (see DATA_PIPELINE.md) and that's being resolved separately.
 
 Usage:
-    python3 big_data.py [--skip-download] [--verbose]
+    python3 big_data.py --build-database [--skip-download] [--verbose]
+
+With no extraction flag, only downloads the dump and writes output/schema_report.txt (confirms real
+table/column names -- see inspect_schema.py). See pipeline/README.md for every flag.
 
 Everything printed to the console is also written to a timestamped file under pipeline/logs/, so a
 run can be reviewed later without having kept the terminal scrollback.
