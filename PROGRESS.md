@@ -9,7 +9,39 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
+- **Current step: `data_implementation` branch — 0.41-0.44 built and run end-to-end against real
+  data.** Testing Phase 1's gate is considered cleared as of v0.384 (remaining `queue.md` items are
+  minor polish, not Blocker/Critical/Major). Branched off `main` at v0.384 to isolate this work
+  until it tests well. Built out `pipeline/` (Python 3 standard-library only, no pip packages,
+  matching this project's "never require compiling anything from source" rule):
+  `dependencies.py`/`download.py`/`inspect_schema.py` (the earlier scaffold), plus real extractors --
+  `sql_extract.py` (a hand-rolled mysqldump `INSERT` row streamer), `lua_writer.py` (Python->Lua
+  table serializer), `wow_enums.py` (stable InventoryType/ItemClass/race-bitmask constants),
+  `extract_items.py`, `extract_loot.py`, `extract_vendor.py`, `extract_quests.py`,
+  `extract_recipes.py`, and `build_database.py` tying them all together
+  (`big_data.py --build-database`). Questie stays excluded (license unresolved, author resolving
+  directly).
+  - Real run against the current cmangos dump produced 18,711 Items, 6,599 Quests, 1,108 Chains,
+    900 Recipes, and a merged Sources table -- all written to `pipeline/output/*.lua`.
+  - Two bugs found and fixed against real data: `extract_rows` needs a table's FULL column list
+    (mysqldump rows are positional across every column, not just the ones a caller wants), and
+    `npc_trainer`/`npc_trainer_template` teach class-ability spells too, not just recipes (filtered
+    to real profession skill ids, cutting 2676 false "recipes" down to 900 real ones).
+  - Real findings, not bugs: quest pickup/turn-in coordinates work with **no Questie dependency**
+    (cmangos's own `creature`/`gameobject` + questrelation tables are enough); `spell_template`
+    ships **completely empty** in this dump, so `Recipes.reagents`/`createsItemId` stay empty until
+    a different source is found; `zone` is a numeric map id, not a real zone name (both are
+    client-side DBC data cmangos doesn't ship in the SQL dump); and shared loot-pool reference
+    groups (up to 1,517 creatures sharing one pool) blew `Sources.lua` up to 162MB, collapsed to one
+    representative creature per item as a stopgap (down to 16MB) -- the real, considered fix is the
+    new `ROADMAP.md` `0.46` data-curation phase (eliminate gear that's not great for any class,
+    dedupe near-identical items, prefer easier/cheaper/nearer equivalents), explicitly scheduled
+    after the addon otherwise works, before Alpha, not attempted now.
+  - Also added `ROADMAP.md`'s `0.45` (an Auction House BOE scanner — a client-side, in-game Lua
+    feature, not a `big_data.py` step, since Python has no access to a live game session).
+  - `pipeline/logs/` mirrors every console line to a timestamped file per run; nothing under
+    `pipeline/downloads|output|logs/` is committed (new root `.gitignore`).
+- **Previous step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
   version bump in between, then batched together (see `queue.md` for the working list).**
   - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable
     0. `GetItemStats` never itemizes a plain item's base armor (bug #23's own note already documented

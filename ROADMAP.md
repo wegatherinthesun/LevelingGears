@@ -117,6 +117,13 @@ closed — see `bugs/resolved-bugs.md` #29 — and `bugs/known-bugs.md` currentl
 Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major findings — see
 `TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
 
+**That gate is now considered cleared as of v0.384** — remaining `queue.md` items (T13's blank-space
+polish, T20b's Auto-detect edge case, T23/T24's weight-ceiling validation, etc.) are minor UX polish,
+not Blocker/Critical/Major findings, and continue in parallel rather than blocking `0.4`. **The push
+to `0.4` is now the active work**, happening on the `data_implementation` branch — see this file's
+`0.4`-`0.45` entries below and `DATA_PIPELINE.md`'s Status note for where the pipeline (`big_data.py`)
+actually stands. Merges back to `main` once this branch tests well.
+
 - **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
   analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously
   tracked internally as v0.304-0.308, kept in `PROGRESS.md`/`bugs/resolved-bugs.md` #31-#35 as the
@@ -197,14 +204,70 @@ Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major f
   chain, craft, vendor, boe) so all later UI can be built and tested with zero pipeline. This is
   the contract every other module codes against.
 - **0.41 — Download the sources. 0.42 — Parser: quests first. 0.43 — Parser: loot + recipes.
-  0.44 — Bake coordinates + merge.** Full detail — exact repo URLs, confirmed license status for
-  each source (Questie's has a real open question, not yet resolved), confirmed file/table
-  structure, and the step-by-step parser design for both sources — is in
+  0.44 — Bake coordinates + merge.** **Built (`data_implementation` branch, cmangos-only — Questie
+  still deferred, license unresolved)** — `pipeline/big_data.py --build-database` runs all of it
+  end-to-end against the real cmangos dump and writes real `Items`/`Sources`/`Quests`/`Chains`/
+  `Recipes`/`BySlot` Lua files to `pipeline/output/`. Full detail — exact repo URLs, confirmed
+  license status for each source, confirmed file/table structure, and the parser design — is in
   [`DATA_PIPELINE.md`](DATA_PIPELINE.md), not repeated here. Short version: cmangos tbc-db (GPLv3)
   supplies loot/quest-reward/vendor/recipe facts from its SQL dump; Questie's source Lua (license
-  status unresolved — see `DATA_PIPELINE.md`) supplies quest chain ordering, prerequisites, and
-  coordinates. Re-derive facts into our own schema and credit sources rather than redistributing
-  either source directly; using cmangos for loot avoids AtlasLoot's GPL entirely.
+  status unresolved — see `DATA_PIPELINE.md`) would add quest chain corrections and hand-verified
+  pickup/turn-in details on top, once unblocked — basic chain ordering and coordinates turned out to
+  need it less than expected (see below). Re-derive facts into our own schema and credit sources
+  rather than redistributing either source directly; using cmangos for loot avoids AtlasLoot's GPL
+  entirely.
+  - **Real finding: quest pickup/turn-in coordinates don't need Questie at all.** cmangos's own
+    `creature`/`gameobject` tables carry real spawn coordinates, and `creature_questrelation`/
+    `_involvedrelation` (+ the `gameobject_*` equivalents) already say which NPC/object starts and
+    finishes each quest. `DATA_PIPELINE.md` originally assumed this required Questie — it doesn't,
+    for the basic case.
+  - **Known gap: recipe reagents/created-item are empty.** `spell_template` — where a crafting
+    spell's `Reagent1-8`/`EffectItemType` would come from — ships completely empty in this cmangos
+    dump (confirmed: `DISABLE KEYS`/`ENABLE KEYS` with zero rows between them). Spell data is
+    client-side DBC content cmangos doesn't redistribute in the SQL dump. Every `Recipes` entry
+    currently has real `taughtBy`/`skill`/`prof` but empty `reagents`/`createsItemId` until a
+    different source for that data is found (raises its own license question, same category as
+    Questie — not yet investigated).
+  - **Known gap: `zone` is a numeric map id, not a readable zone name.** Human-readable zone names
+    (e.g. "Elwynn Forest") are Blizzard's client-side Area/Zone data, not present in this
+    server-side SQL dump either — same category of gap as the reagent one above.
+  - **Known, deliberate simplification: one representative source per shared loot pool.** A first
+    real run showed some `reference_loot_template` groups (shared "generic trash loot" tables) are
+    reused by hundreds to thousands of different creatures — one group alone was referenced by 1,517
+    creatures, blowing `Sources.lua` up to 162MB for what's mostly redundant near-duplicate entries.
+    Collapsed to the single lowest-level qualifying creature per item for now (down to ~16MB) — the
+    real fix is 0.46 below, not a bigger cap.
+- **0.45 — Auction House BOE scanner (supplemental, client-side, not part of the offline pipeline).**
+  The baked `Items`/`Sources` tables from 0.41-0.44 come from static, offline sources (cmangos/
+  Questie) — neither can tell us an item is a Bind-on-Equip that's realistically bought/sold on the
+  AH rather than dropped/quested/vendored, since that's a live, realm-and-faction-specific economic
+  fact, not something a static DB snapshot captures. Python has no access to a live game session, so
+  this can't be a `big_data.py` pipeline step — it has to be an in-game Lua feature: while the player
+  has the Auction House window open, page through current listings (respecting the client's own
+  built-in query throttling, same as every other AH addon) and, for each item seen, check whether it
+  already has an entry in our baked `Items`/`Sources` tables. If it does, skip it — a real drop/quest/
+  vendor/craft source is always more useful than "buy it." If it doesn't, record a `kind="boe"`
+  `Sources[itemId]` entry locally (a supplemental, addon-side SavedVariable table, not the baked
+  data — AH content varies by realm/faction and can't be shipped as one global fact). This closes the
+  gap for exactly the items the static schema already reserved `kind="boe"` for (see this file's
+  "DATA" section above) but that the pipeline alone can never discover.
+- **0.46 — Data curation pass (shrink the database down to what's actually worth recommending).**
+  Scheduled for **after the addon works as envisioned otherwise, but before Alpha** — not now, and
+  not by capping/sampling harder in the pipeline itself (0.41-0.44's one-representative-per-pool
+  simplification is a stopgap, not this). The real fix is judgment, applied in phases, in this
+  order:
+  1. Eliminate gear that isn't great for any class/spec at all (scores poorly everywhere our engine
+     evaluates it).
+  2. Remove pieces that are very similar to another already-kept piece (near-duplicate stat spreads
+     for the same slot).
+  3. Between remaining equivalent options, prefer the one that's less difficult to obtain.
+  4. Between remaining equivalent options, prefer the one that's cheaper to craft (fewer/cheaper
+     reagents) over one that's equivalent but pricier.
+  5. When recommending a source, prefer one that's geographically nearby the player when a
+     comparably-good option exists, rather than always the single mathematically-best pick.
+  This is what actually solves 0.41-0.44's file-size problem (162MB collapsed to 16MB by a blunt cap;
+  this phase is the real, considered reduction) and is a prerequisite for a genuinely useful
+  recommendation list, not just a smaller file.
 
 ### The product (UI against sample data, then real data once 0.4x lands)
 - **0.5 — Tooltip hook.** Hovering an EQUIPPED item adds a small Leveling Gears section for that

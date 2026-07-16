@@ -24,10 +24,42 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**Current version: v0.384 — six more items from the v0.383 test pass's own follow-up notes; the
-sole next step is another live test round.** Same process as v0.383: each item was built and
-individually retested with no version bump in between (see `queue.md` for the working list), then
-batched into this one real version:
+**Now on the `data_implementation` branch — the push to `ROADMAP.md`'s `0.4` has begun.** Testing
+Phase 1's gate is considered cleared as of v0.384 (remaining `queue.md` items are minor polish, not
+Blocker/Critical/Major — see `ROADMAP.md`'s "Testing Phase 1 follow-ups" section). This branch stays
+separate from `main` until it tests well, per direct instruction.
+
+Built so far: `pipeline/` (Python 3 standard library only, no pip packages) now runs the real
+extraction end-to-end via `big_data.py --build-database` — `extract_items.py`/`extract_loot.py`/
+`extract_vendor.py`/`extract_quests.py`/`extract_recipes.py`, tied together by `build_database.py`,
+on top of `sql_extract.py` (a hand-rolled mysqldump row streamer) and `lua_writer.py` (Python->Lua
+serializer). A real run produced 18,711 Items, 6,599 Quests, 1,108 Chains, 900 Recipes, and a merged
+Sources table, all written to `pipeline/output/*.lua`. **Questie is intentionally excluded** — its
+source license is still unresolved, and the author is resolving that directly before any code
+touches that source.
+
+Real findings from that run (see `ROADMAP.md`'s `0.41-0.44` entry for full detail): quest pickup/
+turn-in coordinates work with **no Questie dependency** at all (cmangos's own `creature`/
+`gameobject` + questrelation tables are enough); `spell_template` ships **completely empty** in this
+dump, so recipe reagents/created-items stay empty until a different source is found; `zone` is a
+numeric map id, not a real zone name; and shared loot-pool reference groups blew `Sources.lua` up to
+162MB, collapsed to one representative creature per item for now (down to 16MB) — the real fix is
+the new `ROADMAP.md` `0.46`, a data-curation phase explicitly scheduled after the addon otherwise
+works, before Alpha, not attempted now. Also added `ROADMAP.md`'s `0.45`: an Auction House BOE
+scanner, a client-side in-game Lua feature (not a `big_data.py` step).
+
+**Next step:** the addon's own Lua code needs to start consuming `pipeline/output/*.lua` (or a
+hand-made subset per `ROADMAP.md`'s `0.4`) to actually become useful — "draw the outline, then fill
+it in" per direct instruction: get the addon working end-to-end against what's real now, before
+chasing more data sources (spell reagents, Questie, the 0.46 curation pass).
+
+See `DATA_PIPELINE.md`'s Status note and `pipeline/README.md` for details.
+
+---
+
+**Previous milestone: v0.384 — six more items from the v0.383 test pass's own follow-up notes.**
+Same process as every cycle before it: each item was built and individually retested with no version
+bump in between (see `queue.md` for the working list), then batched into this one real version:
 - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable
   0 — `GetItemStats` never itemizes a plain item's base armor. Added a hidden-tooltip scan
   (`Scoring.ScanItemArmorValue`) and folded it in as a small, fixed, non-adjustable weight, so real
@@ -68,13 +100,8 @@ patches on 0.38, not new sub-features.
 
 **`bugs/known-bugs.md` still has zero open bugs.** (The rolled-back blank-space item and the
 still-unconfirmed Expertise question live in `queue.md`, not the bug ledger, since neither is a
-confirmed defect yet.)
-
-**Next step: another real `TEST_PLAN.md` T1-T35 pass against v0.384 — not more code.** Testing
-should resume from T22b through T35, with extra attention on T8 (armor value in breakdowns), T10
-(minimap right-click/drag), and T13 (the Core-stats/Restore-Defaults overlap fix, plus the
-still-open blank-space item) — see `TEST_PLAN.md`'s "Recent changes" section for exactly what to
-check on each.
+confirmed defect yet.) A v0.384 retest (T22b-T35, extra attention on T8/T10/T13) can still happen
+whenever convenient, but it's no longer the gate blocking `0.4` — see "Current step" above.
 
 **Exit criterion for this cycle:** once a full T1-T35 pass comes back with no unresolved Blocker/
 Critical/Major findings (`TESTERS.md`'s severity scale), move to `ROADMAP.md`'s `0.4` — not before.

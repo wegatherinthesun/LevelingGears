@@ -5,6 +5,26 @@ get it, and how the Python parser turns it into the schema `ROADMAP.md` already 
 `Sources`/`Quests`/`Chains`/`Recipes`/`BySlot`). `ROADMAP.md`'s roadmap entries for these steps just
 point here so the staged-milestone list doesn't have to carry this much detail inline.
 
+## Status
+
+`pipeline/big_data.py --build-database` (built on the `data_implementation` branch) runs end-to-end
+against the real cmangos dump and writes real `Items`/`Sources`/`Quests`/`Chains`/`Recipes`/`BySlot`
+Lua files to `pipeline/output/` — **cmangos-only** (Questie still deferred, see below). See
+`pipeline/README.md` for how to run it; see `ROADMAP.md`'s `0.41-0.44` entry for the full list of
+real findings and known gaps from the first real run against actual data:
+- Quest pickup/turn-in coordinates work with **no Questie dependency** (cmangos's own
+  `creature`/`gameobject` + `*questrelation`/`*involvedrelation` tables are enough).
+- Recipe `reagents`/`createsItemId` are **empty** — `spell_template` ships with zero rows in this
+  dump (confirmed, not a parsing bug); a different source is needed, not yet investigated.
+- `zone` is a numeric map id, not a human-readable zone name (same category of gap as the above —
+  client-side DBC data cmangos doesn't ship).
+- Shared loot-pool reference groups are collapsed to one representative creature per item as a
+  stopgap (162MB -> 16MB) — the real fix is `ROADMAP.md`'s `0.46` data-curation phase, scheduled
+  after the addon otherwise works, before Alpha.
+
+**Questie is intentionally not included yet.** Its license question (see Source B below) is still
+open; the author is resolving it directly before that source gets touched by any code.
+
 Everything below citing a URL, license, or file structure was checked directly (GitHub API/page
 fetches) while writing this, not guessed — per `CONVENTIONS.md`'s "never invent/guess" rule. Where
 something couldn't be confirmed without the actual file in hand, that's flagged explicitly rather
