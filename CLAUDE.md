@@ -53,6 +53,22 @@ hand-made subset per `ROADMAP.md`'s `0.4`) to actually become useful — "draw t
 it in" per direct instruction: get the addon working end-to-end against what's real now, before
 chasing more data sources (spell reagents, Questie, the 0.46 curation pass).
 
+`ROADMAP.md`'s "Starting to actually use the database" section lays out the concrete order. First
+two items are **Built and verified live**, one piece at a time:
+- **Settings window resize**: 40% bigger default (588x462), resizable by dragging the bottom two
+  corners (top corners disabled per direct instruction), a visible grip texture instead of a cursor
+  swap (no installed addon on this client uses a resize-specific `SetCursor` name). Real bug found
+  and fixed along the way: `SetMinResize`/`SetMaxResize` silently broke the rest of `UI.lua`'s load
+  on this client — see `bugs/resolved-bugs.md` #47.
+- **Popout box**: shift+right-click (moved off shift+left-click, which already means something to
+  players) an equipped item opens `UI.ShowScorePopout` beside it — the score breakdown that used to
+  print to chat, now closable via its own X or a click-away catcher frame. This is `0.5`'s
+  flyout-frame concept, built for real.
+
+Still ahead, per direct instruction **not version-numbered yet** — versions get assigned once each
+piece actually ships, not planned in advance: continent-aware querying (scope suggestions to the
+player's own continent first), then actually suggesting upgrades from the pipeline's real data.
+
 See `DATA_PIPELINE.md`'s Status note and `pipeline/README.md` for details.
 
 ---

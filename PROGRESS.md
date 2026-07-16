@@ -41,6 +41,38 @@ the current single most important next step — this file has everything behind 
     feature, not a `big_data.py` step, since Python has no access to a live game session).
   - `pipeline/logs/` mirrors every console line to a timestamped file per run; nothing under
     `pipeline/downloads|output|logs/` is committed (new root `.gitignore`).
+- **Planning only, no code changed:** `ROADMAP.md` gained a new "Starting to actually use the
+  database" section laying out how the addon starts consuming the pipeline's real output --
+  settings window resize (drag-any-corner, 40% bigger default, mirroring Questie's
+  `TrackerBaseFrame.lua`) + removing shift-click's chat output, then continent-aware querying
+  (`C_Map`/`UnitPosition`, confirmed available via Questie's bundled `HereBeDragons-2.0.lua`, though
+  matching cmangos's classic map ids still needs in-game verification), then a real popout box
+  replacing shift-click's old output (`0.5`'s flyout-frame concept, cross-referenced from both
+  places), then the actual suggestion engine. Per direct instruction, **none of this is
+  version-numbered yet** -- versions get assigned once each piece actually ships, not planned in
+  advance. UI.lua stays one file for now (707 lines, 5 sections) -- revisit once the popout/
+  recommendation window (a new file regardless) exists and its real shape is visible.
+- **Built and verified live, one piece at a time: settings window resize + the popout box.**
+  - Default window size increased 40% (420x330 -> 588x462).
+  - Resizable by dragging the bottom two corners (top corners disabled per direct instruction).
+    **Bug #47 (Solved):** `SetMinResize`/`SetMaxResize` silently aborted the rest of `UI.lua`'s load
+    on this client -- caught immediately via live testing ("it is empty... isn't adjustable...
+    isn't a minimap button"), root-caused via real precedent in two other installed addons (Attune's
+    own `--HC BUG` comment on that same call; AceGUI-3.0 gating it behind `WoW 10.0`'s
+    `SetResizeBounds`), fixed by preferring `SetResizeBounds` with a fallback.
+  - Draggability shown via a visible grip texture (Blizzard's own chat-frame resize art, the same
+    real pattern DBM-GUI uses) rather than a guessed cursor name -- no installed addon on this
+    client uses a resize-specific `SetCursor` string.
+  - Shift-clicking equipped gear no longer prints to chat; the trigger itself moved to
+    **shift+right-click** per direct instruction (shift+left-click already means "insert item link
+    in chat" to players) -- accepting the real trade-off that right-click's native
+    `UseInventoryItem` now also fires alongside it.
+  - Built the real replacement: `UI.ShowScorePopout`/`UI.HideScorePopout`, a reusable flyout beside
+    the clicked item showing the same score breakdown that used to go to chat, closing via its own
+    X button or a full-screen click-catcher frame behind it. This is `ROADMAP.md`'s `0.5`
+    flyout-frame concept, built for real now.
+  - `luac -p`/`luacheck` clean throughout (`UI.lua`, `GearEvaluation.lua`). See
+    `bugs/resolved-bugs.md` #47 for the full investigation.
 - **Previous step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
   version bump in between, then batched together (see `queue.md` for the working list).**
   - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable

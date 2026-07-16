@@ -275,9 +275,60 @@ actually stands. Merges back to `main` once this branch tests well.
   this phase is the real, considered reduction) and is a prerequisite for a genuinely useful
   recommendation list, not just a smaller file.
 
+### Starting to actually use the database
+
+Everything below this line is ordered but **deliberately not version-numbered yet** — per direct
+instruction, versioning past the current step stays loose ("we will increment as we make progress...
+just put it in front of us and we will version change as it makes sense"). A version (thousandths
+place, one patch = a batch of accepted fixes) gets assigned once each item is actually built, not in
+this planning pass.
+
+- **Settings window resize.** **Built.** Default size increased 40% (420x330 → 588x462); resizable
+  by dragging the bottom two corners (top corners deliberately disabled per direct instruction).
+  `SetResizable(true)` + a `Button`-type "sizer" frame per corner, `OnMouseDown` →
+  `frame:StartSizing(corner)`, `OnMouseUp` → `StopMovingOrSizing()` + persists the new size the same
+  way window position already persists. Real bug found and fixed during this build: `SetMinResize`/
+  `SetMaxResize` silently aborted the rest of `UI.lua`'s load on this client (confirmed via two
+  installed addons — Attune has `SetMinResize` commented out with a `--HC BUG` note; AceGUI-3.0
+  calls it a pre-"WoW 10.0" API) — replaced with `SetResizeBounds` (falling back to
+  `SetMinResize`/`SetMaxResize` only if `SetResizeBounds` doesn't exist). See `bugs/resolved-bugs.md`
+  #47. Draggability is shown with a visible grip texture (Blizzard's own
+  `Interface\ChatFrame\UI-ChatIM-SizeGrabber-*`, the same real pattern DBM-GUI uses for its own
+  resize handle) rather than a cursor swap — no installed addon on this client uses a resize-specific
+  `SetCursor` name, so this was chosen over guessing one. Also in this same batch: shift-clicking an
+  equipped item no longer prints a score breakdown to chat (removed bug #30/T8's old chat-output
+  behavior), and the trigger itself moved from shift+left-click to **shift+right-click** (per direct
+  instruction — shift+left-click already means "insert item link in chat" to players).
+- **Popout box.** **Built.** Shift+right-clicking an equipped item opens a clickable flyout
+  (`UI.ShowScorePopout`) beside the item showing the score breakdown (item name, spec/score line,
+  then the same sorted per-stat breakdown that used to print to chat) — closes via its own X button
+  or by clicking anywhere else (a full-screen invisible click-catcher frame just behind it in
+  strata). One reusable frame, not one per click. This is `0.5` below's flyout-frame concept, built
+  now rather than just planned — `0.5`'s own entry is the fuller spec for this same frame.
+- Continent-aware querying: detect the player's current continent so upgrade queries can be scoped
+  to "obtainable on your own continent first" instead of scanning the whole `BySlot`/`Sources`
+  dataset (which spans every continent) — smaller, more relevant result sets once real suggesting
+  starts. This client supports the modern `C_Map` namespace (confirmed via Questie's bundled
+  `HereBeDragons-2.0.lua`: `C_Map.GetBestMapForUnit("player")`, `C_Map.GetMapInfo`,
+  `UnitPosition("player")`) — but our pipeline's `Quests`/creature `map` field is cmangos's classic
+  Map.dbc numbering (0=Eastern Kingdoms, 1=Kalimdor, 530=Outland, 571=Northrend), which does **not**
+  equal Blizzard's newer `uiMapId` numbering. `UnitPosition`'s `instanceID` return is the more likely
+  direct match (the exact reason compatibility libraries like HereBeDragons exist) — confirm this
+  live in game before trusting it for real filtering, not an assumed mapping.
+- Begin suggesting: the real recommendation engine — query `BySlot`/`Sources`/`Items` (continent-
+  scoped per the item above) for actual upgrades to show the player. This is where the pipeline's
+  real data (`pipeline/output/*.lua`, not yet wired into the addon) actually starts being consumed
+  instead of `0.4`'s hand-made sample.
+- UI.lua reorganization: not split yet (707 lines across 5 sections as of this writing) — the
+  popout box above and the recommendation window (`0.6`) are new frames that get their own new
+  file(s) regardless of what happens to UI.lua itself; revisit UI.lua's size once those exist and
+  its real shape is visible, rather than splitting preemptively now.
+
 ### The product (UI against sample data, then real data once 0.4x lands)
-- **0.5 — Tooltip hook.** Hovering an EQUIPPED item adds a small Leveling Gears section for that
-  slot. TECHNICAL REALITY: Blizzard's GameTooltip cannot host clickable buttons — tooltips aren't
+- **0.5 — Tooltip hook.** (The "Popout box" item in the section just above is this same
+  flyout-frame concept, already being built — keep the two in sync as it lands.) Hovering an
+  EQUIPPED item adds a small Leveling Gears section for that slot. TECHNICAL REALITY: Blizzard's
+  GameTooltip cannot host clickable buttons — tooltips aren't
   mouse-interactive and vanish when the cursor leaves the item. So implement as: informational
   lines appended INTO the tooltip (selected upgrade + where to get it), and the clickable actions
   ("Select Gears" / "next step") on a small separate clickable flyout frame anchored beside the

@@ -69,6 +69,34 @@ local function SaveWindowPosition(frame)
 	end
 end
 
+-- Apply any previously saved frame size (from a corner drag-resize) so the window reopens at the
+-- size it was last left, the same way ApplySavedPosition already does for position.
+local function ApplySavedSize(frame)
+	local settings = LG.Settings.GetGeneralSettings()
+	local size = settings.size
+	if size and size.width and size.height then
+		frame:SetSize(size.width, size.height)
+	end
+end
+
+-- Persist the frame size so a corner drag-resize survives a reload, mirroring SaveWindowPosition.
+local function SaveWindowSize(frame)
+	local width, height = frame:GetSize()
+	if not width or not height then
+		return
+	end
+
+	local settings = LG.Settings.GetGeneralSettings()
+	settings.size = {
+		width = math.floor(width + 0.5),
+		height = math.floor(height + 0.5),
+	}
+	if LG.Debug then
+		LG.Debug.WriteDebugLog(string.format(
+			"SaveWindowSize: width=%d height=%d", settings.size.width, settings.size.height), 1, "window")
+	end
+end
+
 -- Open or close the single settings window that the addon uses for all configuration.
 function UI.ToggleLevelingGears()
 	local frame = _G["LevelingGearsFrame"]
@@ -199,7 +227,7 @@ end
 
 local LevelingGears = CreateFrame("Frame", "LevelingGearsFrame", UIParent,
 	BackdropTemplateMixin and "BackdropTemplate" or nil)
-LevelingGears:SetSize(420, 330)
+LevelingGears:SetSize(588, 462) -- 40% bigger than the original 420x330 default
 LevelingGears:SetPoint("CENTER")
 LevelingGears:SetBackdrop({
 	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -211,6 +239,19 @@ LevelingGears:EnableMouse(true)
 LevelingGears:SetMovable(true)
 LevelingGears:RegisterForDrag("LeftButton")
 LevelingGears:SetClampedToScreen(true)
+LevelingGears:SetResizable(true)
+-- Min matches the original pre-resize default so the window can never be shrunk into something
+-- unusably small; max is a reasoned, generous cap, not a measured in-game value. SetResizeBounds is
+-- the modern replacement for SetMinResize/SetMaxResize (confirmed real, not guessed: Attune has
+-- SetMinResize commented out on its own frame with a "--HC BUG" note, using SetResizeBounds instead;
+-- AceGUI-3.0's AceGUIContainer-Frame.lua checks `if frame.SetResizeBounds then` before falling back
+-- to SetMinResize, calling SetResizeBounds a "WoW 10.0" addition -- both installed on this client).
+if LevelingGears.SetResizeBounds then
+	LevelingGears:SetResizeBounds(420, 330, 900, 700)
+else
+	LevelingGears:SetMinResize(420, 330)
+	LevelingGears:SetMaxResize(900, 700)
+end
 LevelingGears:EnableKeyboard(true)
 LevelingGears:SetFrameStrata("DIALOG")
 LevelingGears:SetFrameLevel(100)
@@ -229,6 +270,7 @@ end)
 LevelingGears:SetScript("OnShow", function(self)
 	SafeCall(function()
 		ApplySavedPosition(self)
+		ApplySavedSize(self)
 		self:SetFrameStrata("DIALOG")
 		self:SetFrameLevel(100)
 		self:SetToplevel(true)
@@ -249,11 +291,52 @@ LevelingGears:SetScript("OnEvent", function(self, event, addonName)
 	SafeCall(function()
 		if event == "ADDON_LOADED" and addonName == "LevelingGears" then
 			ApplySavedPosition(self)
+			ApplySavedSize(self)
 		end
 	end)
 end)
 LevelingGears:RegisterEvent("ADDON_LOADED")
 LevelingGears:Hide()
+
+-- Corner resize handles. StartSizing/StopMovingOrSizing mirrors a real, confirmed-working pattern
+-- already installed on this client (Questie's Modules/Tracker/TrackerBaseFrame.lua). Draggability is
+-- shown with a visible grip texture instead of a cursor swap -- no installed addon on this client
+-- uses a resize-specific SetCursor name (only BUY_CURSOR/UI_MOVE_CURSOR/CAST_CURSOR appear anywhere),
+-- so rather than guess an unverified one, this mirrors DBM-GUI's own resize handle
+-- (modules/MainFrame.lua): a Button using Blizzard's own shipped chat-frame resize textures
+-- (Interface\ChatFrame\UI-ChatIM-SizeGrabber-*), which come with a highlight-on-hover for free.
+-- Only BOTTOMRIGHT gets the visible grip, matching every real resize handle found on this client
+-- (DBM-GUI, Omen). Top corners are disabled per direct instruction (BOTTOMLEFT stays resizable but
+-- without its own grip graphic, matching the single-conventional-grip reasoning above).
+local RESIZE_CORNERS = { "BOTTOMLEFT", "BOTTOMRIGHT" }
+local RESIZE_HANDLE_SIZE = 14 -- 30% smaller than the original 20
+
+for _, corner in ipairs(RESIZE_CORNERS) do
+	local sizer = CreateFrame("Button", nil, LevelingGears)
+	sizer:SetSize(RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE)
+	sizer:SetPoint(corner, 0, 0)
+
+	if corner == "BOTTOMRIGHT" then
+		sizer:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+		sizer:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+		sizer:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	end
+
+	sizer:SetScript("OnMouseDown", function(_, button)
+		if button ~= "LeftButton" then
+			return
+		end
+		SafeCall(function()
+			LevelingGears:StartSizing(corner)
+		end)
+	end)
+	sizer:SetScript("OnMouseUp", function()
+		SafeCall(function()
+			LevelingGears:StopMovingOrSizing()
+			SaveWindowSize(LevelingGears)
+		end)
+	end)
+end
 
 if not tContains(UISpecialFrames, "LevelingGearsFrame") then
 	tinsert(UISpecialFrames, "LevelingGearsFrame")
@@ -705,3 +788,125 @@ end)
 minimapButton:SetScript("OnLeave", function(_)
 	GameTooltip:Hide()
 end)
+
+-- ============================================================================
+-- Score popout (shift+right-click on an equipped item -- see GearEvaluation.lua)
+-- ============================================================================
+-- Replaces the old chat-output score breakdown with a real flyout, per ROADMAP.md's "Starting to
+-- actually use the database" section: opens near the clicked item, closes via its own X button or
+-- by clicking anywhere else. One reusable frame (not one per click) -- showing it again just
+-- repositions/repopulates it, so clicking a different item's slot while it's open doesn't stack
+-- multiple popouts.
+
+local scorePopout = nil
+local scorePopoutOverlay = nil
+local MAX_SCORE_POPOUT_LINES = 28 -- covers every derived stat key in Weights.lua's statDefinitions
+
+-- A full-screen, invisible, mouse-enabled frame just below the popout in strata: clicking anywhere
+-- that isn't the popout itself hits this instead and closes it. Standard "click away to close"
+-- technique -- the popout's own strata sits above it so clicks ON the popout never reach here.
+local function EnsureScorePopoutFrames()
+	if scorePopout then
+		return
+	end
+
+	scorePopoutOverlay = CreateFrame("Frame", nil, UIParent)
+	scorePopoutOverlay:SetAllPoints(UIParent)
+	scorePopoutOverlay:SetFrameStrata("FULLSCREEN")
+	scorePopoutOverlay:EnableMouse(true)
+	scorePopoutOverlay:Hide()
+	scorePopoutOverlay:SetScript("OnMouseDown", function()
+		UI.HideScorePopout()
+	end)
+
+	scorePopout = CreateFrame("Frame", "LevelingGearsScorePopout", UIParent,
+		BackdropTemplateMixin and "BackdropTemplate" or nil)
+	scorePopout:SetWidth(240)
+	scorePopout:SetFrameStrata("FULLSCREEN_DIALOG")
+	scorePopout:SetBackdrop({
+		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+		tile = true, tileSize = 32, edgeSize = 32,
+		insets = { left = 11, right = 12, top = 12, bottom = 11 },
+	})
+	scorePopout:EnableMouse(true)
+	scorePopout:Hide()
+
+	local popoutCloseButton = CreateFrame("Button", nil, scorePopout, "UIPanelCloseButton")
+	popoutCloseButton:SetPoint("TOPRIGHT", -2, -2)
+	popoutCloseButton:SetScript("OnClick", function()
+		UI.HideScorePopout()
+	end)
+
+	local itemNameText = scorePopout:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	itemNameText:SetPoint("TOPLEFT", 16, -14)
+	itemNameText:SetPoint("RIGHT", -28, 0)
+	itemNameText:SetJustifyH("LEFT")
+	scorePopout.itemNameText = itemNameText
+
+	local scoreText = scorePopout:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	scoreText:SetPoint("TOPLEFT", itemNameText, "BOTTOMLEFT", 0, -6)
+	scoreText:SetPoint("RIGHT", -16, 0)
+	scoreText:SetJustifyH("LEFT")
+	scorePopout.scoreText = scoreText
+
+	local lines = {}
+	for i = 1, MAX_SCORE_POPOUT_LINES do
+		local line = scorePopout:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		line:SetPoint("TOPLEFT", scoreText, "BOTTOMLEFT", 0, -8 - (i - 1) * 14)
+		line:SetPoint("RIGHT", -16, 0)
+		line:SetJustifyH("LEFT")
+		line:Hide()
+		lines[i] = line
+	end
+	scorePopout.lines = lines
+end
+
+function UI.HideScorePopout()
+	if scorePopout then
+		scorePopout:Hide()
+	end
+	if scorePopoutOverlay then
+		scorePopoutOverlay:Hide()
+	end
+end
+
+-- Shows (or repositions/repopulates) the score popout anchored beside whichever slot button was
+-- shift+right-clicked. `breakdown` is the same {statKey = contribution} table Scoring.lua's
+-- PrintBreakdown used to print to chat -- sorted here the same way, largest contribution first.
+function UI.ShowScorePopout(anchorFrame, itemLink, score, breakdown, specDescription)
+	EnsureScorePopoutFrames()
+
+	scorePopout.itemNameText:SetText(itemLink)
+	scorePopout.scoreText:SetText(specDescription .. ": " .. string.format("%.1f", score))
+
+	local sortedKeys = {}
+	for statKey in pairs(breakdown) do
+		table.insert(sortedKeys, statKey)
+	end
+	table.sort(sortedKeys, function(a, b)
+		return math.abs(breakdown[a]) > math.abs(breakdown[b])
+	end)
+
+	for i, line in ipairs(scorePopout.lines) do
+		local statKey = sortedKeys[i]
+		if statKey then
+			line:SetText(statKey .. ": " .. string.format("%.2f", breakdown[statKey]))
+			line:Show()
+		else
+			line:Hide()
+		end
+	end
+
+	-- Height follows however many stat lines actually showed, not a fixed guess: 14 = title, 30 =
+	-- score line + gap, 8 = gap before the first stat line, 14 per stat line, 20 = bottom padding.
+	local visibleLineCount = math.min(#sortedKeys, MAX_SCORE_POPOUT_LINES)
+	scorePopout:SetHeight(14 + 30 + 8 + (visibleLineCount * 14) + 20)
+
+	scorePopout:ClearAllPoints()
+	scorePopout:SetPoint("TOPLEFT", anchorFrame, "TOPRIGHT", 8, 0)
+	scorePopout:SetClampedToScreen(true)
+
+	scorePopoutOverlay:Show()
+	scorePopout:Show()
+end
