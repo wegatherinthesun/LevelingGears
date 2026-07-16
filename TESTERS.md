@@ -8,7 +8,7 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.383). The stat-weighting and scoring engine — the settings window,
+Leveling Gears is early (v0.384). The stat-weighting and scoring engine — the settings window,
 direct-entry stat weights (one set per character), and the equipped-gear outline coloring — is real
 and testable. The longer-term
 "tells you where to get your next upgrade" feature is **not built yet** — there's no item database,

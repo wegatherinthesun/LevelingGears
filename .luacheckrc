@@ -26,4 +26,6 @@ read_globals = {
 	-- v0.383 native "Spec:" dropdown (UI.lua):
 	"UIDropDownMenu_SetWidth", "UIDropDownMenu_SetText", "UIDropDownMenu_Initialize",
 	"UIDropDownMenu_CreateInfo", "UIDropDownMenu_AddButton", "CloseDropDownMenus",
+	-- T10 (minimap button drag-to-reposition):
+	"GetCursorPosition",
 }

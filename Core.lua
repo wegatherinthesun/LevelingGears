@@ -47,7 +47,7 @@ local function HandleScoreCommand(argText)
 	end
 
 	local class, specKey, mode = LG.Scoring:DetectSpec()
-	local score, breakdown = LG.Scoring:ScoreItem(itemStats, class, specKey, mode)
+	local score, breakdown = LG.Scoring:ScoreItem(itemStats, class, specKey, mode, itemLink)
 	LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
 end
 
@@ -73,12 +73,21 @@ local function HandleSlashCommand(msg)
 		LG.Debug.DumpDebugLog()
 		return
 	end
-	local level = tonumber(msgLower:match("debug (%d+)"))
+	local level = tonumber(msgLower:match("^debug (%d+)$"))
 	if msgLower == "debug" or level then
 		LG.Debug.ToggleDebugMode(level or 1)
-	else
-		LG.UI.ToggleLevelingGears()
+		return
 	end
+
+	-- Per-channel toggle (e.g. /lgs debug window) -- lets one noisy log channel be silenced once its
+	-- bug is closed and confirmed, without touching the main debug switch or any other channel.
+	local category = msgLower:match("^debug (%a+)$")
+	if category then
+		LG.Debug.ToggleCategory(category)
+		return
+	end
+
+	LG.UI.ToggleLevelingGears()
 end
 
 -- Initialize the character's weight state on load so the settings page reflects the saved data and

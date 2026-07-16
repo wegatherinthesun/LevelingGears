@@ -10,10 +10,11 @@ local Debug = LG.Debug
 
 -- The addon's version string. Lives here (rather than in Core.lua, which loads last) because
 -- UI.lua's version label needs it at UI.lua's own load time, before Core.lua has run.
-LG.ADDON_VERSION = "0.383"
+LG.ADDON_VERSION = "0.384"
 
 LevelingGearsDB = LevelingGearsDB or {}
 LevelingGearsDB.general = LevelingGearsDB.general or {}
+LevelingGearsDB.general.debugCategories = LevelingGearsDB.general.debugCategories or {}
 LevelingGearsDB.debugLog = LevelingGearsDB.debugLog or {}
 
 -- Bumped from 50 to 500 (v0.312): bug #29's investigation showed the 50-entry buffer wrapping and
@@ -36,8 +37,37 @@ function Debug.GetDebugLevel()
 	return LevelingGearsDB.general.debugLevel or 1
 end
 
-function Debug.WriteDebugLog(message, level)
+-- A category defaults to enabled unless explicitly turned off with /lgs debug <category> -- see
+-- T7's queue item: once a bug tied to one log channel (e.g. window position) is closed and
+-- confirmed, that channel can be silenced on its own without touching the main debug toggle or
+-- every other channel's logging.
+function Debug.IsCategoryEnabled(category)
+	if not category then
+		return true
+	end
+	local categories = LevelingGearsDB.general.debugCategories
+	local enabled = categories and categories[category]
+	if enabled == nil then
+		return true
+	end
+	return enabled == true
+end
+
+function Debug.SetCategoryEnabled(category, enabled)
+	LevelingGearsDB.general.debugCategories = LevelingGearsDB.general.debugCategories or {}
+	LevelingGearsDB.general.debugCategories[category] = enabled and true or false
+	Debug.PrintChat("Debug category '" .. category .. "' " .. (enabled and "enabled" or "disabled") .. ".")
+end
+
+function Debug.ToggleCategory(category)
+	Debug.SetCategoryEnabled(category, not Debug.IsCategoryEnabled(category))
+end
+
+function Debug.WriteDebugLog(message, level, category)
 	if level and Debug.GetDebugLevel() < level then
+		return
+	end
+	if not Debug.IsCategoryEnabled(category) then
 		return
 	end
 

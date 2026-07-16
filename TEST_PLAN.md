@@ -34,28 +34,35 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.383.** See `CHANGELOG.md` for the concise summary. The v0.382 pass (`TEST_RESULTS_
-Helio_v0382.md`) was the first real test run this project has had since the original partial T1-T15
-pass at v0.301 — it got through T1-T22 and found 4 real bugs, all fixed and individually retested
-this version:
+**Version: v0.384.** See `CHANGELOG.md` for the concise summary. The v0.383 pass (`TEST_RESULTS_
+Helio_0383.md`) covered T22b-T35 plus retests, and queued a further round of smaller items from its
+own notes (see `queue.md`) — all addressed one at a time, with no version bump in between, then
+batched into this version:
 
-1. **Bug #29 (closed): window position now uses two absolute screen coordinates instead of a single
-   point/offset anchor** (the same technique other addons on this client use), replacing the old
-   approach that always logged as correct but never actually landed exactly right. **Retest T11** —
-   should now restore to the exact dragged spot across a real `/reload`/relaunch, not just "close."
-2. **Bug #38 (closed): direct stat-weight entry now commits before "Save Settings" reads it back.**
-   Typing a value and clicking Save directly (no Enter first) used to silently revert the box.
-   **Retest T22, T22b, T23** — these were never reached last round since T22 blocked further testing.
-3. **Bug #39 (closed): scoring an item with no clean numeric stats (e.g. a totem) now explains why**
-   instead of a misleading "try again" message or, for shift-click, no response at all. **Retest
-   T8b** specifically on a totem or similar no-stats item.
-4. **Bug #40 (closed): the "Spec:" control is now a real Blizzard dropdown**, not a custom button
-   with a permanent empty gap below it. **Retest T20b.**
+1. **Bug #43 (closed): base armor value now factors into scoring**, via a hidden-tooltip scan
+   (`GetItemStats` never itemizes plain armor). Deliberately tiny — real stats still dominate — but
+   enough that two very-early, otherwise-zero-stat items no longer tie at a dead 0. **Retest T8**
+   on a low-level character if available; a `BASEARMOR` line should now appear in score breakdowns
+   for armor pieces.
+2. **Bug #44 (closed): minimap button right-click no longer duplicates left-click.** It's now
+   press-and-hold-and-drag to reposition the button around the minimap, saved across reloads.
+   **Retest T10** — right-click alone should do nothing; holding it and moving the mouse should drag
+   the button.
+3. **Bug #45 (closed): added `/lgs debug window`**, a per-category debug-log toggle independent of
+   the main `/lgs debug` switch — no test case of its own, optional to spot-check.
+4. **Bug #46 (closed): a new helper-text note explains why "Haste Rating" isn't labeled "Spell
+   Haste"** (TBC never itemized them separately — the scoring was already correct). **Retest T13**
+   (scrolling/layout) since this note added a line to the stat-weights section.
+5. **Bug #41 (closed): "Core stats" briefly overlapped "Restore Defaults"** — a regression bug #46's
+   own note caused, now fixed with a real anchor instead of a hand-guessed offset. **Retest T13**
+   specifically for this overlap (see its own case body below).
+6. Removed **T5** (the `/lg`-alias case) — confirmed permanently fine, no longer worth a retest slot.
 
-**Testing should resume from T22b** (T1-T22 already passed last round, no need to redo those) through
-T35, plus the 4 specific retests called out above. Bug #27's own T20 (spec-aware default seeding
-across multiple classes/specs) was confirmed working last round — no need to repeat unless a new
-class/spec combination is available to check.
+**Testing should resume from T22b** (T1-T22 already passed a prior round) through T35, with extra
+attention on T8, T10, and T13 above. Bug #27's own T20 (spec-aware default seeding across multiple
+classes/specs) was confirmed working previously — no need to repeat unless a new class/spec
+combination is available to check, though T20's own case body below still flags an open question
+about Mage weight defaults worth confirming (see bug #46's Follow-up).
 
 ---
 
@@ -81,7 +88,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.383**.
+- Expected: Reads **v0.384**.
 - Result:
 - Notes:
 
@@ -102,13 +109,6 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T5 — Removed alias stays removed**
-- Instruction: Type `/lg`.
-- Repeat: 1x
-- Expected: Nothing happens (deliberately removed — silence is correct, not a bug).
-- Result:
-- Notes:
-
 **T6 — Debug mode toggle**
 - Instruction: Type `/lgs debug`.
 - Repeat: 2x (once to enable, once to disable)
@@ -123,16 +123,19 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T8 — Shift+left-click an equipped item to score it (bug #30's real fix)**
+**T8 — Shift+left-click an equipped item to score it (bug #30's real fix; armor value added in bug #43)**
 - Instruction: Open the character window (paperdoll) so your equipped gear is visible, then
   shift+left-click one of your equipped items. Try several different slots/items (e.g. a weapon, a
-  caster cloth item, a trinket).
+  caster cloth item, a trinket), including a low-level or otherwise low-stat armor piece if you have
+  one.
 - Repeat: 3x (3 different items)
 - Expected: Prints a derived-stat breakdown and a final score to chat, scored against your own
-  character weights (same weights that drive the gear-outline colors). A plain left-click on the same
-  item still picks it up as normal (don't confirm the drag, just check the cursor picks it up), and a
-  plain shift-click (no click type held down beyond Shift) still inserts the item link into an open
-  chat edit box as it always has — neither of those should be affected by this change.
+  character weights (same weights that drive the gear-outline colors). An armor piece's breakdown
+  should now include a small `BASEARMOR` line (bug #43) — expect it to be tiny relative to real stats,
+  not a major contributor. A plain left-click on the same item still picks it up as normal (don't
+  confirm the drag, just check the cursor picks it up), and a plain shift-click (no click type held
+  down beyond Shift) still inserts the item link into an open chat edit box as it always has — neither
+  of those should be affected by this change.
 - Result:
 - Notes:
 
@@ -156,11 +159,14 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T10 — Minimap button opens the window**
-- Instruction: Left-click the minimap button, then right-click it.
-- Repeat: 2x (both buttons)
-- Expected: Both open/close the window. *(Known, accepted: no separate right-click menu exists yet
-  — identical behavior is correct, not a bug.)*
+**T10 — Minimap button: left-click opens the window, right-click drags to reposition (bug #44, `ROADMAP.md` 0.36)**
+- Instruction: Left-click the minimap button. Separately, hold right-click down on the button and
+  move the mouse around the minimap, then release.
+- Repeat: 2x (left-click twice to open/close; drag twice to two different spots)
+- Expected: Left-click still opens/closes the settings window. A plain right-click (no drag) now does
+  nothing — this is deliberate, not a bug (see bug #44). Holding right-click and moving the mouse
+  drags the button around the minimap's edge in real time; releasing it locks in the new position,
+  which should still be there after a `/reload`.
 - Result:
 - Notes:
 
@@ -189,12 +195,13 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 **T13 — Scrolling and layout**
 - Instruction: Scroll the settings area top to bottom. Look for clipped content or any two sections
-  visually overlapping.
+  visually overlapping. Specifically check "Restore Defaults" against "Core stats" below it (bug #41 —
+  a real overlap here was reported and fixed this version, previously unconfirmed since v0.26, see
+  bug #25/#26) and the excess blank space previously reported at the bottom of the scroll area
+  (reported again, attempted and rolled back this version — still open, expect it to still be there).
 - Repeat: 1x
-- Expected: Smooth scroll, nothing clipped, no section overlaps another (including the "Restore
-  Defaults" button against the stat groups below it — unconfirmed since v0.26, see bug #25/#26; the
-  0.382 primary-stats helper-text line above it; and the "Spec" section's real dropdown, whose sizing
-  changed again in the v0.383 rewrite — all reasoned estimates, not measured in-game values).
+- Expected: Nothing clipped, no section overlaps another. Some blank space below the last stat group
+  is still expected for now (open item, not yet fixed).
 - Result:
 - Notes:
 
@@ -435,8 +442,10 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ## Known, accepted behavior (not a bug — don't report these)
 
-- Minimap button's left-click and right-click do the same thing (open/close). No distinct
-  right-click context menu exists yet.
+- A plain right-click on the minimap button (no drag) does nothing — this is deliberate now that
+  right-click-and-drag repositions the button instead (bug #44, `ROADMAP.md` 0.36).
+- Some blank space below the last stat group in the settings window is still expected (an attempted
+  fix for this was rolled back this version — still an open item, not a new regression).
 - Roadmap features not yet built (tooltip hook, recommendation window, sorting/filters, alt
   professions, data pipeline) are absent by design — see `ROADMAP.md` for what's intentionally not
   built yet at this stage.

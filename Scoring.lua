@@ -98,6 +98,38 @@ function Scoring.ResolveItemStatValue(itemStats, statKey)
 	return 0
 end
 
+-- T8 (v0.383+ queue): a plain item's base armor isn't itemized via GetItemStats at all (see
+-- CONVENTIONS.md's Armor note -- ITEM_MOD_ARMOR_SHORT only ever picks up a BONUS armor modifier,
+-- e.g. a shield's "of the Bear" suffix). That leaves low-level gear -- which very often has no
+-- clean numeric stats yet -- scoring a dead, indistinguishable 0 across completely different
+-- items. Read the real total via the documented fallback: a hidden tooltip scan of the "Armor"
+-- line. Weighted deliberately tiny (see ARMOR_VALUE_WEIGHT below) -- this should separate otherwise-
+-- tied items a little, never compete with real stat weights.
+local armorScanTooltip = CreateFrame("GameTooltip", "LevelingGearsArmorScanTooltip", nil, "GameTooltipTemplate")
+armorScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+
+function Scoring.ScanItemArmorValue(itemLink)
+	if not itemLink then
+		return 0
+	end
+	armorScanTooltip:ClearLines()
+	armorScanTooltip:SetHyperlink(itemLink)
+	for lineIndex = 2, armorScanTooltip:NumLines() do
+		local fontString = _G["LevelingGearsArmorScanTooltipTextLeft" .. lineIndex]
+		local text = fontString and fontString:GetText()
+		local armor = text and text:match("^(%d+) Armor$")
+		if armor then
+			return tonumber(armor) or 0
+		end
+	end
+	return 0
+end
+
+-- Small and fixed on purpose -- not a user-adjustable weight in the settings UI. A level 5 item
+-- with 15 armor vs. 8 armor should no longer tie at 0; a level 70 item with 500 armor should still
+-- be dwarfed by its real stat contributions.
+local ARMOR_VALUE_WEIGHT = 0.01
+
 -- Druids need form awareness for the AP table: score using the form implied by the detected spec
 -- (feral -> cat unless survival mode -> bear) rather than live shapeshift form, so scores don't
 -- flicker when the player actually shapeshifts. This is a given design decision, not a judgment call.
@@ -229,7 +261,7 @@ end
 -- Shared core: derived = Layers 1-2 (Conversions), score = sum(derived * weights). Primaries are
 -- never weighted directly here -- they were already folded into derived stats by ApplyConversions,
 -- which is what prevents double-counting by construction.
-local function ComputeScore(itemStats, class, apKey, offense, weights)
+local function ComputeScore(itemStats, class, apKey, offense, weights, itemLink)
 	local rawStats = {}
 	for statKey in pairs(Scoring.itemStatAliases) do
 		rawStats[statKey] = Scoring.ResolveItemStatValue(itemStats, statKey)
@@ -252,6 +284,13 @@ local function ComputeScore(itemStats, class, apKey, offense, weights)
 		end
 	end
 
+	local armorValue = Scoring.ScanItemArmorValue(itemLink)
+	if armorValue ~= 0 then
+		local contribution = armorValue * ARMOR_VALUE_WEIGHT
+		score = score + contribution
+		breakdown.BASEARMOR = contribution
+	end
+
 	return score, breakdown
 end
 
@@ -260,27 +299,27 @@ end
 -- ignoring any live character weights, so the priority tables themselves can be sanity-checked
 -- against real items independent of whatever a player has since hand-tweaked. See the _self note on
 -- DetectSpec.
-function Scoring.ScoreItem(_self, itemStats, class, specKey, mode)
+function Scoring.ScoreItem(_self, itemStats, class, specKey, mode, itemLink)
 	itemStats = itemStats or {}
 	local specEntry = LG.Priorities[class] and LG.Priorities[class][specKey]
 	local weights = specEntry and specEntry[mode or "speed"]
 	local offense = specEntry and specEntry.offense or "melee"
 	local apKey = GetApKey(class, specKey, mode)
-	return ComputeScore(itemStats, class, apKey, offense, weights)
+	return ComputeScore(itemStats, class, apKey, offense, weights, itemLink)
 end
 
 -- Score an item for the character's own currently-detected spec/mode, against a LIVE weights
 -- table (normally the character's own characterState.weights, already seeded with Priorities
 -- defaults for any key the player hasn't touched -- see Weights.lua's EnsureWeights). This is what
 -- the equipped-gear outline evaluation calls, so player hand-adjustments always take effect.
-function Scoring:ScoreEquippedItem(itemStats, weights)
+function Scoring:ScoreEquippedItem(itemStats, weights, itemLink)
 	itemStats = itemStats or {}
 	local class, specKey, mode = self:DetectSpec()
 	local specEntry = LG.Priorities[class] and LG.Priorities[class][specKey]
 	local offense = specEntry and specEntry.offense or "melee"
 	local apKey = GetApKey(class, specKey, mode)
 	local effectiveWeights = weights or (specEntry and specEntry[mode])
-	return ComputeScore(itemStats, class, apKey, offense, effectiveWeights)
+	return ComputeScore(itemStats, class, apKey, offense, effectiveWeights, itemLink)
 end
 
 -- Look up this character's default (seed) weights for a brand-new character or a missing stat key.

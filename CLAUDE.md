@@ -24,26 +24,38 @@ Never build past the current step before first receiving beta testing feedback f
 
 ## Current step
 
-**Current version: v0.383 — closed all 4 bugs found in the first real T1-T22 test pass; the sole
-next step is another live test round.** Per direct instruction, each was built and individually
-retested with no version bump in between (see `queue.md` for the working list this cycle drew from),
-then batched into this one real version:
-- **Bug #38 (Solved):** direct-entry stat weights looked like they rejected typed values — actually,
-  clicking "Save Settings" directly (no Enter first) let `RefreshWeightLabels` overwrite the
-  still-uncommitted edit. Fixed by clearing focus on every weight input first.
-- **Bug #29 (Solved):** window position finally restores to the exact dragged spot. Found by
-  comparing against how other addons handle this (per direct instruction) instead of guessing a
-  third time: `AceGUI-3.0`'s Window widget saves two independent absolute screen coordinates
-  (`GetLeft()`/`GetTop()`) instead of a single point/relativePoint/offset triple. Confirmed working
-  live.
-- **Bug #39 (Solved):** scoring an item with no clean numeric stats (a totem) looked broken — both
-  `/lgs score` and shift-click now tell the player why instead of a misleading message or silence.
-- **Bug #40 (Solved):** the "Spec:" control was a custom button with a permanently reserved gap;
-  replaced entirely with Blizzard's native `UIDropDownMenuTemplate` (confirmed safe on this client
-  via a real installed addon, `Omen.lua`, using it the same way with no library/version gating).
+**Current version: v0.384 — six more items from the v0.383 test pass's own follow-up notes; the
+sole next step is another live test round.** Same process as v0.383: each item was built and
+individually retested with no version bump in between (see `queue.md` for the working list), then
+batched into this one real version:
+- **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable
+  0 — `GetItemStats` never itemizes a plain item's base armor. Added a hidden-tooltip scan
+  (`Scoring.ScanItemArmorValue`) and folded it in as a small, fixed, non-adjustable weight, so real
+  stats still dominate everywhere except very early gear.
+- **Bug #44 (Solved):** minimap right-click was a redundant copy of left-click; repurposed as
+  press-and-hold-and-drag to reposition the button around the minimap (this was `ROADMAP.md`'s
+  planned 0.36, now Built).
+- **Bug #45 (Solved):** added a per-category debug-log toggle (`/lgs debug window`) so one noisy
+  channel can be silenced without touching the main `/lgs debug` switch.
+- **Bug #46 (Solved, clarification):** added a helper note explaining why a caster's "Haste Rating"
+  box isn't labeled "Spell Haste" (TBC never itemized them separately — the scoring was already
+  correct). Also audited every class/spec table in `Priorities.lua` for a broader "Mage defaults
+  look weird" report — found no anomalies; a live nonzero Expertise reading is more likely a stale
+  saved weight than a table bug, left for the tester to confirm via "Restore Defaults."
+- **Bug #42 (Solved):** the Haste note above caused a real regression (a Lua error indexing
+  `debugCategories` before it reliably existed) — caught via a routine debug-log pull within minutes
+  of shipping, not a tester report. Made the category functions defensive.
+- **Bug #41 (Solved):** "Core stats" overlapped "Restore Defaults" — the third wrong guess in a row
+  for that section's hand-guessed starting offset (bug #25's `-134`, 0.37's `-160`, this cycle's
+  `-195`). Fixed for good by anchoring to `restoreDefaultsButton:GetBottom()` directly instead of
+  guessing a fourth number — this removes the whole recurring bug class, not just this instance.
+- One attempted fix was **rolled back** on direct instruction: the excess blank space at the bottom
+  of the settings window (still open) — a rewritten height formula was judged to look worse in
+  practice than the old hardcoded-760px one, so the old formula is back. Needs a different approach
+  next time, not the same fix again.
 
-See `bugs/resolved-bugs.md` #29, #38, #39, #40 for full investigation detail, and `CHANGELOG.md`
-(new this version — a concise, version-by-version summary going forward) for the short version.
+See `bugs/resolved-bugs.md` #41-#46 for full investigation detail, and `CHANGELOG.md` for the short
+version.
 
 This is a **bug-fix → test → ship cycle** the author asked to set up and repeat until the addon is
 ready for `ROADMAP.md`'s `0.4` (freeze the item/quest schema, start the real database). Builds on
@@ -51,15 +63,18 @@ ready for `ROADMAP.md`'s `0.4` (freeze the item/quest schema, start the real dat
 lua` defaults — see `PROGRESS.md`'s Current status and `bugs/resolved-bugs.md` #31-#35), 0.311-0.313
 (research gaps closed, debug log ring buffer bumped, a gear-evaluation debounce gap fixed — see
 `bugs/resolved-bugs.md` #36), and 0.38 (the versioning-ladder slots 0.31-0.38 are documented in
-`CONVENTIONS.md`; the next free two-decimal slot is 0.39). 0.381-0.383 are thousandths bugfix
+`CONVENTIONS.md`; the next free two-decimal slot is 0.39). 0.381-0.384 are thousandths bugfix
 patches on 0.38, not new sub-features.
 
-**`bugs/known-bugs.md` now has zero open bugs.**
+**`bugs/known-bugs.md` still has zero open bugs.** (The rolled-back blank-space item and the
+still-unconfirmed Expertise question live in `queue.md`, not the bug ledger, since neither is a
+confirmed defect yet.)
 
-**Next step: another real `TEST_PLAN.md` T1-T35 pass against v0.383 — not more code.** The v0.382
-pass got through T1-T22 and found the 4 bugs above; testing should resume from T22b through T35, plus
-specifically retest T11/T22/T8b/T20b to confirm each fix actually holds (see `TEST_PLAN.md`'s "Recent
-changes" section for exactly what to check on each).
+**Next step: another real `TEST_PLAN.md` T1-T35 pass against v0.384 — not more code.** Testing
+should resume from T22b through T35, with extra attention on T8 (armor value in breakdowns), T10
+(minimap right-click/drag), and T13 (the Core-stats/Restore-Defaults overlap fix, plus the
+still-open blank-space item) — see `TEST_PLAN.md`'s "Recent changes" section for exactly what to
+check on each.
 
 **Exit criterion for this cycle:** once a full T1-T35 pass comes back with no unresolved Blocker/
 Critical/Major findings (`TESTERS.md`'s severity scale), move to `ROADMAP.md`'s `0.4` — not before.

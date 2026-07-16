@@ -9,7 +9,43 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.383 — closed all 4 bugs found in the v0.382 test pass (T1-T22), each fixed and
+- **Current step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
+  version bump in between, then batched together (see `queue.md` for the working list).**
+  - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable
+    0. `GetItemStats` never itemizes a plain item's base armor (bug #23's own note already documented
+    the fallback plan) -- added `Scoring.ScanItemArmorValue`, a hidden-`GameTooltip` scan for the
+    "Armor" line, folded into scoring as a small, fixed, non-adjustable weight (`0.01`) so real stats
+    still dominate everywhere except very early gear, where it's now enough to break dead ties.
+  - **Bug #44 (Solved):** minimap button right-click was a redundant copy of left-click. Repurposed as
+    press-and-hold-and-drag to reposition the button around the minimap (angle persisted across
+    reloads) -- this was `ROADMAP.md`'s planned 0.36, now marked Built.
+  - **Bug #45 (Solved):** added a per-category debug-log toggle (`/lgs debug window`) so one noisy
+    channel (window-position logging, no longer needed now that bug #29 is closed) can be silenced
+    without touching the main `/lgs debug` switch.
+  - **Bug #46 (Solved, clarification not a scoring fix):** nothing explained why a caster's "Haste
+    Rating" box wasn't labeled "Spell Haste." TBC never itemized them separately -- the scoring was
+    already correct (`Conversions.lua` already picks `CR_HASTE_SPELL` etc. by class). Added a helper
+    note explaining this. Also audited every class/spec table in `Priorities.lua` for the broader
+    "Mage defaults look weird" concern -- found no anomalies (`EXP` is already 0 for every pure-caster
+    spec); a live nonzero Expertise reading is more likely a stale saved weight, not a table bug --
+    left for the tester to confirm via "Restore Defaults" rather than guessed at blind.
+  - **Bug #42 (Solved):** the Haste note above caused a real regression -- indexing
+    `debugCategories` before it reliably existed threw a Lua error the moment a window-position log
+    line fired. Caught via a routine debug-log pull (this project's standard practice) within minutes
+    of shipping, not a tester report. Made both `IsCategoryEnabled`/`SetCategoryEnabled` defensive.
+  - **Bug #41 (Solved):** "Core stats" ended up overlapping "Restore Defaults" and the note above it
+    -- the stat groups' starting position had always been a hand-guessed absolute offset, re-guessed
+    wrong three times now (bug #25's original `-134`, 0.37's `-160`, this cycle's `-195`). Stopped
+    guessing a fourth number: anchored it to `restoreDefaultsButton:GetBottom()` directly, removing
+    this entire recurring bug class rather than patching the symptom again.
+  - Removed the `/lg`-alias test case (T5) from `TEST_PLAN.md` -- confirmed permanently fine.
+  - One attempted fix was rolled back on direct instruction: `scrollChild`'s height formula (excess
+    blank space at the bottom of the settings window) was rewritten to sum real section heights
+    instead of a hardcoded 760px floor, but the old fixed-760 version looked better in practice and
+    was restored. This item is still open for a different approach later.
+  - `luac -p`/`luacheck` clean on all touched files throughout. Version bumped to 0.384 (thousandths
+    patch).
+- **Previous step: 0.383 — closed all 4 bugs found in the v0.382 test pass (T1-T22), each fixed and
   individually retested before this batched version bump.** Per direct instruction, these were built
   and tested one at a time with no version bump between them (see `queue.md` for the working list
   this cycle drew from); this entry consolidates all of it into one real version:
@@ -930,3 +966,29 @@ the current single most important next step — this file has everything behind 
   added #38-#40 there; `bugs/known-bugs.md` now has zero open bugs. `luac -p`/`luacheck` clean on all
   touched files (`UI.lua`, `Core.lua`, `GearEvaluation.lua`, `Debug.lua`, `.luacheckrc`). Version
   bumped to 0.383 (thousandths patch).
+- 0.384 completed: six more items from the v0.383 test pass's own follow-up notes, again built and
+  individually retested one at a time with no version bump between them (`queue.md`), then batched
+  together. Bug #43: low-level gear with no clean numeric stats scored a dead, indistinguishable 0 --
+  `GetItemStats` never itemizes a plain item's base armor, so added `Scoring.ScanItemArmorValue` (a
+  hidden-`GameTooltip` scan for the "Armor" line, the fallback bug #23 had already planned for) and
+  folded it into scoring as a small, fixed, non-adjustable weight so real stats still dominate outside
+  very early gear. Bug #44: minimap right-click was a redundant copy of left-click's open/close --
+  repurposed as press-and-hold-and-drag to reposition the button around the minimap, angle persisted
+  across reloads; this was `ROADMAP.md`'s planned 0.36, now marked Built. Bug #45: added a per-category
+  debug-log toggle (`/lgs debug window`) so the now-unneeded window-position log channel can be
+  silenced without touching the main switch. Bug #46: added a helper note explaining why a caster's
+  "Haste Rating" box isn't labeled "Spell Haste" (TBC never itemized them separately -- the scoring was
+  already correct); also audited every class/spec table in `Priorities.lua` for the broader "Mage
+  defaults look weird" concern and found no anomalies, leaving the specific Expertise question for the
+  tester to confirm via "Restore Defaults" rather than guessing at a fix blind. Bug #42: that same Haste
+  note caused a real regression, caught via a routine debug-log pull within minutes of shipping (not a
+  tester report) -- `debugCategories` wasn't reliably initialized before a window-position log call
+  indexed it; made both category functions defensive. Bug #41: "Core stats" ended up overlapping
+  "Restore Defaults" and the note above it -- the third wrong guess in a row for that same hand-guessed
+  offset (bug #25's `-134`, 0.37's `-160`, this cycle's `-195`), finally fixed for good by anchoring to
+  `restoreDefaultsButton:GetBottom()` directly instead of guessing a fourth number. Removed the
+  `/lg`-alias test case (T5) from `TEST_PLAN.md`. One attempted fix (the excess blank space at the
+  bottom of the settings window) was rolled back on direct instruction after the old hardcoded-760px
+  formula was judged to look better in practice -- still open for a different approach later. `luac -p`/
+  `luacheck` clean on all touched files (`UI.lua`, `Debug.lua`, `Core.lua`, `Scoring.lua`,
+  `GearEvaluation.lua`, `.luacheckrc`). Version bumped to 0.384 (thousandths patch).

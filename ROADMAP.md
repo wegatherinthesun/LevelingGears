@@ -163,13 +163,14 @@ Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major f
   hand-touched (needs a new "touched by player" flag per stat, since today there's no way to tell a
   hand-set 5 apart from a seeded 5) — the second option preserves customization but is more state to
   track. Decide and record the choice here before implementing.
-- **0.36 — Minimap button: drag to reposition.** Right-click-and-drag moves the button around the
+- **0.36 — Minimap button: drag to reposition.** **Built (shipped in v0.384, out of numeric order —
+  same versioning-ladder precedent as 0.37/0.38).** Right-click-and-drag moves the button around the
   minimap (the standard convention most players expect from an addon minimap icon); the new position
-  persists across sessions the same way window position does. Left-click still opens/closes the
-  settings window. A plain right-click (no drag) no longer needs to also open/close the window once
-  drag is its own distinct gesture — see the "Known, accepted" note in `TEST_PLAN.md` about left/
-  right-click currently doing the same thing; that note goes away once this ships. (Renumbered from
-  0.31, which the consolidated release above now occupies.)
+  (`settings.minimapAngle`) persists across sessions the same way window position does. Left-click
+  still opens/closes the settings window; a plain right-click no longer also opens/closes it now that
+  drag is its own distinct gesture — the "Known, accepted" note in `TEST_PLAN.md` about left/
+  right-click doing the same thing has been removed to match. (Renumbered from 0.31, which the
+  consolidated release above now occupies.)
 - **0.37 — Explain, in the settings UI itself, why primary stats aren't weightable.** **Built (shipped
   in v0.382, out of numeric order — see `CONVENTIONS.md`'s versioning ladder for why this two-decimal
   slot shipped under a thousandths patch number instead of its own).** The stat-weights section only

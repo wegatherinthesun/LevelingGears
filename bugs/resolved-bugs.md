@@ -591,3 +591,61 @@ bug number so every existing cross-reference elsewhere in the docs still resolve
   2. Second pass: replaced the whole custom widget with Blizzard's real `UIDropDownMenuTemplate` + the native `UIDropDownMenu_SetWidth`/`UIDropDownMenu_SetText`/`UIDropDownMenu_Initialize`/`UIDropDownMenu_CreateInfo`/`UIDropDownMenu_AddButton`/`ToggleDropDownMenu`/`CloseDropDownMenus` API. Confirmed safe to call directly on this client (no compatibility library needed, unlike some other installed addons that route through one for other client versions) by finding a real, installed, unmodified addon doing exactly this with no version gating: `Omen.lua`'s own right-click menu (`CreateFrame(..., "UIDropDownMenuTemplate")` + direct global calls). The template's own built-in button already handles click-to-open/close and outside-click-to-close on its own, so all the custom OnClick/OnLeave/auto-close logic from step 1 was removed as no longer needed.
 - Validation: `luac -p`/`luacheck` clean on `UI.lua`; `.luacheckrc` updated with the new dropdown globals, `GetTalentTabInfo`-era leftovers already removed in bug #37.
 - Follow-up: None -- confirmed working via direct live retest ("This tested good").
+
+### 41. "Core stats" overlapped "Restore Defaults" and the note above it (a regression this cycle's own Haste note caused)
+- Status: Solved
+- Discovered: 2026-07-15 (direct report: "core stats now overlaps with restore defaults and the paragraph above")
+- Version introduced: 0.384 (this cycle's own Haste/Spell-Haste note, bug #46, briefly regressed this)
+- Summary: `ReflowStatGroups`' first stat group has always started from a hand-guessed absolute Y-offset from `weightSection`'s top, re-estimated (and gotten wrong) every time any note above it changed length -- first `-134` (bug #25, never confirmed in-game), then `-160` (0.37's primary-stats note), then `-195` (this cycle's Haste note). The `-195` guess undershot the note's real wrapped height, so "Core stats" overlapped both "Restore Defaults" and the primary-stats note above it.
+- Investigation: Same root cause as bug #25/#26's original, never-fully-closed "verify no overlap" follow-up -- a fixed pixel guess for text whose wrapped height was never actually measured in-game.
+- Resolution: Stopped guessing a fourth number. `ReflowStatGroups` now anchors the first stat group's starting position to `restoreDefaultsButton:GetBottom()` minus `weightSection:GetTop()` (with a small fixed gap), computed from the widgets' own real, resolved positions -- falls back to the old `-195` only if that geometry somehow isn't resolved yet. This removes the whole class of bug, not just this one instance: any future change to the notes above no longer needs a re-guess.
+- Validation: `luac -p`/`luacheck` clean on `UI.lua`.
+- Follow-up: None -- fix is structural, not a new guess; next live test should still eyeball it once per this project's standing UI-overlap rule.
+
+### 42. `Debug.lua` threw a Lua error the moment any window-position log line fired, right after adding the per-category debug toggle
+- Status: Solved
+- Discovered: 2026-07-15 (found via a routine debug-log pull, not a tester report: `Debug.lua:48: attempt to index field 'debugCategories' (a nil value)`)
+- Version introduced: 0.384 (this cycle's own per-category debug toggle, bug #45)
+- Summary: `IsCategoryEnabled`/`SetCategoryEnabled` indexed `LevelingGearsDB.general.debugCategories` directly, relying solely on a one-time top-of-file initializer to guarantee that table exists. It didn't reliably hold across a real client session, and the very next `SaveWindowPosition`/`ApplySavedPosition` call (now tagged with the `"window"` category) crashed on it.
+- Investigation: Caught immediately by this project's standard practice of pulling the real on-disk debug log after every change, before assuming a fix landed cleanly -- the error was in the log within minutes of the feature shipping, well before it could be mistaken for tester-reported behavior.
+- Resolution: Made both functions defensive instead of trusting the one-time init: `IsCategoryEnabled` now guards against `categories` itself being nil before indexing it, and `SetCategoryEnabled` re-creates the table (`... or {}`) immediately before writing to it.
+- Validation: `luac -p`/`luacheck` clean on `Debug.lua`; confirmed no further occurrences in the debug log after the client reloaded to pick up the fix.
+- Follow-up: None.
+
+### 43. Low-level gear with no clean numeric stats scored a dead, indistinguishable 0 (armor value never factored in)
+- Status: Solved
+- Discovered: 2026-07-15 (test report, T8: "add armor level valuation at some level, to create some difference based on armor value, to distinguish between gear on toons less than level 10 which has very little stats")
+- Version introduced: N/A (a gap present since the v0.25 scoring engine; not a regression)
+- Summary: A plain item's base armor was never itemized via `GetItemStats` at all (see bug #23's own note -- `ITEM_MOD_ARMOR_SHORT` only ever captures a BONUS armor modifier, e.g. a shield's "of the Bear" suffix). That left very early gear, which often has no other clean numeric stats yet, scoring an identical 0 across completely different items -- both as a real scoring gap and, as a side effect, `GearEvaluation.lua` was hiding the gear-outline entirely for anything that scored exactly 0.
+- Investigation: Bug #23's own resolution notes already documented the fallback plan (`CONVENTIONS.md`'s Armor entry: "if it never contributes to any item's score in play, fall back to a hidden-tooltip scan of the 'Armor' line") -- this cycle carried that plan out rather than inventing a new approach.
+- Resolution: Added `Scoring.ScanItemArmorValue` (`Scoring.lua`), a hidden `GameTooltip` scan for the "Armor" line, and folded its result into `ComputeScore` as a small, fixed, non-user-adjustable weight (`ARMOR_VALUE_WEIGHT = 0.01`), shown in breakdowns as `BASEARMOR`. Deliberately tiny per direct instruction ("real stats should be more valuable... just make little pieces distinct") -- real stat weights still dominate everywhere except low-level gear, where it's now just enough to break dead ties. Threaded `itemLink` through `Scoring.ScoreItem`/`ScoreEquippedItem`/`ComputeScore` and both call sites (`Core.lua`'s `/lgs score`, `GearEvaluation.lua`'s shift-click and outline scoring) to make the tooltip scan possible.
+- Validation: `luac -p`/`luacheck` clean on `Scoring.lua`, `Core.lua`, `GearEvaluation.lua`.
+- Follow-up: Confirmed no regressions live ("everything seems to work fine").
+
+### 44. Minimap button's right-click was a redundant copy of left-click (`ROADMAP.md` 0.36)
+- Status: Solved
+- Discovered: 2026-07-15 (test report, T10: "queue to remove rightclick completely. This will be added as the click that when long pressed will move the minimap button around the map")
+- Version introduced: N/A (0.36 had been a planned-but-unbuilt roadmap item since before this cycle)
+- Summary: Right-click on the minimap button just opened/closed the settings window a second way, identical to left-click, with no distinct purpose of its own.
+- Resolution: Right-click no longer toggles the window (left-click only). Repurposed as press-and-hold-and-drag: holding right-click down and moving the mouse repositions the button around the minimap's edge using the standard angle-around-the-circle technique most minimap-button addons use (`GetMinimapButtonAngle`/`ApplyMinimapButtonAngle`, `UI.lua`), with the resulting angle persisted (`settings.minimapAngle`) so it survives a reload. Tooltip text updated to describe both actions. This was already `ROADMAP.md`'s planned 0.36 item -- marked Built there, out of numeric order, same precedent as 0.37/0.38.
+- Validation: `luac -p`/`luacheck` clean on `UI.lua`; `.luacheckrc` updated with `GetCursorPosition`.
+- Follow-up: Confirmed no regressions live ("everything seems to work fine").
+
+### 45. No way to quiet a single noisy debug-log channel without disabling debug logging entirely
+- Status: Solved
+- Discovered: 2026-07-15 (test report, T7: "queue to change the debug level where window position isn't recorded anymore now that this bug is completely fixed")
+- Version introduced: N/A (feature request, not a regression)
+- Summary: Once bug #29 (window position) was closed and confirmed, its own debug-log lines (`SaveWindowPosition`/`ApplySavedPosition`) became pure noise in every dump, but the only existing control was the single account-wide `/lgs debug` on/off switch -- turning that off would also silence every other channel.
+- Resolution: Added a per-category toggle to `Debug.lua` (`IsCategoryEnabled`/`SetCategoryEnabled`/`ToggleCategory`, backed by `LevelingGearsDB.general.debugCategories`), wired a `"window"` category onto the two window-position log calls in `UI.lua`, and exposed it as `/lgs debug window` (`Core.lua`). A one-word `/lgs debugwindow` form was added and then removed again at the tester's own request once the space-separated form was confirmed working -- only `/lgs debug window` is supported.
+- Validation: `luac -p`/`luacheck` clean on `Debug.lua`, `Core.lua`. See bug #42 for a real regression this feature briefly introduced and its fix.
+- Follow-up: Confirmed working live ("/lgs debug window works").
+
+### 46. Nothing explained why a caster's "Haste" box wasn't labeled "Spell Haste"
+- Status: Solved (clarified -- not a scoring defect)
+- Discovered: 2026-07-15 (test report, T16: "why is haste recommended instead of spell haste. Why is there no spell haste stat?")
+- Version introduced: N/A (the underlying scoring was already correct; only the missing explanation is new)
+- Summary: TBC never itemized a separate Spell Haste stat -- that split only exists from Wrath of the Lich King onward. A single Haste Rating value already affects melee, ranged, and spell simultaneously, and `Conversions.lua` already converts it using whichever `CR_HASTE_*` constant matches the detected class/spec's own offense type (`CR_HASTE_SPELL` for a Mage). The "Haste Rating" box was always being scored correctly as spell haste for a caster -- nothing in the UI said so, reading as if a melee stat had been recommended by mistake.
+- Investigation: While addressing this, also audited every class/spec table in `Priorities.lua` for the broader "Mage defaults look weird" concern (same test report) -- found no anomalies; `EXP` (Expertise) is already `0` for all 3 Mage specs, and every other pure-caster spec, in both `speed`/`survival` modes. If a live character still shows a nonzero Expertise weight, the far more likely explanation is a stale saved value from before this table was last tuned (`EnsureWeights` never overwrites an already-set stat -- same known limitation as `ROADMAP.md`'s 0.35), fixable today via "Restore Defaults" -- not changed blind.
+- Resolution: Added a new helper-text note in `UI.lua`'s stat-weights section (next to the existing 0.37 primary-stats note) explaining the Hit/Crit/Haste-is-role-converted behavior in plain terms.
+- Validation: `luac -p`/`luacheck` clean on `UI.lua`. This note's own added height caused bug #41 (overlap) -- see that entry for the follow-up fix.
+- Follow-up: Awaiting tester confirmation on whether "Restore Defaults" clears the Expertise question on the specific Frost Mage character in question.

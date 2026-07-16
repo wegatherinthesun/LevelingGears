@@ -42,7 +42,7 @@ local function ApplySavedPosition(frame)
 				"ApplySavedPosition: left=%d top=%d frameScale=%.4f frameEffScale=%.4f " ..
 				"uiParentEffScale=%.4f",
 				pos.left, pos.top,
-				frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
+				frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1, "window")
 		end
 	end
 end
@@ -65,7 +65,7 @@ local function SaveWindowPosition(frame)
 			"SaveWindowPosition: left=%d top=%d frameScale=%.4f frameEffScale=%.4f " ..
 			"uiParentEffScale=%.4f",
 			settings.position.left, settings.position.top,
-			frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1)
+			frame:GetScale(), frame:GetEffectiveScale(), UIParent:GetEffectiveScale()), 1, "window")
 	end
 end
 
@@ -433,12 +433,26 @@ colorLegend:SetWidth(300)
 colorLegend:SetJustifyH("LEFT")
 colorLegend:SetText("Color guide: red/orange/yellow means below the current gear average, green means around average, and blue/violet means above it.")
 
+-- T20/T16 (v0.383+ queue): a tester scoring items on a Frost Mage asked why "Haste" was recommended
+-- instead of a separate "Spell Haste" stat -- reasonable confusion, since Hit/Crit/Haste Rating are
+-- shown as one box each rather than split by role. TBC itself never itemized a separate Spell Haste
+-- stat (that split only arrived in Wrath) -- gear-granted Hit/Crit/Haste Rating already affects
+-- melee, ranged, and spell at once, and Conversions.lua already converts each one using whichever of
+-- those applies to the detected class/spec (CR_HASTE_SPELL for a Mage, etc. -- see its offense-type
+-- lookup). The box was already being scored correctly as spell haste; nothing here told the player
+-- that.
+local hasteNote = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+hasteNote:SetPoint("TOPLEFT", colorLegend, "BOTTOMLEFT", 0, -8)
+hasteNote:SetWidth(300)
+hasteNote:SetJustifyH("LEFT")
+hasteNote:SetText("Hit, Crit, and Haste Rating are each a single box, not split by role -- TBC never itemized a separate \"Spell Haste\" stat, so the same Haste Rating value is converted for melee, ranged, or spell automatically, based on your class.")
+
 -- ROADMAP.md 0.37: nothing previously told a player why familiar primary stats are missing from
 -- this list. Strength/Agility/Intellect/Stamina/Spirit are converted into the derived stats shown
 -- below (Conversions.lua) before any weight is applied -- weighting them directly too would
 -- double-count (see DESIGN.md's double-counting rule).
 local primaryStatsNote = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-primaryStatsNote:SetPoint("TOPLEFT", colorLegend, "BOTTOMLEFT", 0, -8)
+primaryStatsNote:SetPoint("TOPLEFT", hasteNote, "BOTTOMLEFT", 0, -8)
 primaryStatsNote:SetWidth(300)
 primaryStatsNote:SetJustifyH("LEFT")
 primaryStatsNote:SetText("Strength, Agility, Intellect, Stamina, and Spirit aren't listed here -- they're automatically converted into the stats below (Attack Power, Crit, Health, Mana, etc.), so weighting them separately would count them twice.")
@@ -542,12 +556,14 @@ local function CreateStatRow(parent, stat)
 end
 
 local function ReflowStatGroups()
-	-- Starting offset accounts for the header, helper text, color legend, the 0.37 primary-stats
-	-- note, and the Restore Defaults button above the stat groups; verify in game that the first
-	-- group's header doesn't overlap that button after any font/wrap-width change (see CLAUDE.md's
-	-- UI-overlap rule). Bumped from -134 to -160 for the new note line (a reasoned estimate, not a
-	-- measured in-game value -- same caveat as every prior change to this offset, e.g. bug #25).
-	local currentY = -160
+	-- Real overlap reported live (Core stats overlapping Restore Defaults and the note above it) --
+	-- this offset used to be a hand-guessed absolute number that had to be re-estimated (and kept
+	-- getting it wrong, see bug #25/#26 and the -134 -> -160 -> -195 history) every time any note's
+	-- text length changed. Anchored to restoreDefaultsButton's own actual bottom edge instead, so it
+	-- can never drift out of sync with whatever text is above it again.
+	local buttonBottom = restoreDefaultsButton:GetBottom()
+	local sectionTop = weightSection:GetTop()
+	local currentY = (buttonBottom and sectionTop) and (buttonBottom - sectionTop - 12) or -195
 	local totalHeight = 0
 
 	for _, group in ipairs(statGroups) do
@@ -611,16 +627,61 @@ ReflowStatGroups()
 -- Minimap button
 -- ============================================================================
 
--- The minimap button is a second entry point into the same single settings window used by the slash commands.
+-- The minimap button is a second entry point into the same single settings window used by the slash
+-- commands. T10 (v0.383+ queue): right-click used to just duplicate left-click's open/close, which
+-- had no real purpose -- repurposed as press-and-drag instead, to reposition the button around the
+-- minimap's edge (the same angle-around-the-circle technique most minimap-button addons use), with
+-- the resulting angle persisted so it survives a reload.
+local MINIMAP_BUTTON_RADIUS = 80
+
+local function GetMinimapButtonAngle()
+	local minimapX, minimapY = Minimap:GetCenter()
+	local cursorX, cursorY = GetCursorPosition()
+	local scale = Minimap:GetEffectiveScale()
+	cursorX, cursorY = cursorX / scale, cursorY / scale
+	return math.deg(math.atan2(cursorY - minimapY, cursorX - minimapX))
+end
+
+local function ApplyMinimapButtonAngle(button, angle)
+	local radians = math.rad(angle)
+	local x = math.cos(radians) * MINIMAP_BUTTON_RADIUS
+	local y = math.sin(radians) * MINIMAP_BUTTON_RADIUS
+	button:ClearAllPoints()
+	button:SetPoint("CENTER", Minimap, "CENTER", x, y)
+end
+
 minimapButton = CreateFrame("Button", "LevelingGearsMinimapButton", Minimap)
 minimapButton:SetSize(31, 31)
 minimapButton:SetFrameStrata("MEDIUM")
-minimapButton:SetPoint("CENTER", Minimap, "CENTER", 80, 0)
-minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
+do
+	local settings = LG.Settings.GetGeneralSettings()
+	ApplyMinimapButtonAngle(minimapButton, settings.minimapAngle or 0)
+end
+
+minimapButton:RegisterForClicks("LeftButtonUp")
 minimapButton:SetScript("OnClick", function(_, button)
-	if button == "LeftButton" or button == "RightButton" then
+	if button == "LeftButton" then
 		UI.ToggleLevelingGears()
 	end
+end)
+
+minimapButton:SetScript("OnMouseDown", function(self, button)
+	if button ~= "RightButton" then
+		return
+	end
+	self:SetScript("OnUpdate", function()
+		ApplyMinimapButtonAngle(self, GetMinimapButtonAngle())
+	end)
+end)
+
+minimapButton:SetScript("OnMouseUp", function(self, button)
+	if button ~= "RightButton" then
+		return
+	end
+	self:SetScript("OnUpdate", nil)
+	local settings = LG.Settings.GetGeneralSettings()
+	settings.minimapAngle = GetMinimapButtonAngle()
 end)
 
 local minimapIcon = minimapButton:CreateTexture(nil, "ARTWORK")
@@ -636,7 +697,8 @@ minimapBorder:SetPoint("TOPLEFT", minimapButton, "TOPLEFT", -8, 8)
 minimapButton:SetScript("OnEnter", function(self)
 	GameTooltip:SetOwner(self, "ANCHOR_BOTTOMLEFT")
 	GameTooltip:SetText("Leveling Gears")
-	GameTooltip:AddLine("Click to open or close the settings window", 1, 1, 1, true)
+	GameTooltip:AddLine("Left-click to open or close the settings window", 1, 1, 1, true)
+	GameTooltip:AddLine("Hold right-click and drag to move this button", 1, 1, 1, true)
 	GameTooltip:Show()
 end)
 

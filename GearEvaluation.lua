@@ -83,7 +83,7 @@ local function EnsureScoreClickHook(slotButton, slotId)
 
 		LG.Weights.EnsureWeights()
 		local characterState = LG.Settings.GetCharacterState()
-		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights)
+		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights, itemLink)
 		LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
 	end)
 end
@@ -109,7 +109,7 @@ local function GetEquippedItemScore(slotId)
 
 	LG.Weights.EnsureWeights()
 	local characterState = LG.Settings.GetCharacterState()
-	return LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights)
+	return LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights, itemLink)
 end
 
 -- Convert the gap between an item and the player's current average into a color from red to violet, with green at parity.
