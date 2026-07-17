@@ -34,20 +34,22 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**On the `data_implementation` branch, unreleased (no version bump yet), on top of v0.385's
-baseline.** Two batches worth knowing about:
+**Version: v0.44.** `ROADMAP.md`'s `0.4` milestone (freeze the schema, build the real data pipeline)
+is complete — see `CHANGELOG.md` for the concise summary. Two batches worth knowing about, both new
+since v0.385:
 
 **Settings window resize, Popout box, bug #48 (Auto-detect fix), bug #49 (weight-ceiling
-validation)** — all v0.385, all previously covered here; see `CHANGELOG.md`/`bugs/resolved-bugs.md`
-for detail if retesting them specifically.
+validation)** — all shipped in v0.385, all previously covered here; see `CHANGELOG.md`/
+`bugs/resolved-bugs.md` for detail if retesting them specifically.
 
-**New this round — the Suggestions engine and recommendation window:**
+**New in v0.44 — the real data pipeline, the Suggestions engine, and the recommendation window:**
 1. **Shift+right-click an equipped item now opens the Suggestions window instead of the old score
    popout** — the popout's code is still present but no longer wired to this gesture. **T8
    rewritten** to match.
 2. **New: `Suggestions.lua` (the upgrade-recommendation engine) and `SuggestionsUI.lua` (its
-   window).** Shows up to 6 real upgrade candidates for the clicked slot — never a downgrade from
-   what's equipped, mixing guaranteed category diversity (crafted/BOE/nearby quest) with pure score,
+   window), backed by the real pipeline-built database** (18,711 items, 6,599 quests, 900 recipes).
+   Shows up to 6 real upgrade candidates for the clicked slot — never a downgrade from what's
+   equipped, mixing guaranteed category diversity (crafted/BOE/nearby quest) with pure score,
    filtered by level and armor type. **New cases T36-T44** cover this — all brand new, none
    previously tested by anyone but the author. Confirmed working live after fixing several real bugs
    along the way (`bugs/resolved-bugs.md` #50-#55) — T36-T38 are the most important ones to confirm
@@ -82,7 +84,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.385**.
+- Expected: Reads **v0.44**.
 - Result:
 - Notes:
 

@@ -10,6 +10,43 @@ For the full investigation behind any fix below (root cause, evidence, validatio
 
 ---
 
+## v0.44 (2026-07-17)
+
+**The `0.4` milestone (`ROADMAP.md`: freeze the schema, build the real data pipeline) is complete
+and shipped** — this version number was overdue; the work itself landed gradually across several
+unversioned commits on the `data_implementation` branch before this catch-up bump. Merged to `main`.
+
+- **Added: the real data pipeline.** `pipeline/big_data.py --build-database` produces real `Items`/
+  `Sources`/`Quests`/`Chains`/`Recipes`/`BySlot` Lua files from the cmangos tbc-db dump (Questie still
+  license-blocked, deferred) — 18,711 items, 6,599 quests, 1,108 chains, 900 recipes. These now ship
+  as real, committed addon data (`LevelingGears.toc` loads `pipeline/output/*.lua` directly).
+- **Added: `Suggestions.lua`, the upgrade-recommendation engine.** For any equipped slot: never a
+  downgrade from what's equipped, up to 6 candidates mixing guaranteed category diversity (crafted,
+  BOE/AH, nearby quest) with pure score, a dynamic (not fixed) threshold for showing an opposite-
+  continent quest source, level and armor-type filtering, a background queue that warms the item
+  cache on login/continent-switch/new-equip/spec-change/level-up, and per-character memory of
+  previously-found upgrades.
+- **Added: `SuggestionsUI.lua`, the recommendation window.** Shift+right-click an equipped item
+  (replacing the old score-breakdown popout) to see up to 6 real suggested upgrades — icon, name in
+  native quality color, upgrade %, and source (drop/quest/craft/vendor/BOE). Hover a row for the full
+  native item tooltip; Refresh re-checks on demand; Settings opens the main settings window alongside
+  it.
+- Six real bugs found and fixed while building this (`bugs/resolved-bugs.md` #50-#55): a caching
+  check that mistook a fully-cached plain-armor item for an uncached one; an armor-type filter with
+  no allow-list for non-proficiency values (rings, necks, trinkets, shields, relics); `reqLevel = 0`
+  misread as a literal level-0 requirement instead of "no requirement"; the recommendation window's
+  position drifting around the screen from an unintended full-body drag zone; identical wording for
+  "still loading" and "genuinely no upgrades"; and the window's content not rendering at all (root
+  cause not fully isolated — most likely a missing explicit height on a container frame, possibly
+  combined with the drag fix above).
+- **Known gaps, not yet closed:** no real in-game trigger for the recommendation window besides
+  shift+right-click and debug commands (`ROADMAP.md`'s `0.5` tooltip hook); no "next step" to actually
+  walk a player to a suggested item (`0.7`); no way to tell a dungeon-boss drop from an overworld one
+  yet (a real pipeline gap, not a design choice); recipe reagents and human-readable zone names are
+  still empty/absent (client-side DBC data the SQL dump doesn't carry).
+- `TEST_PLAN.md` extended with T36-T44 for the new engine/window; `ROADMAP.md` reordered around
+  "draw the outline first, color it in after."
+
 ## v0.385 (2026-07-16)
 
 Built on the `data_implementation` branch on top of v0.384, pushing toward `ROADMAP.md`'s `0.4`:
