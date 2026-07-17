@@ -8,13 +8,15 @@ reading.
 
 ## Scope: what's actually testable right now
 
-Leveling Gears is early (v0.385). The stat-weighting and scoring engine — the settings window,
-direct-entry stat weights (one set per character), and the equipped-gear outline coloring — is real
-and testable. The longer-term
-"tells you where to get your next upgrade" feature is **not built yet** — there's no item database,
-no tooltip integration, no recommendation window. If a roadmap item in `ROADMAP.md` is marked "Not
-built," that's expected, not a defect. Only note something as a problem if it should work today
-(per `TEST_PLAN.md`) and doesn't.
+Leveling Gears is early (v0.385, plus unversioned work since). The stat-weighting and scoring engine
+— the settings window, direct-entry stat weights (one set per character), and the equipped-gear
+outline coloring — is real and testable. A first real upgrade-recommendation engine and window are
+now real and testable too: shift+right-click an equipped item to see up to 6 real suggested upgrades
+for that slot (`TEST_PLAN.md`'s T36-T44). What's still **not built yet**: a real in-game entry point
+for that window other than shift+right-click (the planned tooltip hook), and the "next step" that
+walks you to actually go get a suggested item (quest chains, crafting, TomTom waypoints). If a
+roadmap item in `ROADMAP.md` is marked "Not built," that's expected, not a defect. Only note
+something as a problem if it should work today (per `TEST_PLAN.md`) and doesn't.
 
 ## Environment notes
 

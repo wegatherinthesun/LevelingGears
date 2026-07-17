@@ -9,38 +9,28 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: `data_implementation` branch — `Suggestions.lua` (the recommendation engine) and
-  `SuggestionsUI.lua` (its window) built. Engine confirmed live-working; the window has one open bug
-  blocking real use.** Built per direct instruction from the ground up: no downgrades ever, a
-  6-candidate mix of guaranteed category diversity (crafted/BOE/local quest/nearby quest, dungeon-
-  blue deferred — `ROADMAP.md`'s known gap on instance detection) plus pure-score fill, a dynamic
-  (not fixed) opposite-continent threshold that scales with local-pool depth, level and armor-type
-  filters to keep the scan fast, a background cache-warming queue tied to the original trigger list
-  (startup, continent switch, new equip, spec change, level up), and persistent per-character
-  suggestion memory so a found upgrade doesn't need rediscovering every session. Full design detail
-  in `ROADMAP.md`'s "Begin suggesting" entry.
-  - **Engine confirmed working via live evidence**, not just code review: the on-disk debug log shows
-    6 real candidates found across many different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/
-    Hands/Legs) in real play sessions, after five real bugs were found and fixed along the way —
-    three by reading the debug log directly (bug #50: `GetItemStats`' empty-but-cached table
-    misread as "not cached," dropping most plain armor from the pool) and two by checking the
-    pipeline's actual generated data instead of assuming its shape (bug #51: armor-type filter had
-    no allow-list for `"Miscellaneous"`/`"Shield"`/relic values, wrongly excluding every ring, neck,
-    trinket, cloak, shield, and relic; bug #52: `reqLevel = 0` means "no requirement," not a literal
-    level-0 requirement, since `0` is truthy in Lua). See `bugs/resolved-bugs.md` #50-#52.
-  - **The window itself has an open, unresolved bug** (`bugs/known-bugs.md` #55): it shows correctly
-    (backdrop, correct size, correct centered position, confirmed via debug log every time) but its
-    content — title, buttons, every row's text — never renders, even in the same instant the engine
-    confirms finding real candidates. Two related but distinct bugs were found and fixed on the way
-    to isolating this (bug #53: the window's whole body was drag-enabled with no dedicated title
-    strip, and its anchor point was confirmed drifting across CENTER/LEFT/TOP/TOPLEFT during one
-    session — very likely why found suggestions were never seen; fixed by removing drag capability
-    and force-resetting position every `Show()` call. Bug #54: the empty-state text was identical for
-    "still loading" and "genuinely nothing found," reading as a dead end either way; fixed with
-    context-aware messaging). Bug #55 itself is still open — diagnostic logging (row geometry,
-    visibility, alpha, frame level) was added to `SuggestionsUI.lua` to objectively localize it on
-    the next live test, rather than guess further. See `bugs/known-bugs.md` #55 for the full
-    investigation record.
+- **Current step: `Suggestions.lua` (the recommendation engine) and `SuggestionsUI.lua` (its window)
+  built, live-verified, and merged to `main`.** Built per direct instruction from the ground up: no
+  downgrades ever, a 6-candidate mix of guaranteed category diversity (crafted/BOE/local quest/nearby
+  quest, dungeon-blue deferred — `ROADMAP.md`'s known gap on instance detection) plus pure-score fill,
+  a dynamic (not fixed) opposite-continent threshold that scales with local-pool depth, level and
+  armor-type filters to keep the scan fast, a background cache-warming queue tied to the original
+  trigger list (startup, continent switch, new equip, spec change, level up), and persistent
+  per-character suggestion memory so a found upgrade doesn't need rediscovering every session. Opens
+  today via shift+right-click on an equipped item (replacing the old score popout) or debug commands
+  (`/lgs suggest`/`/lgs suggestwindow`). Full design detail in `ROADMAP.md`'s "Begin suggesting" entry.
+  - **Confirmed working via live evidence**, not just code review: the on-disk debug log shows 6 real
+    candidates found across many different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/Hands/Legs)
+    in real play sessions, and the window itself confirmed actually rendering that data (real item
+    names, correct row geometry) after six real bugs were found and fixed along the way — three by
+    reading the debug log directly, two by checking the pipeline's actual generated data instead of
+    assuming its shape, and one (the window's own content not rendering) resolved by a combination of
+    a drag-removal fix and giving a container frame an explicit height it had been missing. See
+    `bugs/resolved-bugs.md` #50-#55 for the full investigation record on each.
+  - `TEST_PLAN.md` extended with T36-T44 covering the new engine/window end to end — none
+    independently confirmed by a tester yet, all new.
+  - **Next real gap:** `ROADMAP.md`'s `0.5` (a real in-game trigger for the window — today's
+    shift+right-click and debug commands are stopgaps, not the originally-planned tooltip hook).
 - **Previous step: v0.385 — the `data_implementation` branch's first version-numbered batch, merged
   back to `main`.** Closed out two more `queue.md` items on top of the already-built settings resize/
   popout box: **bug #48** (the "Spec:" dropdown's "Auto-detect" option silently did nothing after a

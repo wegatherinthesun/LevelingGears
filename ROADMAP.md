@@ -126,9 +126,9 @@ unbuilt work that had been sitting unmarked in this "all built" list by mistake;
 misfiled here the same way — also relocated.) What's left before Testing Phase 1 itself is over is
 **not more building, it's a real `TEST_PLAN.md` T1-T35 pass** (see `PROGRESS.md`'s Current status /
 `CLAUDE.md`'s Next step). Bug #29 (window position) is now closed — see `bugs/resolved-bugs.md` #29
-— and `bugs/known-bugs.md` has one open bug as of this writing (#55, unrelated to this section — see
-"Begin suggesting" below). Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/
-Major findings — see `TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
+— and `bugs/known-bugs.md` currently has zero open bugs. Once a full T1-T35 pass comes back clean (no
+unresolved Blocker/Critical/Major findings — see `TESTERS.md`'s severity scale), the next real step
+is `0.4` below, not before.
 
 **That gate is now considered cleared as of v0.384** — remaining `queue.md` items were minor UX
 polish, not Blocker/Critical/Major findings, and continued in parallel rather than blocking `0.4`.
@@ -274,29 +274,29 @@ this planning pass.
   equipped item no longer prints a score breakdown to chat (removed bug #30/T8's old chat-output
   behavior), and the trigger itself moved from shift+left-click to **shift+right-click** (per direct
   instruction — shift+left-click already means "insert item link in chat" to players).
-- **Popout box.** **Built.** Shift+right-clicking an equipped item opens a clickable flyout
-  (`UI.ShowScorePopout`) beside the item showing the score breakdown (item name, spec/score line,
-  then the same sorted per-stat breakdown that used to print to chat) — closes via its own X button
-  or by clicking anywhere else (a full-screen invisible click-catcher frame just behind it in
-  strata). One reusable frame, not one per click. This is `0.5` below's flyout-frame concept, built
-  now rather than just planned — `0.5`'s own entry is the fuller spec for this same frame.
+- **Popout box.** **Built, but since superseded.** Shift+right-clicking an equipped item used to
+  open a clickable flyout (`UI.ShowScorePopout`, still present in `UI.lua`) showing the score
+  breakdown (item name, spec/score line, sorted per-stat breakdown) — closes via its own X button or
+  by clicking anywhere else. This was `0.5`'s flyout-frame concept, built early. **Shift+right-click
+  now opens the Suggestions window instead** (see "Begin suggesting" below) — `ShowScorePopout` is
+  unreferenced by any click today, kept in place rather than deleted since nothing has asked for its
+  removal.
 - **Continent-aware querying.** **Built and confirmed live** (`Suggestions.GetPlayerLocation`) —
   `UnitPosition("player")`'s `instanceID` return was the right match after all: the on-disk debug log
   confirms it correctly resolved to `EASTERN_KINGDOMS` (instanceId=0) and, later the same session
   after the character actually traveled there, `OUTLAND` (instanceId=530) — real live confirmation,
   not an assumed mapping. Upgrade queries scope to "obtainable on your own continent first" per
   `Suggestions.lua`'s dynamic opposite-continent threshold (see "Begin suggesting" below).
-- **Begin suggesting: the real recommendation engine.** **Engine built and live-verified**
-  (`Suggestions.lua`, `data_implementation` branch) — confirmed via the on-disk debug log finding 6
+- **Begin suggesting: the real recommendation engine.** **Built, live-verified, and merged to
+  `main`** (`Suggestions.lua` + `SuggestionsUI.lua`) — confirmed via the on-disk debug log finding 6
   real candidates across multiple different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/Hands/Legs)
-  in real live sessions. **The window (`SuggestionsUI.lua`, `0.6` below) is built but has an open bug
-  (`bugs/known-bugs.md` #55): the window itself shows correctly (backdrop, correct size, correct
-  centered position) but its content — title, buttons, every row's icon/name/source/category text —
-  never renders, even when the engine is confirmed to have found real candidates the same instant.**
-  Query `BySlot`/`Sources`/`Items`/`Quests` (all six now committed, real, and loaded — see this file's
-  DATA section above and `DATA_PIPELINE.md`'s Status note) for actual upgrades to show the player,
-  instead of `0.4`'s hand-made sample. Verify via the `/lgs suggest <slot>` (text) or
-  `/lgs suggestwindow <slot>` (window) debug commands. Concrete design, decided per direct instruction:
+  in real live sessions, and the window (`SuggestionsUI.lua`, `0.6` below) confirmed actually
+  rendering its content after bug #55 (`bugs/resolved-bugs.md`) was closed. Query `BySlot`/`Sources`/
+  `Items`/`Quests` (all six now committed, real, and loaded — see this file's DATA section above and
+  `DATA_PIPELINE.md`'s Status note) for actual upgrades to show the player, instead of `0.4`'s
+  hand-made sample. Opens today via shift+right-click on an equipped item, or the `/lgs suggest
+  <slot>` (text) / `/lgs suggestwindow <slot>` (window) debug commands — `0.5` below is the still-open
+  gap for a real in-game trigger. Concrete design, decided per direct instruction:
   - **Hard rule: no downgrades, ever.** A candidate only enters the pool if its score beats the
     currently-equipped item's score for that slot — applied before any category logic touches the
     pool, not a display-side filter. **Built.**
@@ -347,8 +347,7 @@ this planning pass.
     a fresh check comes back empty purely from caching lag.
   - **UI requirements for the recommendation window (`0.6` below):** a **Refresh** button that
     re-runs just that slot's 6-candidate query on demand and a **Settings** button opening the main
-    settings window without closing this one. **Built** — see this item's own open bug (#55) above for
-    why the window isn't actually usable yet despite this.
+    settings window without closing this one. **Built.**
 - UI.lua reorganization: not split yet (707 lines across 5 sections as of this writing) — the
   popout box above and the recommendation window (`0.6`) are new frames that get their own new
   file(s) regardless of what happens to UI.lua itself; revisit UI.lua's size once those exist and
@@ -371,15 +370,14 @@ everything that only makes sense once this loop already works.
   Gears action. One chosen → show it + where to get it + the next-step action. **Not built** — this
   is the real in-game trigger for `SuggestionsUI.lua`'s window, which today only opens via debug
   commands (`/lgs suggestwindow <slot>`) or shift+right-click (which took over the old score-popout
-  gesture — see `GearEvaluation.lua`). Deciding and building this is the next real outline gap once
-  bug #55 is closed.
-- **0.6 — Recommendation window.** **Mostly built** as `SuggestionsUI.lua` (`data_implementation`
-  branch) — opens scoped to one slot, 6-row list (icon + name in native quality color + % upgrade +
-  source summary + category tags), hovering a row shows the native item tooltip plus appended
-  source/category lines, Refresh and Settings buttons. **Blocked on bug #55** (`bugs/known-bugs.md`
-  — window shows but its content never renders) and not yet opened by a real trigger (0.5 above is
-  still an open decision). Still not built from the original spec: a character-summary header
-  (name/level/color-rated gearscore) and a group-content marker — both cosmetic/informational
+  gesture — see `GearEvaluation.lua`). This is now the real, immediate next outline gap — the engine
+  and window both work; the only thing missing is a real way for a player to reach them in normal play.
+- **0.6 — Recommendation window.** **Mostly built and confirmed working live** as `SuggestionsUI.lua`
+  (merged to `main`) — opens scoped to one slot, 6-row list (icon + name in native quality color + %
+  upgrade + source summary + category tags), hovering a row shows the native item tooltip plus
+  appended source/category lines, Refresh and Settings buttons. Not yet opened by a real trigger (0.5
+  above is still an open decision). Still not built from the original spec: a character-summary
+  header (name/level/color-rated gearscore) and a group-content marker — both cosmetic/informational
   additions on top of the working list, not blocking. Scores via the real engine (`Suggestions.lua`),
   real pipeline data, not the old `0.4` hand-made sample.
 - **0.7 — Next-step engine.** Selected upgrade shows current next step and iterates it: quest
@@ -515,8 +513,9 @@ NAMES keep Blizzard's native quality colors (a different, familiar system — do
 
 There is exactly ONE settings window in this addon. Slash commands and the minimap button both open
 it, and every setting below lives on that single vertically-scrolling page — no second settings
-screen exists anywhere. (The 0.5 recommendation window is a separate frame, but it is NOT settings —
-it is the per-slot upgrade picker opened from "Select Gears." Those are the only two frames.)
+screen exists anywhere. (The `0.6` recommendation window, `SuggestionsUI.lua`, is a separate frame,
+but it is NOT settings — it is the per-slot upgrade picker, today opened via shift+right-click or a
+debug command, eventually from `0.5`'s "Select Gears" tooltip action. Those are the only two frames.)
 
 - Per-stat weights — the main content of the window, visible and directly editable from early (0.2);
   since 0.25 these are DERIVED-stat inputs only (primaries STR/AGI/STA/INT/SPI were removed from the
@@ -532,7 +531,9 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
   exactly one weight set per character (no profiles — see the "Testing Phase 1 follow-ups" section
   above); defaults do not yet auto-update on respec (0.35). **Built.**
 - Minimap button on/off. **Built.**
-- Suggestion count (default 3). **Not built** (depends on 0.6 recommendation window).
+- Suggestion count (configurable, originally spec'd default 3). **Not built** — `SuggestionsUI.lua`
+  currently shows a fixed 6 per slot (see "Begin suggesting" above), not yet a player-configurable
+  count.
 - Sort mode default. **Not built** (depends on 0.8).
 - Source-type checkboxes (all on by default). **Not built** (depends on 0.8/data pipeline).
 - Alt professions toggle; crafter-search fallback toggle. **Not built** (depends on 0.91).
