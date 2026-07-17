@@ -1,3 +1,7 @@
+# Local-only notes, not pushed
+CLAUDE.md
+queue.md
+
 # Pipeline build artifacts (big_data.py) -- downloaded source dumps, generated reports/output, and
 # per-run logs are all reproducible, not source. See pipeline/README.md.
 pipeline/downloads/*
