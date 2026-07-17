@@ -9,7 +9,7 @@ globals = {
 }
 read_globals = {
 	"CreateFrame", "UIParent", "BackdropTemplateMixin", "GetAddOnMetadata", "C_AddOns",
-	"DEFAULT_CHAT_FRAME", "UnitName", "GetRealmName", "date",
+	"DEFAULT_CHAT_FRAME", "UnitName", "GetRealmName", "date", "ChatFontNormal",
 	"GetInventoryItemLink", "GetItemStats", "GetInventorySlotInfo",
 	"tContains", "tinsert", "UISpecialFrames",
 	"Minimap", "GameTooltip", "CharacterFrame", "C_Timer",

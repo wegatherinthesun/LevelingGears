@@ -88,7 +88,31 @@ local function HandleSlashCommand(msg)
 		return
 	end
 
+	-- T3/Q1: opens the copy-ready developer report window. The sandbox can't send anything itself, so
+	-- this prepares the report (version + character context + debug log) pre-selected for the player
+	-- to copy and email -- see UI.ShowReportWindow / Debug.BuildReportText.
+	if original:match("^%s*[Rr][Ee][Pp][Oo][Rr][Tt]%s*$") then
+		SafeCall(function()
+			LG.UI.ShowReportWindow(LG.Debug.BuildReportText())
+		end)
+		return
+	end
+
 	local msgLower = original:lower()
+
+	-- Test scaffolding -- NOT for the shipped player build (see the ship/no-ship manifest, queue Q6).
+	-- Forces a caught Lua error so the whole error path (chat hint + once-per-session report
+	-- auto-offer) can be exercised on demand. Resetting the flag re-arms the auto-offer so the popup
+	-- fires on every /lgs testerror during a session. SafeCall catches this exactly as it would a real
+	-- error, so this drives the real code path rather than simulating it.
+	if msgLower == "testerror" then
+		LG.Debug.errorReportOffered = false
+		SafeCall(function()
+			error("Leveling Gears: forced test error from /lgs testerror")
+		end)
+		return
+	end
+
 	if msgLower == "debug dump" then
 		LG.Debug.DumpDebugLog()
 		return

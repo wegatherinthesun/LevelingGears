@@ -28,6 +28,23 @@ StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"] = {
 	timeout = 0,
 }
 
+-- T3/Q1: auto-offered once per session when SafeCall catches a Lua error (see Debug.SafeCall). The
+-- sandbox can't send anything itself, so "Open report" just brings up the copy-ready report window
+-- fast; "Dismiss" leaves the player alone (they can still use /lgs report or the settings button).
+StaticPopupDialogs["LEVELINGGEARS_ERROR_REPORT"] = {
+	text = "Leveling Gears hit a Lua error. Open a copy-ready report to email to the developer?",
+	button1 = "Open report",
+	button2 = "Dismiss",
+	OnAccept = function()
+		SafeCall(function()
+			UI.ShowReportWindow(LG.Debug.BuildReportText())
+		end)
+	end,
+	whileDead = 1,
+	hideOnEscape = 1,
+	timeout = 0,
+}
+
 -- Bug #29: testers reported the restored position is consistently in "a similar general area" but
 -- not the exact spot the window was dragged to, even though extensive debug-log evidence showed
 -- this addon's own save/apply values always matched exactly (ruling out a UI-scale mismatch, the
@@ -443,12 +460,30 @@ local generalCheckboxText = generalSection:CreateFontString(nil, "OVERLAY", "Gam
 generalCheckboxText:SetPoint("LEFT", generalSettingsCheckbox, "RIGHT", 4, 1)
 generalCheckboxText:SetText("Show minimap button")
 
+-- T3/Q1: one-click access to a copy-ready bug report. The addon sandbox can't SEND anything (no
+-- network/io/os), so this opens a dialog with the whole report (version + character context + debug
+-- log) pre-selected, ready to Ctrl/Cmd+C and email. Also reachable via /lgs report, and auto-offered
+-- once per session when a Lua error is caught (see Debug.SafeCall).
+local reportButton = CreateFrame("Button", nil, generalSection, "UIPanelButtonTemplate")
+reportButton:SetSize(200, 22)
+reportButton:SetPoint("TOPLEFT", generalSettingsCheckbox, "BOTTOMLEFT", 2, -10)
+reportButton:SetText("Copy report for developer")
+reportButton:SetScript("OnClick", function()
+	SafeCall(function()
+		UI.ShowReportWindow(LG.Debug.BuildReportText())
+	end)
+end)
+
 local divider = generalSection:CreateTexture(nil, "OVERLAY")
 divider:SetColorTexture(0.6, 0.6, 0.6, 0.4)
 divider:SetSize(300, 1)
-divider:SetPoint("TOPLEFT", generalSettingsCheckbox, "BOTTOMLEFT", 0, -12)
+divider:SetPoint("TOPLEFT", reportButton, "BOTTOMLEFT", -2, -12)
 
-generalSection:SetHeight(92)
+-- Reasoned estimate (not yet visually confirmed in game, same caveat as the other UI sizing in this
+-- file): header + hint + checkbox + the report button + gaps. Everything below (spec/weight sections)
+-- anchors to this section's bottom, so it shifts down automatically, and the scroll child height
+-- (recomputed from these section heights, see UpdateWeightSectionLayout) already accounts for it.
+generalSection:SetHeight(136)
 
 -- ============================================================================
 -- Spec section (v0.38, bug #37)
@@ -930,4 +965,115 @@ function UI.ShowScorePopout(anchorFrame, itemLink, score, breakdown, specDescrip
 
 	scorePopoutOverlay:Show()
 	scorePopout:Show()
+end
+
+-- ============================================================================
+-- Report window (T3/Q1): the copy-ready developer report
+-- ============================================================================
+-- The addon sandbox has no network/io/os access, so it cannot send anything itself. This window is
+-- the honest best alternative: it shows the full report (LG.Debug.BuildReportText) in a scrollable,
+-- effectively read-only multiline box with the text pre-selected, so the player just presses
+-- Ctrl+C (Cmd+C on Mac) and pastes it into an email to the developer. Reached three ways: /lgs
+-- report, the "Copy report for developer" button in the settings window, and the once-per-session
+-- auto-offer popup on a caught Lua error.
+
+local reportWindow
+
+local function EnsureReportWindow()
+	if reportWindow then
+		return
+	end
+
+	local frame = CreateFrame("Frame", "LevelingGearsReportWindow", UIParent,
+		BackdropTemplateMixin and "BackdropTemplate" or nil)
+	frame:SetSize(500, 420)
+	frame:SetPoint("CENTER")
+	-- Above the settings window (strata DIALOG): this can be opened from the settings button while
+	-- that window is up, and must sit on top of it.
+	frame:SetFrameStrata("FULLSCREEN_DIALOG")
+	frame:SetBackdrop({
+		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+		tile = true, tileSize = 32, edgeSize = 32,
+		insets = { left = 11, right = 12, top = 12, bottom = 11 },
+	})
+	frame:EnableMouse(true)
+	frame:SetMovable(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetClampedToScreen(true)
+	frame:SetScript("OnDragStart", function(self)
+		SafeCall(function() self:StartMoving() end)
+	end)
+	frame:SetScript("OnDragStop", function(self)
+		SafeCall(function() self:StopMovingOrSizing() end)
+	end)
+	frame:Hide()
+
+	-- Escape closes it (and it stays out of the settings window's own special-frame handling).
+	if not tContains(UISpecialFrames, "LevelingGearsReportWindow") then
+		tinsert(UISpecialFrames, "LevelingGearsReportWindow")
+	end
+
+	local reportTitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+	reportTitle:SetPoint("TOP", 0, -16)
+	reportTitle:SetText("Leveling Gears -- report for the developer")
+
+	local reportCloseButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+	reportCloseButton:SetPoint("TOPRIGHT", -4, -4)
+
+	local instructions = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	instructions:SetPoint("TOPLEFT", 20, -46)
+	instructions:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
+	instructions:SetJustifyH("LEFT")
+	instructions:SetText("The text below is already selected. Copy it (Ctrl+C, or Cmd+C on Mac) and " ..
+		"email it to |cff71d5ffwegatherinthesun@gmail.com|r. Nothing is sent automatically.")
+
+	local reportScrollFrame = CreateFrame("ScrollFrame", "LevelingGearsReportScroll", frame,
+		"UIPanelScrollFrameTemplate")
+	reportScrollFrame:SetPoint("TOPLEFT", 20, -84)
+	reportScrollFrame:SetPoint("BOTTOMRIGHT", -30, 20)
+	reportScrollFrame:EnableMouseWheel(true)
+
+	-- A multiline EditBox is WoW's only practical "copyable text" widget -- there is no read-only
+	-- text box that still allows selection/copy. It's made effectively read-only by reverting any
+	-- user edit in OnTextChanged (see below), so a stray keypress can't corrupt what gets copied.
+	local editBox = CreateFrame("EditBox", nil, reportScrollFrame)
+	editBox:SetMultiLine(true)
+	editBox:SetAutoFocus(false)
+	editBox:SetFontObject(ChatFontNormal)
+	editBox:SetWidth(430)
+	editBox:EnableMouse(true)
+	editBox:SetScript("OnEscapePressed", function()
+		reportWindow:Hide()
+	end)
+	editBox:SetScript("OnTextChanged", function(self, userInput)
+		-- Only react to real typing (userInput), and guard against the recursive SetText below (which
+		-- fires this again with userInput=false). Reverting to the stored report text keeps the box
+		-- effectively read-only and keeps the full report always selected for copying.
+		if userInput and reportWindow.reportText and self:GetText() ~= reportWindow.reportText then
+			self:SetText(reportWindow.reportText)
+			self:HighlightText()
+		end
+	end)
+	reportScrollFrame:SetScrollChild(editBox)
+	frame.editBox = editBox
+
+	reportWindow = frame
+end
+
+function UI.ShowReportWindow(reportText)
+	EnsureReportWindow()
+	reportWindow.reportText = reportText
+	reportWindow:Show()
+	reportWindow.editBox:SetText(reportText)
+	reportWindow.editBox:SetFocus()
+	reportWindow.editBox:HighlightText()
+	-- Preemptive "report" debug channel (toggle with /lgs debug report): the same visibility/geometry
+	-- instrumentation that made bug #55's "window shows but is empty" tractable, in place from the
+	-- start this time. Silence with /lgs debug report once the window is confirmed solid.
+	LG.Debug.WriteDebugLog(string.format(
+		"report: ShowReportWindow textLen=%d windowShown=%s editBoxShown=%s editBoxVisible=%s",
+		#reportText, tostring(reportWindow:IsShown()),
+		tostring(reportWindow.editBox:IsShown()), tostring(reportWindow.editBox:IsVisible())),
+		1, "report")
 end

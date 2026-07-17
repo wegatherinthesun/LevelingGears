@@ -116,13 +116,71 @@ function Debug.DumpDebugLog()
 	end
 end
 
+-- Build the full copy-ready report text: addon version, character context, and the stored debug
+-- log. The addon sandbox has no way to SEND this (no network/io/os), so the report is prepared for
+-- the player to copy and email to the developer -- UI.ShowReportWindow displays it with the text
+-- pre-selected. Class/level/spec are read at call time (runtime), so LG.Scoring loading after
+-- Debug.lua is not a problem.
+function Debug.BuildReportText()
+	local lines = {}
+	table.insert(lines, "Leveling Gears -- bug report")
+	table.insert(lines, "Please email this to wegatherinthesun@gmail.com")
+	table.insert(lines, "")
+	table.insert(lines, "Version: v" .. tostring(LG.ADDON_VERSION))
+
+	local playerName = UnitName("player") or "?"
+	local realm = GetRealmName() or "?"
+	local _, className = UnitClass("player")
+	local level = UnitLevel("player") or 0
+	table.insert(lines, "Character: " .. playerName .. "-" .. realm ..
+		" (" .. tostring(className) .. ", level " .. tostring(level) .. ")")
+
+	-- Spec is a nice-to-have; a failure here must never break report generation (the whole point is
+	-- to work even when something else is broken), so it's pcall-guarded and simply omitted on error.
+	if LG.Scoring and LG.Scoring.DescribeCurrentSpec then
+		local ok, spec = pcall(function() return LG.Scoring:DescribeCurrentSpec() end)
+		if ok and spec then
+			table.insert(lines, "Scoring as: " .. tostring(spec))
+		end
+	end
+
+	local log = LevelingGearsDB.debugLog
+	table.insert(lines, "")
+	table.insert(lines, "--- Debug log (" .. #log .. " entries) ---")
+	if #log == 0 then
+		table.insert(lines, "(empty -- enable logging with /lgs debug, reproduce the issue, then " ..
+			"reopen this report for detail)")
+	else
+		for _, entry in ipairs(log) do
+			table.insert(lines, "[" .. entry.time .. "] " .. entry.message)
+		end
+	end
+
+	return table.concat(lines, "\n")
+end
+
 -- Every other file's pcall-wrapped blocks route through this so a Lua error is logged and
 -- reported instead of silently breaking the addon.
 function Debug.SafeCall(func, ...)
 	local success, err = pcall(func, ...)
 	if not success then
 		Debug.WriteDebugLog(err, 1)
-		Debug.PrintChat("A Lua error occurred. Use /lgs debug dump to view recent debug entries.")
+		Debug.PrintChat("A Lua error occurred. Type /lgs report to open a copy-ready report for the " ..
+			"developer (or /lgs debug dump to view raw entries).")
+		-- Auto-offer the copy-ready report dialog, but only ONCE per session: a Lua error can fire
+		-- repeatedly (e.g. from an OnUpdate path), and an unthrottled popup would spam the screen. The
+		-- dialog is registered in UI.lua; the guard also covers an error firing before UI.lua has
+		-- loaded (Debug.lua loads first). The flag lives on the session-scoped Debug table, so it
+		-- resets on /reload -- a fresh session can offer again.
+		if not Debug.errorReportOffered
+			and StaticPopupDialogs and StaticPopupDialogs["LEVELINGGEARS_ERROR_REPORT"] then
+			Debug.errorReportOffered = true
+			Debug.WriteDebugLog("report: auto-offering error report (first caught error this session)", 1, "report")
+			StaticPopup_Show("LEVELINGGEARS_ERROR_REPORT")
+		else
+			Debug.WriteDebugLog("report: error report auto-offer suppressed (already offered this " ..
+				"session, or dialog not registered yet)", 1, "report")
+		end
 	end
 	return success, err
 end
