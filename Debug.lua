@@ -94,7 +94,8 @@ function Debug.SetDebugEnabled(enabled, level)
 	settings.debugEnabled = enabled and true or false
 	settings.debugLevel = level or settings.debugLevel or 1
 	if enabled then
-		Debug.PrintChat("Debug logging enabled (level " .. settings.debugLevel .. "). Use /lgs debug dump to view recent entries.")
+		Debug.PrintChat("Debug logging enabled (level " .. settings.debugLevel ..
+			"). Use /lgs debug dump to view recent entries, or /lgs debug again to turn it back off.")
 	else
 		Debug.PrintChat("Debug logging disabled.")
 	end
