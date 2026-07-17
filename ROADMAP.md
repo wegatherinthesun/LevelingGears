@@ -467,12 +467,21 @@ everything that only makes sense once this loop already works.
 
 - **Debug log dump window (dev/tester tooling — not shipped to players; part of the debug suite
   `queue.md` Q6's ship/no-ship manifest strips from the player build).** Today `/lgs debug dump`
-  prints the stored ring buffer straight to chat, which floods it on a large buffer (the reason
-  `queue.md`'s dump line-limit nitpick, Q3, exists). Give the dump its own **scrollable window that
-  can display all stored messages at once** instead of dumping to chat — reusing the scrollable,
-  copyable multiline-editbox infrastructure already built for the developer report window
-  (`UI.ShowReportWindow`, #56). Q3's in-chat 50-line cap stays useful for a quick peek, but this
-  window is the full view; once it exists, `/lgs debug dump` can open here by default.
+  prints the stored ring buffer straight to chat, which floods it on a large buffer. Give the dump
+  its own **scrollable window that can display all stored messages at once** instead of dumping to
+  chat — reusing the scrollable, copyable multiline-editbox infrastructure already built for the
+  developer report window (`UI.ShowReportWindow`, #56). Because the window can display the whole
+  buffer, **raise the log capacity to ~5000 entries** (from the current `DEBUG_LOG_MAX_ENTRIES = 2000`
+  in `Debug.lua`) as part of this. This **supersedes the cancelled `queue.md` Q3** (an in-chat
+  50-line cap) — the window is the full view, so no chat truncation is needed; `/lgs debug dump` opens
+  here instead.
+- **Player-friendly score presentation (was `queue.md` Q4, T8).** Today the score breakdown is a flat
+  list of derived-stat contributions — useful for debugging, but not designed for a first-time player
+  to read at a glance. Refine it into something a player can actually interpret. Note the moving
+  parts around it: the raw `/lgs score` command is tester-only and slated for retirement once `0.5`'s
+  tooltip hook exists (`queue.md` Q5), and shift+right-click now opens the Suggestions window rather
+  than the old score popout — so this is really about how score *reasoning* is surfaced to players
+  wherever it appears, not about polishing the debug command.
 
 Smaller tester-feedback nitpicks live in `queue.md` instead of here — small enough to pick up one at
 a time without needing a permanent roadmap slot: error reports to the developer, debug-toggle
