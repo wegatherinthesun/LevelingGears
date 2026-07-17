@@ -1,6 +1,8 @@
 # Local-only notes, not pushed
 CLAUDE.md
+WORKFLOW.md
 queue.md
+testing-log.md
 
 # Pipeline build artifacts (big_data.py) -- downloaded source dumps and per-run logs are
 # reproducible, not source. See pipeline/README.md.

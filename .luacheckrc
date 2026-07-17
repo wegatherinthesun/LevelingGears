@@ -8,7 +8,7 @@ globals = {
 	"StaticPopupDialogs",
 }
 read_globals = {
-	"CreateFrame", "UIParent", "BackdropTemplateMixin",
+	"CreateFrame", "UIParent", "BackdropTemplateMixin", "GetAddOnMetadata", "C_AddOns",
 	"DEFAULT_CHAT_FRAME", "UnitName", "GetRealmName", "date",
 	"GetInventoryItemLink", "GetItemStats", "GetInventorySlotInfo",
 	"tContains", "tinsert", "UISpecialFrames",

@@ -8,9 +8,16 @@ local _, LG = ...
 LG.Debug = LG.Debug or {}
 local Debug = LG.Debug
 
--- The addon's version string. Lives here (rather than in Core.lua, which loads last) because
--- UI.lua's version label needs it at UI.lua's own load time, before Core.lua has run.
-LG.ADDON_VERSION = "0.44"
+-- The addon's version string. Read at runtime from the single source of truth -- the "## Version:"
+-- line in LevelingGears.toc -- so the two can never drift. The C_AddOns shim is REQUIRED on this
+-- client: the Anniversary build (though it reports Interface 20505) runs the modern engine, which
+-- removed the old global GetAddOnMetadata in favour of C_AddOns.GetAddOnMetadata -- calling the bare
+-- global here is exactly what broke addon load once. Shim pattern confirmed against working installed
+-- addons (Auctionator, Clique). Lives here (rather than in Core.lua, which loads last) because
+-- UI.lua's version label needs it at UI.lua's own load time, before Core.lua has run. The two nil
+-- guards mean the worst case is a "?" version, never a load-time error.
+local getAddOnMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+LG.ADDON_VERSION = (getAddOnMetadata and getAddOnMetadata("LevelingGears", "Version")) or "?"
 
 LevelingGearsDB = LevelingGearsDB or {}
 LevelingGearsDB.general = LevelingGearsDB.general or {}
