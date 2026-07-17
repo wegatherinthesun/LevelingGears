@@ -14,7 +14,9 @@ local WriteDebugLog = LG.Debug.WriteDebugLog
 -- Shirt/Ammo/Tabard are deliberately excluded (not stat-relevant for gearing). RangedSlot also
 -- covers class relics (Librams/Idols/Totems) since TBC has no separate relic slot -- that was only
 -- added in Wrath -- so those classes' relics are already evaluated for every class through here.
-local equippedSlotDefinitions = {
+-- Exposed on the module table (not local) since Suggestions.lua also needs this exact 17-slot list
+-- to resolve/validate a slot name for its own per-slot candidate queries.
+GearEvaluation.SLOT_DEFINITIONS = {
 	{ slotName = "HeadSlot", buttonName = "CharacterHeadSlot" },
 	{ slotName = "NeckSlot", buttonName = "CharacterNeckSlot" },
 	{ slotName = "ShoulderSlot", buttonName = "CharacterShoulderSlot" },
@@ -33,17 +35,18 @@ local equippedSlotDefinitions = {
 	{ slotName = "SecondaryHandSlot", buttonName = "CharacterSecondaryHandSlot" },
 	{ slotName = "RangedSlot", buttonName = "CharacterRangedSlot" },
 }
+local equippedSlotDefinitions = GearEvaluation.SLOT_DEFINITIONS
 
 local gearOutlineFrames = {}
 local scoreClickHookedButtons = {}
 
 -- Bug #30's original fix (per the author, after rejecting the /lgs score slash command as "too
--- complicated"): shift-click an equipped item in the character window to see its score breakdown.
--- HookScript (not SetScript) is required here -- it runs alongside Blizzard's own OnClick handler
--- instead of replacing it, so the native click behaviors underneath stay intact.
+-- complicated"): shift-click an equipped item in the character window. HookScript (not SetScript)
+-- is required here -- it runs alongside Blizzard's own OnClick handler instead of replacing it, so
+-- the native click behaviors underneath stay intact.
 --
--- Now shift+RIGHT-click, not shift+left-click, per direct instruction: shift+left-click already
--- means something to players (inserts the item link into an open chat edit box), so this moved to
+-- Shift+RIGHT-click, not shift+left-click, per direct instruction: shift+left-click already means
+-- something to players (inserts the item link into an open chat edit box), so this moved to
 -- shift+right-click instead to avoid overloading that gesture. Real, accepted trade-off: confirmed
 -- against FrameXML's PaperDollItemSlotButton_OnClick that right-click unconditionally calls
 -- UseInventoryItem(slotId) regardless of any held modifier, so shift+right-clicking an equipped item
@@ -51,45 +54,32 @@ local scoreClickHookedButtons = {}
 -- handler -- unlike shift+left-click, which was side-effect-free. Accepted anyway per direct
 -- instruction rather than silently avoided.
 --
--- No longer prints to chat (removed bug #30/T8's original chat-output behavior) -- instead opens
--- LG.UI's score popout anchored beside the clicked slot button, per ROADMAP.md's "Starting to
--- actually use the database" section. The popout itself (frame, close button, click-away-to-close)
--- lives in UI.lua, matching this project's data/UI layering convention.
-local function EnsureScoreClickHook(slotButton, slotId)
+-- Opens the SuggestionsUI recommendation window for this slot (per direct instruction), replacing
+-- what used to open here (the score-breakdown popout, UI.ShowScorePopout/UI.lua) -- that popout code
+-- is now unreferenced by this click; left in place rather than deleted since nothing else has asked
+-- for its removal yet.
+local function EnsureScoreClickHook(slotButton, slotName)
 	if not slotButton or scoreClickHookedButtons[slotButton] then
 		return
 	end
 	scoreClickHookedButtons[slotButton] = true
 
-	slotButton:HookScript("OnClick", function(self, button)
+	slotButton:HookScript("OnClick", function(_, button)
 		if button ~= "RightButton" or not IsShiftKeyDown() then
 			return
 		end
-
-		local itemLink = GetInventoryItemLink("player", slotId)
-		if not itemLink then
-			return
-		end
-
-		local itemStats = GetItemStats(itemLink)
-		if not itemStats or not next(itemStats) then
-			WriteDebugLog("EnsureScoreClickHook: GetItemStats returned " ..
-				(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
-			return
-		end
-
-		LG.Weights.EnsureWeights()
-		local characterState = LG.Settings.GetCharacterState()
-		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights, itemLink)
-		LG.UI.ShowScorePopout(self, itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
+		SafeCall(function()
+			LG.SuggestionsUI.Show(slotName)
+		end)
 	end)
 end
 
 -- Score a single equipped slot using the v0.25/0.26 engine and the character's own weights.
 -- EnsureWeights seeds any never-set stat from the detected spec's Priorities default, then leaves
 -- it alone forever -- so the player's own saved weights (post any hand adjustment) are always the
--- right table to score against here, not the raw Priorities table.
-local function GetEquippedItemScore(slotId)
+-- right table to score against here, not the raw Priorities table. Exposed on the module table (not
+-- local) since Suggestions.lua also needs this exact score as its no-downgrade baseline.
+function GearEvaluation.GetEquippedItemScore(slotId)
 	if not slotId then
 		return nil
 	end
@@ -202,8 +192,8 @@ function GearEvaluation.UpdateEquippedGearEvaluation()
 		-- entry must not abort the evaluation for every other slot.
 		local slotOk, slotId = pcall(GetInventorySlotInfo, slotDefinition.slotName)
 		if slotOk and slotId then
-			EnsureScoreClickHook(_G[slotDefinition.buttonName], slotId)
-			local score = GetEquippedItemScore(slotId)
+			EnsureScoreClickHook(_G[slotDefinition.buttonName], slotDefinition.slotName)
+			local score = GearEvaluation.GetEquippedItemScore(slotId)
 			if score and score > 0 then
 				itemScores[slotDefinition.buttonName] = score
 				scoreTotal = scoreTotal + score

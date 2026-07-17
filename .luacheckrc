@@ -31,4 +31,11 @@ read_globals = {
 	"GetCursorPosition",
 	-- v0.385 (T23/T24, bug #49): weight-validation rejection popup:
 	"OKAY", "StaticPopup_Show",
+	-- Suggestions.lua (the upgrade-recommendation engine):
+	"UnitPosition", "GetItemInfo", "UnitLevel", "GetInventoryItemID",
+	-- Pipeline output (pipeline/big_data.py --build-database), wired into LevelingGears.toc:
+	"LevelingGearsData_Items", "LevelingGearsData_Sources", "LevelingGearsData_Quests",
+	"LevelingGearsData_Chains", "LevelingGearsData_Recipes", "LevelingGearsData_BySlot",
+	-- SuggestionsUI.lua (the recommendation window):
+	"ITEM_QUALITY_COLORS", "GetItemIcon", "ChatEdit_GetActiveWindow", "ChatEdit_InsertLink",
 }

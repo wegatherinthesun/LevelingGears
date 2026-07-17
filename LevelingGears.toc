@@ -5,11 +5,26 @@
 ## SavedVariables: LevelingGearsDB
 
 Debug.lua
+
+# Pipeline output (pipeline/big_data.py --build-database) -- ships as real, committed addon data
+# (per direct instruction), loaded straight from pipeline/output/ rather than a separate promoted
+# copy. Genuinely large as-is (Sources.lua alone ~16MB, ~20MB total) -- accepted as the known cost of
+# real coverage for now; ROADMAP.md's 0.46 curation pass is the planned trim, scheduled after the
+# addon otherwise works, not before this wiring.
+pipeline/output/Items.lua
+pipeline/output/Sources.lua
+pipeline/output/Quests.lua
+pipeline/output/Chains.lua
+pipeline/output/Recipes.lua
+pipeline/output/BySlot.lua
+
 Conversions.lua
 Priorities.lua
 Scoring.lua
 Settings.lua
 Weights.lua
 GearEvaluation.lua
+Suggestions.lua
 UI.lua
+SuggestionsUI.lua
 Core.lua

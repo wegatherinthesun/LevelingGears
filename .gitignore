@@ -2,11 +2,21 @@
 CLAUDE.md
 queue.md
 
-# Pipeline build artifacts (big_data.py) -- downloaded source dumps, generated reports/output, and
-# per-run logs are all reproducible, not source. See pipeline/README.md.
+# Pipeline build artifacts (big_data.py) -- downloaded source dumps and per-run logs are
+# reproducible, not source. See pipeline/README.md.
 pipeline/downloads/*
-pipeline/output/*
 pipeline/logs/*.log
 !pipeline/downloads/.gitkeep
-!pipeline/output/.gitkeep
 !pipeline/logs/.gitkeep
+
+# pipeline/output/*.lua (Items/Sources/Quests/Chains/Recipes/BySlot) ships WITH the addon -- see
+# LevelingGears.toc -- so those six are tracked below, deliberately not covered by this rule.
+# Anything else generated into output/ (schema_report.txt, etc.) stays ignored.
+pipeline/output/*
+!pipeline/output/.gitkeep
+!pipeline/output/Items.lua
+!pipeline/output/Sources.lua
+!pipeline/output/Quests.lua
+!pipeline/output/Chains.lua
+!pipeline/output/Recipes.lua
+!pipeline/output/BySlot.lua

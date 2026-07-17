@@ -679,3 +679,52 @@ bug number so every existing cross-reference elsewhere in the docs still resolve
 - Resolution: Added `Weights.MIN_WEIGHT`/`MAX_WEIGHT` (0-20) and `Weights.ValidateWeightInput(statName, parsed)` (`Weights.lua`) -- rejects non-numeric, negative, or over-20 input with a human-readable reason, and rounds any accepted value to the nearest tenth. `UI.lua`'s `CommitValue` now calls this validator; on rejection it shows a new `StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"]` popup explaining exactly why (confirmed a plain OK-only popup works unmodified on this client via a real installed addon, ShamanPower's own `SHAMANPOWER_DELETESET` dialog) before reverting the box to its last real saved value -- never a silent revert. Also updated the stat-weights section's helper text (`UI.lua`) to state the 0-20 range and tenth-rounding up front, closing `ROADMAP.md`'s separate T17 backlog item ("explain in the UI what values are accepted") as a side effect. Checked every authored default weight in `Priorities.lua` against the new 0-20 ceiling -- all are within range, so no seeded spec default gets clipped.
 - Validation: `luac -p` clean on `UI.lua`, `Weights.lua`. Not yet live-confirmed by the tester as of this writing (built directly on the reported repro, not yet retested in-game).
 - Follow-up: Retest T22b (rewritten for this fix) on next pass.
+
+### 50. New Suggestions.lua engine found zero candidates for almost every slot on first use
+- Status: Solved
+- Discovered: 2026-07-16 (live report: "It isn´t finding upgrades")
+- Version introduced: N/A -- `Suggestions.lua` is new, unreleased code on the `data_implementation` branch, not a regression.
+- Summary: `GetCandidateItemStats` treated `GetItemStats` returning an *empty* table as "item not cached yet" and discarded it. But `GetItemStats` legitimately returns an empty table for a fully-cached plain armor piece with no bonus stat mods -- this project already knows this (bug #23/#43's `ScanItemArmorValue` hidden-tooltip fallback exists for exactly this reason). Every such item -- a large fraction of ordinary leveling armor -- was being thrown out as "uncached" before `ComputeScore` ever got a chance to apply that same armor fallback.
+- Investigation: Read the on-disk debug log directly (this project's standard technique) after adding diagnostic counters to `BuildCandidatePool`; confirmed no Lua errors were being thrown, which narrowed it to a logic bug rather than a crash.
+- Resolution: Cache-check now uses `GetItemInfo`'s name return (nil only when truly uncached, regardless of stat content) instead of `GetItemStats`' emptiness.
+- Validation: `luac -p` clean on `Suggestions.lua`.
+- Follow-up: See #52 -- a second, compounding cause of the same "zero candidates" symptom was found right after this one.
+
+### 51. Armor-type filter wrongly excluded every ring, neck, trinket, cloak, shield, and relic candidate
+- Status: Solved
+- Discovered: 2026-07-16 (added as a performance filter per direct instruction, then found broken by checking the real generated data rather than assuming its shape)
+- Version introduced: N/A -- introduced and found broken in the same session, before ever shipping.
+- Summary: A new armor-type filter (added to cut scan volume) assumed `Items[itemId].armorType` only ever took the four class-proficiency values (Cloth/Leather/Mail/Plate). Checking `pipeline/output/Items.lua` directly showed it also uses `"Miscellaneous"` (rings, necks, trinkets, cloaks), `"Shield"`, and `"Idol"/"Libram"/"Totem"` (relics) -- none of which are governed by class armor-proficiency at all. The filter had no fallback for those values, so every item carrying one was wrongly excluded outright.
+- Investigation: Confirmed via direct inspection (`grep -o 'armorType = [^,]*' pipeline/output/Items.lua | sort -u`) rather than assumed -- per `CONVENTIONS.md`'s "never guess" rule, the same discipline that caught bug #50.
+- Resolution: Added `PROFICIENCY_ARMOR_TYPES` (Cloth/Leather/Mail/Plate only) to `Suggestions.lua`; `ItemMatchesArmorType` now passes through any `armorType` not in that set untouched, instead of treating it as a mismatch.
+- Validation: `luac -p` clean on `Suggestions.lua`.
+- Follow-up: None.
+
+### 52. Items with `reqLevel = 0` ("no real requirement") were excluded by the level-window filter
+- Status: Solved
+- Discovered: 2026-07-16 (found by checking `pipeline/output/Items.lua` directly after bug #51's same discipline paid off once already)
+- Version introduced: N/A -- same session as the level filter's own introduction.
+- Summary: 4,313 real items carry `reqLevel = 0`, meaning "no requirement was set," the same intended meaning as `nil` -- but `0` is truthy in Lua, so the filter's `not item.reqLevel` short-circuit never caught it, and every one of those items was evaluated as a literal level-0 requirement and excluded for any character above level 3 (the window's own lower bound).
+- Investigation: Direct data inspection (`grep -c 'reqLevel = 0,' pipeline/output/Items.lua`), not assumed.
+- Resolution: `BuildCandidatePool`'s level check now treats `item.reqLevel == 0` the same as `nil` (unrestricted).
+- Validation: `luac -p` clean on `Suggestions.lua`.
+- Follow-up: None.
+
+### 53. SuggestionsUI window's position drifted around the screen, likely hiding genuinely-found suggestions
+- Status: Solved
+- Discovered: 2026-07-17 (found by checking the window's own saved debug log for its anchor `point` across a full test session: 149 CENTER / 15 LEFT / 29 TOP / 62 TOPLEFT)
+- Version introduced: N/A -- present since the window's first build this session.
+- Summary: The window's entire body was drag-enabled (`RegisterForDrag("LeftButton")` covering the whole frame, not a dedicated title strip), and with 6 rows packed tightly into a 420px-wide window there was very little safe background left to click without nudging the whole thing. `SetClampedToScreen` kept it from fully leaving the screen, but a drifted position is not the same as a position the player is actually looking at -- this is the most likely reason candidates the engine had genuinely found (confirmed correct in the log every time) were reported as never being seen.
+- Investigation: The varying `point` value across many logged `SuggestionsUI.Show` calls in one session was the direct evidence -- not inferred, read from the character's own SavedVariables file.
+- Resolution: Removed drag capability entirely (no `SetMovable`/`RegisterForDrag`/drag scripts) rather than only fighting the symptom; `SuggestionsUI.Show` also force-resets the window to `SetPoint("CENTER")` on every call as a second safety net.
+- Validation: `luac -p` clean on `SuggestionsUI.lua`.
+- Follow-up: Revisit adding a dedicated title-bar-only drag zone later, if repositioning turns out to still be wanted once the window is otherwise trusted.
+
+### 54. Empty-slot message didn't distinguish "still loading" from "genuinely nothing found"
+- Status: Solved
+- Discovered: 2026-07-17 (identified while investigating repeated "not finding upgrades" reports that later log evidence showed were actually still-caching, not really empty)
+- Version introduced: N/A -- present since the window's first build this session.
+- Summary: Both "every candidate is still uncached, check back shortly" and "fully checked, nothing qualifies" showed the identical static text, "No qualifying upgrades found for this slot right now." A player had no way to tell a genuine dead end apart from "just needs a few more seconds," which read as broken even when the engine was working correctly.
+- Resolution: `SuggestionsUI.Show`'s empty-state text is now conditional on `skippedUncached`: "Still loading item data (N item(s) not cached yet) -- checking again shortly..." when there's still uncached data in play, the old definitive message only when the pool was fully checked and truly came up empty.
+- Validation: `luac -p` clean on `SuggestionsUI.lua`.
+- Follow-up: None.

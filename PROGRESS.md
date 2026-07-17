@@ -9,7 +9,39 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: v0.385 — the `data_implementation` branch's first version-numbered batch, merged
+- **Current step: `data_implementation` branch — `Suggestions.lua` (the recommendation engine) and
+  `SuggestionsUI.lua` (its window) built. Engine confirmed live-working; the window has one open bug
+  blocking real use.** Built per direct instruction from the ground up: no downgrades ever, a
+  6-candidate mix of guaranteed category diversity (crafted/BOE/local quest/nearby quest, dungeon-
+  blue deferred — `ROADMAP.md`'s known gap on instance detection) plus pure-score fill, a dynamic
+  (not fixed) opposite-continent threshold that scales with local-pool depth, level and armor-type
+  filters to keep the scan fast, a background cache-warming queue tied to the original trigger list
+  (startup, continent switch, new equip, spec change, level up), and persistent per-character
+  suggestion memory so a found upgrade doesn't need rediscovering every session. Full design detail
+  in `ROADMAP.md`'s "Begin suggesting" entry.
+  - **Engine confirmed working via live evidence**, not just code review: the on-disk debug log shows
+    6 real candidates found across many different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/
+    Hands/Legs) in real play sessions, after five real bugs were found and fixed along the way —
+    three by reading the debug log directly (bug #50: `GetItemStats`' empty-but-cached table
+    misread as "not cached," dropping most plain armor from the pool) and two by checking the
+    pipeline's actual generated data instead of assuming its shape (bug #51: armor-type filter had
+    no allow-list for `"Miscellaneous"`/`"Shield"`/relic values, wrongly excluding every ring, neck,
+    trinket, cloak, shield, and relic; bug #52: `reqLevel = 0` means "no requirement," not a literal
+    level-0 requirement, since `0` is truthy in Lua). See `bugs/resolved-bugs.md` #50-#52.
+  - **The window itself has an open, unresolved bug** (`bugs/known-bugs.md` #55): it shows correctly
+    (backdrop, correct size, correct centered position, confirmed via debug log every time) but its
+    content — title, buttons, every row's text — never renders, even in the same instant the engine
+    confirms finding real candidates. Two related but distinct bugs were found and fixed on the way
+    to isolating this (bug #53: the window's whole body was drag-enabled with no dedicated title
+    strip, and its anchor point was confirmed drifting across CENTER/LEFT/TOP/TOPLEFT during one
+    session — very likely why found suggestions were never seen; fixed by removing drag capability
+    and force-resetting position every `Show()` call. Bug #54: the empty-state text was identical for
+    "still loading" and "genuinely nothing found," reading as a dead end either way; fixed with
+    context-aware messaging). Bug #55 itself is still open — diagnostic logging (row geometry,
+    visibility, alpha, frame level) was added to `SuggestionsUI.lua` to objectively localize it on
+    the next live test, rather than guess further. See `bugs/known-bugs.md` #55 for the full
+    investigation record.
+- **Previous step: v0.385 — the `data_implementation` branch's first version-numbered batch, merged
   back to `main`.** Closed out two more `queue.md` items on top of the already-built settings resize/
   popout box: **bug #48** (the "Spec:" dropdown's "Auto-detect" option silently did nothing after a
   manual spec was picked — this client's `UIDropDownMenu_AddButton` doesn't leave a nil-value
@@ -1104,3 +1136,30 @@ the current single most important next step — this file has everything behind 
   formula was judged to look better in practice -- still open for a different approach later. `luac -p`/
   `luacheck` clean on all touched files (`UI.lua`, `Debug.lua`, `Core.lua`, `Scoring.lua`,
   `GearEvaluation.lua`, `.luacheckrc`). Version bumped to 0.384 (thousandths patch).
+- **2026-07-17** — Clarified (and, in the moment, briefly got wrong) `queue.md`'s actual role:
+  temporary working file, not a permanent record. An old `queue.md` was accidentally recreated from
+  git history even though its entire contents had already been migrated to `ROADMAP.md`'s "Deferred
+  minor polish" section and `bugs/resolved-bugs.md` #48/#49 during the v0.385 cycle -- corrected
+  (deleted again), and the rule written into `CLAUDE.md` directly so it doesn't repeat: once
+  everything in `queue.md` is migrated to its permanent home (a finished bug to `bugs/resolved-
+  bugs.md`, an unfinished/deferred idea to `ROADMAP.md`), delete the file outright rather than
+  preserving or recreating it.
+- **2026-07-17** — Reordered `ROADMAP.md`'s not-yet-built items around a stated philosophy: draw the
+  whole outline first, color it in after. Concretely: renamed "The product" to two sections --
+  "Outline: close the loop from suggestion to action" (0.5 tooltip hook, 0.6 recommendation window,
+  0.7 next-step engine -- these three, plus the already-built "Begin suggesting" engine right above
+  them, are what it takes to get a single suggest -> see it in game -> act on it loop working end to
+  end, even crudely) and "Coloring it in" (0.8 sorting/filters, 0.9 upgrade-relative outline coloring,
+  0.91 alt professions, 0.45 AH scanner, 0.46 data curation, 0.32 custom art, 0.35 auto-updating
+  weights -- refinements that only make sense once the outline above already works). Also fixed two
+  real staleness bugs found while doing this: `0.32`/`0.35` had been sitting unbuilt and unmarked
+  inside "Testing Phase 1 follow-ups," which claimed "every item below is now Built" -- both
+  relocated to "Coloring it in" and the claim corrected to name them as the exceptions; "Continent-
+  aware querying" was still phrased as an unconfirmed guess ("confirm this live in game before
+  trusting it") when the debug log had already confirmed it live twice that same week (`EASTERN_
+  KINGDOMS`/`OUTLAND` both resolved correctly) -- updated to **Built**. The old "Deferred minor
+  polish" section's still-small tester-feedback items (error reports to the developer, debug-toggle
+  message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, retiring `/lgs score`)
+  moved into the freshly recreated `queue.md` instead, per the new "easy things go in the queue, large
+  changes stay in the roadmap" rule; its one substantive item (T20, upgrade-relative outline coloring)
+  turned out to be a stale duplicate of `0.9` and was merged into that entry instead of moved.

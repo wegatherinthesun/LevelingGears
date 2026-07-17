@@ -22,8 +22,27 @@ real findings and known gaps from the first real run against actual data:
   stopgap (162MB -> 16MB) — the real fix is `ROADMAP.md`'s `0.46` data-curation phase, scheduled
   after the addon otherwise works, before Alpha.
 
+**This output now ships as real, committed addon data (per direct instruction) — `LevelingGears.toc`
+loads all six `pipeline/output/*.lua` files directly, and they're tracked in git (`.gitignore`
+carves out exactly these six filenames from the rest of `pipeline/output/`'s otherwise-ignored build
+artifacts).** Current total size is ~20MB (Sources.lua alone ~16MB) — accepted as the known cost of
+real coverage for now, not blocking on `0.46`'s curation pass first: "everyone knew this would be a
+big addon from the beginning." `Suggestions.lua` is the first consumer (see `ROADMAP.md`'s "Begin
+suggesting" entry).
+
 **Questie is intentionally not included yet.** Its license question (see Source B below) is still
 open; the author is resolving it directly before that source gets touched by any code.
+
+**Real data-shape quirks found while building `Suggestions.lua` (checked directly against the real
+generated files, not assumed — see `bugs/resolved-bugs.md` #51/#52):**
+- `Items[itemId].armorType` isn't only `"Cloth"`/`"Leather"`/`"Mail"`/`"Plate"` (the four real class
+  armor-proficiency types) — it's also `"Miscellaneous"` (rings, necks, trinkets, cloaks),
+  `"Shield"`, and `"Idol"`/`"Libram"`/`"Totem"` (relics), none of which are governed by class armor
+  proficiency at all. Any future code filtering on `armorType` needs to allow-list just the four real
+  proficiency types, not treat every other value as a mismatch.
+- `Items[itemId].reqLevel` uses `0` (not `nil`) to mean "no real requirement was set" — confirmed
+  4,313 real items carry this. Since `0` is truthy in Lua, `not item.reqLevel` alone does NOT catch
+  this case; check `item.reqLevel == 0` explicitly too.
 
 Everything below citing a URL, license, or file structure was checked directly (GitHub API/page
 fetches) while writing this, not guessed — per `CONVENTIONS.md`'s "never invent/guess" rule. Where
