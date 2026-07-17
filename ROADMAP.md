@@ -501,6 +501,12 @@ message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, an
   popular off-meta builds" idea is broader than what 0.38 built and could still be revisited later.)
 - **Proc/effect valuation (optional).** See the proc note under 0.2 — contingent on committing to
   the second scraped database.
+- **Player/tester build split (release packaging).** Fully specified in `PACKAGING.md` (the
+  ship/no-ship manifest): the player build is lean, its only diagnostic surface the error report;
+  testers get a separate, fuller download with the whole debug suite. Implementation: delete the dead
+  `ShowScorePopout` code, wrap no-ship commands/functions in CurseForge/BigWigs `--@debug@` markers,
+  add a `.pkgmeta` `ignore:` list, wire the packager, and **verify a stripped player build live**.
+  A pre-Alpha release gate; the manifest exists now so it doesn't have to be reconstructed later.
 - **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`); each requires explicit
   approval before starting.
 
