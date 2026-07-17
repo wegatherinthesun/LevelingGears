@@ -9,8 +9,21 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: `data_implementation` branch — 0.41-0.44 built and run end-to-end against real
-  data.** Testing Phase 1's gate is considered cleared as of v0.384 (remaining `queue.md` items are
+- **Current step: v0.385 — the `data_implementation` branch's first version-numbered batch, merged
+  back to `main`.** Closed out two more `queue.md` items on top of the already-built settings resize/
+  popout box: **bug #48** (the "Spec:" dropdown's "Auto-detect" option silently did nothing after a
+  manual spec was picked — this client's `UIDropDownMenu_AddButton` doesn't leave a nil-value
+  button's `self.value` as nil, it falls back to the button's text, confirmed via two other installed
+  addons' bundled `LibUIDropDownMenu.lua`; fixed by capturing the intended spec key in each button's
+  own closure instead of reading `self.value` back) and **bug #49** (stat weights accepted any typed
+  number, including negative, with no warning — added a real 0-20 bound, rounded to the nearest
+  tenth, with a popup explaining exactly why a rejected value didn't stick, instead of a silent
+  accept/clamp/revert). `TEST_PLAN.md`'s T8 (rewritten for the popout box's shift+right-click
+  gesture), T14b (new, window resize), T20b, and T22b (rewritten for the new ceiling; old T24
+  removed as stale) all updated to match. See `CHANGELOG.md` and `bugs/resolved-bugs.md` #48-#49 for
+  full detail.
+- **Previous step: `data_implementation` branch — 0.41-0.44 built and run end-to-end against real
+  data.** Testing Phase 1's gate is considered cleared as of v0.384 (remaining `queue.md` items were
   minor polish, not Blocker/Critical/Major). Branched off `main` at v0.384 to isolate this work
   until it tests well. Built out `pipeline/` (Python 3 standard-library only, no pip packages,
   matching this project's "never require compiling anything from source" rule):
@@ -73,6 +86,41 @@ the current single most important next step — this file has everything behind 
     flyout-frame concept, built for real now.
   - `luac -p`/`luacheck` clean throughout (`UI.lua`, `GearEvaluation.lua`). See
     `bugs/resolved-bugs.md` #47 for the full investigation.
+- **Previous step: v0.385 — the settings resize/popout box above, plus two more `queue.md` fixes,
+  batched into this branch's first version-numbered release and merged to `main`.**
+  - **Bug #48 (Solved):** the "Spec:" dropdown's "Auto-detect" option silently did nothing after a
+    manual spec had been selected. Root cause: `InitializeSpecDropdown` (`UI.lua`) set
+    `info.value = nil` for "Auto-detect," relying on `OnSelect` reading it back as `self.value`
+    (nil) to clear the override -- but this client's own `UIDropDownMenu_AddButton` doesn't leave a
+    nil-value button's `value` as nil, it falls back to `button.value = info.text`, confirmed (not
+    guessed) by reading the real implementation bundled with two other installed addons (ShamanPower's
+    and PallyPower's own `LibUIDropDownMenu.lua`). `self.value` on that button therefore read back as
+    the string `"Auto-detect"`, which failed `Settings.SetSpecOverride`'s validOptions check and
+    silently no-opped. Fixed by capturing the intended spec key directly in each dropdown button's own
+    closure instead of reading `self.value` back at all. Confirmed working live ("Autodetect is
+    working").
+  - **Bug #49 (Solved):** direct-entry stat weights accepted any typed number -- including negative --
+    with no bound and no warning (T23/T24: "It does allow me to input a negative number"). Added
+    `Weights.MIN_WEIGHT`/`MAX_WEIGHT` (0-20) and `Weights.ValidateWeightInput`, which rejects
+    non-numeric/negative/over-20 input with a human-readable reason and rounds an accepted value to
+    the nearest tenth; `UI.lua`'s `CommitValue` shows that reason in a new
+    `StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"]` popup (confirmed a plain OK-only popup works
+    unmodified on this client via ShamanPower's own `SHAMANPOWER_DELETESET` dialog) before reverting
+    the box -- never a silent revert. Also updated the stat-weights helper text to state the range up
+    front, closing `ROADMAP.md`'s separate T17 backlog item as a side effect. Checked every authored
+    default weight in `Priorities.lua` against the new ceiling -- all within range.
+  - `queue.md`'s remaining "Still open" retest items (T14, T27, T31-T34) weren't filed as new bugs or
+    roadmap items -- they're already tracked as their own `TEST_PLAN.md` test-case IDs awaiting a
+    retest, so `queue.md`'s mention of them was purely redundant with the checklist itself.
+  - `queue.md`'s "Roadmap backlog" list triaged into `ROADMAP.md`'s new "Deferred minor polish"
+    subsection (error reports to the developer, debug-dump chat-output limit, clearer `/lgs score`
+    output, retiring `/lgs score` once the tooltip hook exists, upgrade-relative outline coloring) --
+    except "make the settings window ~40% bigger," which was simply dropped: this version's own
+    resize feature already built it.
+  - `ROADMAP.md`/`DESIGN.md` updated to stop describing the weight box as having "no imposed scale."
+    `luac -p` clean on all touched files (`UI.lua`, `Weights.lua`). Version bumped to 0.385
+    (thousandths patch, per `ROADMAP.md`'s own rule for this un-numbered "Starting to actually use
+    the database" phase: "a version gets assigned once each item is actually built").
 - **Previous step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
   version bump in between, then batched together (see `queue.md` for the working list).**
   - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable

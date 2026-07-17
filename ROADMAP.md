@@ -88,7 +88,9 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   Per-character, saved.
   Every OTHER setting the addon ever gains (minimap toggle, suggestion count, source checkboxes,
   spec dropdown, TomTom row, etc.) also lives on THIS one scrolling page — there is no second
-  settings screen anywhere in the app.
+  settings screen anywhere in the app. (v0.385 reintroduced a real bound — 0-20, rejecting anything
+  outside it with an explanatory popup instead of silently accepting or clamping — see this file's
+  "Settings inventory" section and `bugs/resolved-bugs.md` #49.)
 - **0.21 — The scorer.** A function behind the page: score(item) = sum over the item's numeric
   stats of (statValue × that stat's weight). It reads the exact values shown on the 0.2 page.
   It has no results window YET (that's the recommendation window later), so at this step prove it
@@ -123,12 +125,14 @@ closed — see `bugs/resolved-bugs.md` #29 — and `bugs/known-bugs.md` currentl
 Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major findings — see
 `TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
 
-**That gate is now considered cleared as of v0.384** — remaining `queue.md` items (T13's blank-space
-polish, T20b's Auto-detect edge case, T23/T24's weight-ceiling validation, etc.) are minor UX polish,
-not Blocker/Critical/Major findings, and continue in parallel rather than blocking `0.4`. **The push
-to `0.4` is now the active work**, happening on the `data_implementation` branch — see this file's
-`0.4`-`0.45` entries below and `DATA_PIPELINE.md`'s Status note for where the pipeline (`big_data.py`)
-actually stands. Merges back to `main` once this branch tests well.
+**That gate is now considered cleared as of v0.384** — remaining `queue.md` items were minor UX
+polish, not Blocker/Critical/Major findings, and continued in parallel rather than blocking `0.4`.
+**v0.385 closed two of them:** T20b's Auto-detect edge case (`bugs/resolved-bugs.md` #48) and
+T23/T24's weight-ceiling validation (`bugs/resolved-bugs.md` #49). T13's blank-space polish is still
+open (see `TEST_PLAN.md` T13). **The push to `0.4` is now the active work**, happening on the
+`data_implementation` branch — see this file's `0.4`-`0.45` entries below and `DATA_PIPELINE.md`'s
+Status note for where the pipeline (`big_data.py`) actually stands. Merges back to `main` once this
+branch tests well.
 
 - **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
   analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously
@@ -364,6 +368,27 @@ this planning pass.
   "known alts only"). Toggle: if no one you have can craft it, still show reagents + offer a
   pre-written trade-chat message to find a crafter. Both default on, both disableable.
 
+### Deferred minor polish (from testing feedback, no version assigned — build only when picked up)
+- **Error reports back to the developer.** Nothing today lets a player send a caught error or debug
+  dump directly to the developer — they still have to copy/paste manually (T3).
+- **The debug-toggle chat confirmation should also explain how to disable it once enabled** — today
+  it confirms debug mode turned on but doesn't remind the player `/lgs debug` toggles it back off
+  (T3 notes).
+- **Limit `/lgs debug dump`'s chat output to the last 50 lines**, independent of how large the
+  underlying ring-buffer storage is (currently up to 2000 entries — bug #40/T7) — a full dump of a
+  large buffer floods chat.
+- **Improve `/lgs score` / shift+right-click score output to be clearer for a player, less raw** —
+  today's breakdown is a flat list of derived-stat contributions, useful for debugging but not
+  designed for a first-time player to read at a glance (T8).
+- **Remove the `/lgs score` slash command entirely; fold its function into the item tooltip
+  instead**, once the 0.5 tooltip hook exists — today it's kept as the debug-bench fallback for
+  sanity-checking `Priorities.lua` independent of a player's own weights (see `DESIGN.md`) (T8b).
+- **Outline coloring relative to an available upgrade, not just the character's own current
+  average.** Today's 0.9 coloring (`GearEvaluation.lua`) is entirely self-relative — it can't yet
+  say "this slot's outline is bad because a specific better item exists," since no upgrade data is
+  wired in yet. Revisit once "Begin suggesting" (this file's "Starting to actually use the database"
+  section) is real (T20).
+
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),
   matches a table of popular builds (hand-made, expanded over time). Its ONLY job is to **fill in the
@@ -417,12 +442,14 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
   list — see DESIGN.md), seeded with spec-aware defaults on first use, and later spec automation just
   fills these in. Each stat is a direct-entry edit box since v0.305 (replacing the 0.26-era up/down
   buttons with 0.05 steps and a Shift-click coarser ±1 — see `bugs/resolved-bugs.md` #32); v0.306
-  removed the box's artificial 0-10 clamp/framing too, so it shows and accepts the exact number
-  `Scoring.lua` multiplies the stat by, with no imposed scale (see `bugs/resolved-bugs.md` #33). A
-  "Restore Defaults" button in the same section resets the character's own weights back to the
-  spec-aware defaults on demand. Since v0.304 there is exactly one weight set per character (no
-  profiles — see the "Testing Phase 1 follow-ups" section above); defaults do not yet auto-update on
-  respec (0.35). **Built.**
+  removed the box's artificial 0-10 clamp/framing entirely (see `bugs/resolved-bugs.md` #33), and
+  v0.385 reintroduced a real bound — 0-20, rounded to the nearest tenth, with a popup explaining
+  exactly why a value outside that range (or non-numeric) gets rejected rather than a silent revert
+  (see `bugs/resolved-bugs.md` #49) — so it shows and accepts the exact number `Scoring.lua`
+  multiplies the stat by, within that bound. A "Restore Defaults" button in the same section resets
+  the character's own weights back to the spec-aware defaults on demand. Since v0.304 there is
+  exactly one weight set per character (no profiles — see the "Testing Phase 1 follow-ups" section
+  above); defaults do not yet auto-update on respec (0.35). **Built.**
 - Minimap button on/off. **Built.**
 - Suggestion count (default 3). **Not built** (depends on 0.6 recommendation window).
 - Sort mode default. **Not built** (depends on 0.8).

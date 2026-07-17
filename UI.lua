@@ -17,6 +17,17 @@ local weightInputs = {}
 local specDropdownButton = nil
 local specStatusText = nil
 
+-- T23/T24: explains a rejected weight edit (out of range or not a number) instead of a silent
+-- revert. Confirmed a plain OK-only StaticPopupDialogs entry works unmodified on this client via a
+-- real installed addon (ShamanPower's "SHAMANPOWER_DELETESET"), same pattern used here.
+StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"] = {
+	text = "%s",
+	button1 = OKAY,
+	whileDead = 1,
+	hideOnEscape = 1,
+	timeout = 0,
+}
+
 -- Bug #29: testers reported the restored position is consistently in "a similar general area" but
 -- not the exact spot the window was dragged to, even though extensive debug-log evidence showed
 -- this addon's own save/apply values always matched exactly (ruling out a UI-scale mismatch, the
@@ -141,15 +152,22 @@ local function InitializeSpecDropdown(_, level)
 	local characterState = LG.Settings.GetCharacterState()
 	local override = characterState.specOverride
 
-	local function OnSelect(self)
-		LG.Settings.SetSpecOverride(self.value)
+	-- Bug #48: reading `self.value` back in OnSelect doesn't work for "Auto-detect" -- this
+	-- client's own UIDropDownMenu_AddButton (confirmed via two other installed addons' bundled
+	-- LibUIDropDownMenu: ShamanPower's and PallyPower's) falls back to `button.value = info.text`
+	-- whenever `info.value` is nil, so a nil-value button's `self.value` reads back as the string
+	-- "Auto-detect", not nil -- which then fails SetSpecOverride's validOptions check and silently
+	-- no-ops, leaving the previous manual override in place. Capturing the intended specKey
+	-- directly in each button's closure sidesteps the whole button.value quirk.
+	local function OnSelect(specKey)
+		LG.Settings.SetSpecOverride(specKey)
 		CloseDropDownMenus()
 	end
 
 	local info = UIDropDownMenu_CreateInfo()
 	info.text = "Auto-detect"
 	info.value = nil
-	info.func = OnSelect
+	info.func = function() OnSelect(nil) end
 	info.checked = (override == nil)
 	UIDropDownMenu_AddButton(info, level)
 
@@ -157,7 +175,7 @@ local function InitializeSpecDropdown(_, level)
 		info = UIDropDownMenu_CreateInfo()
 		info.text = option.label
 		info.value = option.key
-		info.func = OnSelect
+		info.func = function() OnSelect(option.key) end
 		info.checked = (override == option.key)
 		UIDropDownMenu_AddButton(info, level)
 	end
@@ -508,7 +526,7 @@ local helperText = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighl
 helperText:SetPoint("TOPLEFT", weightHeader, "BOTTOMLEFT", 0, -4)
 helperText:SetWidth(300)
 helperText:SetJustifyH("LEFT")
-helperText:SetText("Each box shows the exact weight used when scoring items for that stat. Raise it to care more, lower it (or zero it) to care less. Type a value and press Enter (or click away) to save. Values are saved per character.")
+helperText:SetText("Each box shows the exact weight used when scoring items for that stat. Raise it to care more, lower it (or zero it) to care less. Accepts 0-20, rounded to the nearest tenth -- type a value and press Enter (or click away) to save. Values are saved per character.")
 
 local colorLegend = weightSection:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 colorLegend:SetPoint("TOPLEFT", helperText, "BOTTOMLEFT", 0, -8)
@@ -601,9 +619,10 @@ local function CreateStatRow(parent, stat)
 	input:SetText("5")
 	weightInputs[stat.key] = input
 
-	-- Parses and commits whatever is currently typed. Invalid (non-numeric) text is not silently
-	-- kept on screen -- reverting to the real saved value makes clear the edit didn't take effect,
-	-- rather than leaving stale-looking text that implies it did.
+	-- Parses and commits whatever is currently typed. Invalid text -- non-numeric, negative, or over
+	-- the T23/T24 ceiling (Weights.lua's ValidateWeightInput) -- is never silently kept on screen NOR
+	-- silently reverted: a popup explains exactly why the edit was rejected before reverting to the
+	-- real saved value, so a player never has to guess whether "20.001" quietly became something else.
 	--
 	-- T22 (v0.382 test pass): reported that typed values were not being accepted at all, for any
 	-- stat. Trimmed leading/trailing whitespace before parsing (a real, if unconfirmed, candidate --
@@ -619,11 +638,13 @@ local function CreateStatRow(parent, stat)
 				"CommitValue: stat=%s rawText=%q parsed=%s",
 				stat.key, tostring(rawText), tostring(parsed)), 1)
 		end
-		if not parsed then
+		local value, reason = LG.Weights.ValidateWeightInput(stat.name, parsed)
+		if not value then
+			StaticPopup_Show("LEVELINGGEARS_INVALID_WEIGHT", reason)
 			UI.RefreshWeightLabels()
 			return
 		end
-		LG.Weights.SetWeightValue(stat.key, parsed)
+		LG.Weights.SetWeightValue(stat.key, value)
 	end
 
 	input:SetScript("OnEnterPressed", function(self)

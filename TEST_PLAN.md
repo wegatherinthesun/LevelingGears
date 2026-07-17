@@ -34,35 +34,25 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.384.** See `CHANGELOG.md` for the concise summary. The v0.383 pass (`TEST_RESULTS_
-Helio_0383.md`) covered T22b-T35 plus retests, and queued a further round of smaller items from its
-own notes (see `queue.md`) — all addressed one at a time, with no version bump in between, then
-batched into this version:
+**Version: v0.385.** See `CHANGELOG.md` for the concise summary. Built on the `data_implementation`
+branch, on top of v0.384's baseline:
 
-1. **Bug #43 (closed): base armor value now factors into scoring**, via a hidden-tooltip scan
-   (`GetItemStats` never itemizes plain armor). Deliberately tiny — real stats still dominate — but
-   enough that two very-early, otherwise-zero-stat items no longer tie at a dead 0. **Retest T8**
-   on a low-level character if available; a `BASEARMOR` line should now appear in score breakdowns
-   for armor pieces.
-2. **Bug #44 (closed): minimap button right-click no longer duplicates left-click.** It's now
-   press-and-hold-and-drag to reposition the button around the minimap, saved across reloads.
-   **Retest T10** — right-click alone should do nothing; holding it and moving the mouse should drag
-   the button.
-3. **Bug #45 (closed): added `/lgs debug window`**, a per-category debug-log toggle independent of
-   the main `/lgs debug` switch — no test case of its own, optional to spot-check.
-4. **Bug #46 (closed): a new helper-text note explains why "Haste Rating" isn't labeled "Spell
-   Haste"** (TBC never itemized them separately — the scoring was already correct). **Retest T13**
-   (scrolling/layout) since this note added a line to the stat-weights section.
-5. **Bug #41 (closed): "Core stats" briefly overlapped "Restore Defaults"** — a regression bug #46's
-   own note caused, now fixed with a real anchor instead of a hand-guessed offset. **Retest T13**
-   specifically for this overlap (see its own case body below).
-6. Removed **T5** (the `/lg`-alias case) — confirmed permanently fine, no longer worth a retest slot.
+1. **Settings window resize:** the window is now 40% bigger by default and resizable by dragging its
+   bottom-left or bottom-right corner (look for the grip texture). **New case T14b** — not yet tested
+   live by anyone but the author.
+2. **Popout box:** shift+right-click (moved off shift+left-click) an equipped item now opens a small
+   flyout beside it showing the score breakdown, instead of printing to chat. **T8 rewritten** to
+   match — if you tested shift+left-click scoring before, note the gesture changed.
+3. **Bug #48 (closed): the "Spec:" dropdown's "Auto-detect" option now actually re-engages
+   talent-point detection** after a manual spec was selected — previously a silent no-op. **Retest
+   T20b**, specifically the "switch back to Auto-detect" half.
+4. **Bug #49 (closed): stat weights now enforce a real 0-20 range**, rounded to the nearest tenth,
+   with a popup explaining exactly why a rejected value (negative, over 20, or non-numeric) didn't
+   stick — instead of the old no-bound, no-warning behavior. **T22b rewritten** for this; the old
+   T24 (`+`/`-` button clamping) is removed — those buttons haven't existed since v0.305.
 
-**Testing should resume from T22b** (T1-T22 already passed a prior round) through T35, with extra
-attention on T8, T10, and T13 above. Bug #27's own T20 (spec-aware default seeding across multiple
-classes/specs) was confirmed working previously — no need to repeat unless a new class/spec
-combination is available to check, though T20's own case body below still flags an open question
-about Mage weight defaults worth confirming (see bug #46's Follow-up).
+**Testing should cover T8, T14b, T20b, and T22b above first** (all new or changed this version, none
+yet confirmed live by anyone but the author), then resume the regular T1-T35 sweep as time allows.
 
 ---
 
@@ -88,7 +78,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 **T2 — Version string is correct**
 - Instruction: Open the settings window and read the version line under the title.
 - Repeat: 1x
-- Expected: Reads **v0.384**.
+- Expected: Reads **v0.385**.
 - Result:
 - Notes:
 
@@ -123,19 +113,21 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T8 — Shift+left-click an equipped item to score it (bug #30's real fix; armor value added in bug #43)**
+**T8 — Shift+right-click an equipped item opens the score popout (moved off shift+left-click; supersedes bug #30's chat-print fix)**
 - Instruction: Open the character window (paperdoll) so your equipped gear is visible, then
-  shift+left-click one of your equipped items. Try several different slots/items (e.g. a weapon, a
+  shift+right-click one of your equipped items. Try several different slots/items (e.g. a weapon, a
   caster cloth item, a trinket), including a low-level or otherwise low-stat armor piece if you have
   one.
 - Repeat: 3x (3 different items)
-- Expected: Prints a derived-stat breakdown and a final score to chat, scored against your own
-  character weights (same weights that drive the gear-outline colors). An armor piece's breakdown
-  should now include a small `BASEARMOR` line (bug #43) — expect it to be tiny relative to real stats,
-  not a major contributor. A plain left-click on the same item still picks it up as normal (don't
-  confirm the drag, just check the cursor picks it up), and a plain shift-click (no click type held
-  down beyond Shift) still inserts the item link into an open chat edit box as it always has — neither
-  of those should be affected by this change.
+- Expected: Opens a small flyout box beside the item showing its name, a spec/score line, and the
+  same sorted per-stat breakdown that used to print to chat — scored against your own character
+  weights (same weights that drive the gear-outline colors). An armor piece's breakdown should still
+  include a small `BASEARMOR` line (bug #43) — expect it tiny relative to real stats, not a major
+  contributor. Close it via its own X button, or by clicking anywhere else. A plain shift+left-click
+  on the same item now ONLY inserts the item link into an open chat edit box (Blizzard's native
+  behavior) — it no longer also prints a score, since the trigger moved off that gesture. A plain
+  right-click (no Shift) behaves as it always does natively (fires the item's on-use effect if it has
+  one) — this is an accepted trade-off of moving to shift+right-click, not a bug.
 - Result:
 - Notes:
 
@@ -212,6 +204,16 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
+**T14b — Window resize by dragging a bottom corner**
+- Instruction: Hover the bottom-left or bottom-right corner of the settings window (look for a grip
+  texture), then click and drag to resize. Try the top two corners as well.
+- Repeat: 2x (one bottom corner each)
+- Expected: The window resizes smoothly by dragging either bottom corner. The top two corners do NOT
+  resize (deliberate — don't report this as a bug). The new size persists across closing/reopening
+  the window and across a `/reload`.
+- Result:
+- Notes:
+
 ### Single weight set per character (v0.304 — replaces the old "Profiles section")
 
 **T15 — No profile picker exists anymore**
@@ -277,18 +279,19 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T20b — Manual spec-override dropdown (bug #37, v0.38 → v0.381; now a real dropdown, bug #40 in v0.383)**
+**T20b — Manual spec-override dropdown (bug #37, v0.38 → v0.381; real dropdown since bug #40 in v0.383; Auto-detect fixed as bug #48 in v0.385)**
 - Instruction: Open the "Spec" section (between "General settings" and "Stat weights"). Note what the
   "Currently scoring as:" status line says, then click the "Spec:" dropdown and select a different one
-  of your class's 3 specs.
-- Repeat: 2x (pick two different specs, and once try "Auto-detect" to switch back)
-- Expected: This is now a real Blizzard dropdown widget (previously a custom button) — confirm it
-  looks and opens like a standard WoW dropdown, with no permanent empty gap below it whether open or
-  closed. The dropdown lists exactly your class's 3 real specs plus "Auto-detect." Selecting a spec
-  immediately updates the status line (ending in `[manually set]`), re-seeds every stat weight to that
-  spec's real defaults, and re-colors your equipped gear's outlines to match. Selecting "Auto-detect"
-  goes back to talent-point detection (status line ending in `[assumed - ...]` or no bracketed tag at
-  all if a real spec was read).
+  of your class's 3 specs. **Then switch it back to "Auto-detect"** — this specific step is bug #48's
+  fix (previously a silent no-op).
+- Repeat: 2x (pick two different specs, and each time switch back to "Auto-detect" afterward)
+- Expected: This is a real Blizzard dropdown widget — confirm it looks and opens like a standard WoW
+  dropdown, with no permanent empty gap below it whether open or closed. The dropdown lists exactly
+  your class's 3 real specs plus "Auto-detect." Selecting a spec immediately updates the status line
+  (ending in `[manually set]`), re-seeds every stat weight to that spec's real defaults, and re-colors
+  your equipped gear's outlines to match. Selecting "Auto-detect" goes back to talent-point detection
+  (status line ending in `[assumed - ...]` or no bracketed tag at all if a real spec was read) —
+  **this must actually take effect**, not silently keep scoring as the previously-selected spec.
 - Result:
 - Notes:
 
@@ -313,28 +316,24 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T22b — No more 0-10 ceiling (v0.306, bug #33)**
-- Instruction: Type a value clearly outside the old 0-10 range into a stat's box — try both "25" and
-  "-3" — pressing Enter after each.
-- Repeat: 2x (one above 10, one below 0)
-- Expected: Both values are accepted and stick exactly as typed (not clamped back to 10 or 0). The
-  helper text above the stat groups should also no longer say "0 = ignore, 10 = highest importance."
+**T22b — Real 0-20 ceiling, rejected values explained with a popup (T23/T24, bug #49 in v0.385)**
+- Instruction: Type a value clearly outside the 0-20 range into a stat's box — try both "25" and "-3"
+  — pressing Enter after each. Then type a value with more than one decimal place, e.g. "7.23".
+- Repeat: 3x ("25", "-3", "7.23")
+- Expected: "25" and "-3" are each **rejected** — a popup explains why (out of range) before the box
+  reverts to its last real saved value; neither should silently stick or silently revert with no
+  explanation. "7.23" IS accepted but rounds to the nearest tenth ("7.2"), not the full typed
+  precision. The helper text above the stat groups should mention the 0-20 range.
 - Result:
 - Notes:
 
-**T23 — Invalid entry reverts instead of sticking**
+**T23 — Invalid (non-numeric) entry is explained and reverts, not silently accepted**
 - Instruction: Click into a stat's edit box, clear it, type something non-numeric (e.g. "abc"), then
   click elsewhere in the window to move focus away.
 - Repeat: 2x
-- Expected: The box reverts to the last real saved value (not left showing "abc" or blank) — the
-  invalid entry should never look like it was accepted.
-- Result:
-- Notes:
-
-**T24 — Clamping at the ends of the range**
-- Instruction: Reduce a stat to 0 and keep clicking `-`; raise a stat to 10 and keep clicking `+`.
-- Repeat: 1x each end
-- Expected: Value stops at 0 (never negative) and at 10 (never above), respectively.
+- Expected: A popup explains the value isn't a number, then the box reverts to the last real saved
+  value (not left showing "abc" or blank) — the invalid entry should never look like it was accepted,
+  and the rejection should never be silent.
 - Result:
 - Notes:
 
@@ -444,6 +443,10 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 - A plain right-click on the minimap button (no drag) does nothing — this is deliberate now that
   right-click-and-drag repositions the button instead (bug #44, `ROADMAP.md` 0.36).
+- A plain right-click (no Shift) on an equipped item slot still fires Blizzard's native
+  `UseInventoryItem` (e.g. a trinket's on-use effect), even though Shift+right-click now opens the
+  score popout (T8) — accepted so Shift+left-click can stay purely native ("insert item link in
+  chat"), per `ROADMAP.md`'s note under "Settings window resize."
 - Some blank space below the last stat group in the settings window is still expected (an attempted
   fix for this was rolled back this version — still an open item, not a new regression).
 - Roadmap features not yet built (tooltip hook, recommendation window, sorting/filters, alt
