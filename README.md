@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.385, plus unversioned work since).** The stat-weighting and
+> **Status: early, active development (v0.44).** The stat-weighting and
 > scoring engine is built and usable today, and a first real upgrade-recommendation engine and window
 > now exist too — shift+right-click an equipped item to see up to 6 real suggested upgrades for that
 > slot. What's still missing: a proper in-game entry point for it (today it's shift+right-click or a

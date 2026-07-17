@@ -9,16 +9,18 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: `Suggestions.lua` (the recommendation engine) and `SuggestionsUI.lua` (its window)
-  built, live-verified, and merged to `main`.** Built per direct instruction from the ground up: no
-  downgrades ever, a 6-candidate mix of guaranteed category diversity (crafted/BOE/local quest/nearby
-  quest, dungeon-blue deferred — `ROADMAP.md`'s known gap on instance detection) plus pure-score fill,
-  a dynamic (not fixed) opposite-continent threshold that scales with local-pool depth, level and
-  armor-type filters to keep the scan fast, a background cache-warming queue tied to the original
-  trigger list (startup, continent switch, new equip, spec change, level up), and persistent
-  per-character suggestion memory so a found upgrade doesn't need rediscovering every session. Opens
-  today via shift+right-click on an equipped item (replacing the old score popout) or debug commands
-  (`/lgs suggest`/`/lgs suggestwindow`). Full design detail in `ROADMAP.md`'s "Begin suggesting" entry.
+- **Current step: v0.44 — `ROADMAP.md`'s `0.4` milestone (freeze the schema, build the real data
+  pipeline) is complete and shipped, catching up a version number that had gone stale across several
+  unversioned commits.** `Suggestions.lua` (the recommendation engine) and `SuggestionsUI.lua` (its
+  window) built per direct instruction from the ground up: no downgrades ever, a 6-candidate mix of
+  guaranteed category diversity (crafted/BOE/local quest/nearby quest, dungeon-blue deferred —
+  `ROADMAP.md`'s known gap on instance detection) plus pure-score fill, a dynamic (not fixed)
+  opposite-continent threshold that scales with local-pool depth, level and armor-type filters to
+  keep the scan fast, a background cache-warming queue tied to the original trigger list (startup,
+  continent switch, new equip, spec change, level up), and persistent per-character suggestion memory
+  so a found upgrade doesn't need rediscovering every session. Opens today via shift+right-click on
+  an equipped item (replacing the old score popout) or debug commands (`/lgs suggest`/
+  `/lgs suggestwindow`). Full design detail in `ROADMAP.md`'s "Begin suggesting" entry.
   - **Confirmed working via live evidence**, not just code review: the on-disk debug log shows 6 real
     candidates found across many different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/Hands/Legs)
     in real play sessions, and the window itself confirmed actually rendering that data (real item
@@ -1153,3 +1155,13 @@ the current single most important next step — this file has everything behind 
   moved into the freshly recreated `queue.md` instead, per the new "easy things go in the queue, large
   changes stay in the roadmap" rule; its one substantive item (T20, upgrade-relative outline coloring)
   turned out to be a stale duplicate of `0.9` and was merged into that entry instead of moved.
+- **2026-07-17** — Caught and fixed a real process gap: the version number had stayed at 0.385
+  through the entire `Suggestions.lua`/`SuggestionsUI.lua` build (several unversioned commits,
+  correctly following "versions get assigned once each piece actually ships, not planned in
+  advance"), but the moment that work actually landed and was confirmed working, the version should
+  have been bumped to mark `ROADMAP.md`'s `0.4` milestone complete -- this got missed across a run of
+  commits and merges. Corrected by bumping to **v0.44** now (the data pipeline's own most granular
+  completed sub-step, `0.41-0.44` all Built) rather than rewriting the commits that already shipped
+  under the stale version string -- those commits are an accurate record of what actually happened at
+  the time; only the current, ongoing state needed to be correct, not history. Explicitly decided
+  against rewriting git history (no force-push, no rebase) for this reason.

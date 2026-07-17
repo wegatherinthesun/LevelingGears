@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Leveling Gears
 ## Notes: Finds upgrades for your equipped gear while leveling and tells you exactly where to get them.
-## Version: 0.385
+## Version: 0.44
 ## SavedVariables: LevelingGearsDB
 
 Debug.lua

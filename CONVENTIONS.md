@@ -116,6 +116,15 @@ Buttons use the branding: **"Select Gears"**, **"View Gears"**.
   forward is 0.31. **Patches to 0.31 follow the existing thousandths rule**: the next one is 0.311,
   not 0.301 (0.301 already exists — it's the earlier, unrelated bug #27 crash fix from the 0.3
   baseline milestone, well before this fork existed).
+- **0.4 milestone reached (2026-07-17):** after v0.385 (a thousandths patch on the 0.38 line), the
+  next real work was the data pipeline itself — `ROADMAP.md`'s `0.4` (freeze the schema) and
+  `0.41-0.44` (the real cmangos-backed database, all Built). That work, plus the first consumer of it
+  (`Suggestions.lua`/`SuggestionsUI.lua`, the recommendation engine and window), landed across several
+  unversioned commits before the version number caught up — corrected by bumping straight to **0.44**
+  (the pipeline's own most granular completed sub-step) rather than continuing 0.385's thousandths
+  line, since this is genuinely a different, later milestone, not a patch on the settings/scoring one.
+  Patches to 0.44 follow the usual thousandths rule (0.441, 0.442…) until a new two-decimal
+  sub-feature of this milestone is scoped.
 - **Version A** — first feature-complete **alpha** (no decimal). A.1, A.2 = alpha fixes.
 - **Version B** — **beta**.
 - **1.0** — first shipped release. **1.01** = bug patches. **1.1** = one new feature.

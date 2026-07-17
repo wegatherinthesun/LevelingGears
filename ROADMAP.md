@@ -196,13 +196,15 @@ branch tests well.
   resolve silently to tab order rather than falling back to the documented low-level default — see
   `bugs/resolved-bugs.md` #37 for the full investigation and fix.
 
-- **0.4 — Freeze the schema + hand-made sample.** Implement the exact table shapes above as real
-  Lua files. Populate with a ~12-item HAND-MADE sample spanning every source kind (drop, quest,
-  chain, craft, vendor, boe) so all later UI can be built and tested with zero pipeline. This is
-  the contract every other module codes against.
+- **0.4 — Freeze the schema + hand-made sample.** **Superseded by the real thing.** Implement the
+  exact table shapes above as real Lua files. Originally planned as a ~12-item HAND-MADE sample
+  spanning every source kind (drop, quest, chain, craft, vendor, boe) so all later UI could be built
+  and tested with zero pipeline — instead, `0.41-0.44` below shipped the real pipeline first, so the
+  schema froze against real data (18,711 items, 6,599 quests) rather than a hand-made stand-in. This
+  is the contract every other module codes against. **Shipped as v0.44.**
 - **0.41 — Download the sources. 0.42 — Parser: quests first. 0.43 — Parser: loot + recipes.
-  0.44 — Bake coordinates + merge.** **Built (`data_implementation` branch, cmangos-only — Questie
-  still deferred, license unresolved)** — `pipeline/big_data.py --build-database` runs all of it
+  0.44 — Bake coordinates + merge.** **Built and shipped as v0.44** (cmangos-only — Questie
+  still deferred, license unresolved) — `pipeline/big_data.py --build-database` runs all of it
   end-to-end against the real cmangos dump and writes real `Items`/`Sources`/`Quests`/`Chains`/
   `Recipes`/`BySlot` Lua files to `pipeline/output/`. Full detail — exact repo URLs, confirmed
   license status for each source, confirmed file/table structure, and the parser design — is in
