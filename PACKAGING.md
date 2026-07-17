@@ -1,8 +1,8 @@
 # PACKAGING.md — the ship / no-ship manifest
 
 This is `queue.md` Q6's deliverable: the authoritative list of what does and does not go into the
-**player build**, and the decided mechanism for producing the split. Two builds come out of one
-source tree:
+**player build**, and the mechanism options (Curse *and* non-Curse) for producing the split. Two
+builds come out of one source tree:
 
 - **Tester build** — the raw repo (debug markers active). The whole debug suite is available. This is
   a *separate download* for testers; it also includes `TEST_PLAN.md` / `TESTERS.md`.
@@ -16,17 +16,17 @@ no-ship (see below).
 
 ---
 
-## Decided mechanism (how the split is produced)
+## Mechanism: annotate once, package many ways
 
-Adopt the **CurseForge / BigWigs packager conventions** — verified in use on this very client
-(AceGUI-3.0-SharedMediaWidgets `prototypes.lua`; PallyPower/ShamanPower's bundled
-`LibUIDropDownMenu` `.toc` files), so this is a real, standard toolchain, not a bespoke invention.
-It is also **forward-compatible with actually publishing to CurseForge/Wago later** — the same
-`BigWigsMods/packager` script does exactly this, so none of the markup is throwaway.
+We are nowhere near shipping — this section only needs to leave us **prepared and not locked into any
+one vendor**, not committed today. The principle: annotate the source in plain text (no tool required
+to *read* it), then let any of several packaging backends — Curse or not — act on it. Decide the
+exact backend at packaging time.
+
+### The annotations (toolchain-agnostic — this is the durable part)
 
 1. **In-file code stripping — `--@debug@` markers.** Wrap each no-ship command branch and no-ship
-   function in the packager's debug tokens. In the raw source the code is active (tester build); the
-   packager comments the block out for the release/player build.
+   function so it is active in the raw source (tester build) and removed for the player build.
 
    ```lua
    --@debug@
@@ -34,16 +34,51 @@ It is also **forward-compatible with actually publishing to CurseForge/Wago late
    --@end-debug@
    ```
 
-   (The inverse, `--[===[@non-debug@ ... --@end-non-debug@]===]`, marks code that is inactive in
-   source and only turned on in the release — not expected to be needed here yet.)
+   These happen to be the CurseForge / BigWigs packager tokens — verified in use on this very client
+   (AceGUI-3.0-SharedMediaWidgets `prototypes.lua`; PallyPower/ShamanPower's bundled
+   `LibUIDropDownMenu` `.toc` files) — **but they are only Lua comments.** Nothing Curse-specific:
+   any script that can match the tokens can strip the block. Keeping them means we're ready for a
+   Curse packager *and* a local script, without choosing yet. (The inverse
+   `--[===[@non-debug@ ... --@end-non-debug@]===]` marks code inactive in source and on only in the
+   release — not expected here yet.)
 
-2. **File exclusion — `.pkgmeta` `ignore:` list.** A `.pkgmeta` at the repo root lists the dev-only
-   files/dirs to keep out of the packaged zip (docs, linter config, pipeline build tooling). The
-   loaded addon files and the baked pipeline data stay in.
+2. **A file-exclusion list** (docs, linter config, pipeline build tooling — enumerated in NO-SHIP
+   below). Just a list; expressed differently per backend.
 
-3. **Two artifacts.** Tester build = the raw repo as-is. Player build = the packager's output. Until
-   the addon is actually published, run the packager locally (or a small local script that mimics
-   these two rules) to emit the player zip.
+### Packaging backends (all consume the same annotations — pick when the time comes)
+
+**Non-Curse options (no account, no vendor toolchain) — the intended path for now:**
+
+1. **Local strip script (recommended).** A ~30–50 line Python/bash script: copy the tree, delete
+   `--@debug@…--@end-debug@` blocks by regex, drop the excluded files, zip it. Zero dependencies,
+   runs offline, fully under our control. Because the markers are standard, this stays trivially
+   swappable for the Curse packager later with no source changes.
+2. **`git archive` + `.gitattributes export-ignore`.** Mark dev-only files with `export-ignore` in
+   `.gitattributes`; `git archive` then emits a zip that omits them — pure git, no extra tooling.
+   Covers the *file-exclusion* half; pair it with the strip script or the dev-`.toc` split for the
+   *code* half.
+3. **Whole-file separation via the `.toc` (no stripping at all).** Move the no-ship command
+   registrations/handlers into dedicated dev-only file(s) (e.g. `DevCommands.lua`) and simply omit
+   them from the player `.toc`; the tester `.toc` lists them. Cleanest for anything that can be filed
+   on its own — the cost is refactoring interleaved dev code (the `HandleSlashCommand` branches,
+   `Scoring.PrintBreakdown`, `Suggestions.PrintSuggestions`) out of shared files. Combines with
+   markers for the bits that can't be cleanly moved.
+4. **Runtime dev flag (zero build step, fallback only).** A single `LG.DEV_BUILD` constant gates
+   registration of dev commands; flip it off for the player build. No packaging step at all — but the
+   dev code physically ships (inert, not removed), so it does **not** satisfy "actually clean it out."
+   Keep as the last-resort fallback, not the goal.
+
+**Curse/Wago option (only if we later choose to publish there):**
+
+5. **The `BigWigsMods/packager` script** — consumes the same `--@debug@` markers plus a `.pkgmeta`
+   `ignore:` list, and can also upload to CurseForge / Wago / WoWInterface / GitHub releases.
+   Adopting the markers now keeps this available without locking us in.
+
+**Recommendation for now:** keep the `--@debug@` markers + a plain file-exclusion list as the durable
+source annotation, and plan to produce the player build with the **local strip script (1)** and/or
+**`git archive` (2)** — no Curse dependency — while staying trivially able to switch to the Curse
+packager (5) later. Two artifacts either way: tester build = raw repo; player build = the backend's
+output.
 
 Dead code (see below) is simply **deleted outright**, independent of the build split.
 
@@ -100,7 +135,9 @@ Dead code (see below) is simply **deleted outright**, independent of the build s
   `MAX_SCORE_POPOUT_LINES`. Superseded when shift+right-click moved to `SuggestionsUI.Show`; nothing
   calls it anymore (only a comment in `GearEvaluation.lua` references what it "used to" do).
 
-**Files excluded from the player zip (`.pkgmeta` `ignore:`):**
+**Files excluded from the player zip** (expressed via `.gitattributes export-ignore` for `git
+archive`, a strip-script exclude list, or `.pkgmeta` `ignore:` for the Curse packager — same list
+whichever backend):
 - Docs: `README.md`, `ROADMAP.md`, `PROGRESS.md`, `CONVENTIONS.md`, `DESIGN.md`, `DATA_PIPELINE.md`,
   `CHANGELOG.md`, `TEST_PLAN.md`, `TESTERS.md`, `PACKAGING.md`, `bugs/` (`known-bugs.md`,
   `resolved-bugs.md`)
@@ -116,10 +153,13 @@ Dead code (see below) is simply **deleted outright**, independent of the build s
 ## Implementation steps (not yet done — this file is the plan)
 
 1. Delete the dead `ShowScorePopout` code from `UI.lua`.
-2. Wrap the no-ship command branches and functions in `--@debug@` / `--@end-debug@`.
-3. Add a `.pkgmeta` with the `ignore:` list above.
-4. Wire the packager (the `BigWigsMods/packager` script, or a small local equivalent) to emit the
-   player zip; the tester build is just the raw repo.
+2. Wrap the no-ship command branches and functions in `--@debug@` / `--@end-debug@` — **or**, if going
+   the whole-file route (backend 3), move them into dev-only file(s) omitted from the player `.toc`.
+3. Express the file-exclusion list in whichever backend is chosen: `.gitattributes export-ignore`
+   (git archive), a strip-script exclude list, or `.pkgmeta` `ignore:` (Curse packager). No need to
+   commit to one yet.
+4. Emit the player zip via the chosen backend (local strip script / `git archive` / Curse packager);
+   the tester build is just the raw repo.
 5. **Verify a packaged player build live:** load it, confirm the dev commands are gone, confirm
    `/lgs report` + the settings button + the error auto-offer still work, and confirm no Lua errors
    from any stripped reference the player build still points at.

@@ -504,9 +504,12 @@ message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, an
 - **Player/tester build split (release packaging).** Fully specified in `PACKAGING.md` (the
   ship/no-ship manifest): the player build is lean, its only diagnostic surface the error report;
   testers get a separate, fuller download with the whole debug suite. Implementation: delete the dead
-  `ShowScorePopout` code, wrap no-ship commands/functions in CurseForge/BigWigs `--@debug@` markers,
-  add a `.pkgmeta` `ignore:` list, wire the packager, and **verify a stripped player build live**.
-  A pre-Alpha release gate; the manifest exists now so it doesn't have to be reconstructed later.
+  `ShowScorePopout` code, annotate no-ship commands/functions with `--@debug@` markers (plain
+  comments — consumable by a local strip script or `git archive`, **not** Curse-dependent), express
+  the file-exclusion list, emit the player zip, and **verify a stripped player build live**. Curse
+  and non-Curse backends are both laid out in `PACKAGING.md`; the intended path for now is non-Curse
+  (local script / `git archive`). A pre-Alpha release gate; the manifest exists now so it doesn't have
+  to be reconstructed later.
 - **A / B / 1.0** — per the versioning ladder (see `CONVENTIONS.md`); each requires explicit
   approval before starting.
 
