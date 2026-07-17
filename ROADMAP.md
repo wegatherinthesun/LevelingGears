@@ -465,6 +465,15 @@ everything that only makes sense once this loop already works.
   track. Decide and record the choice here before implementing. Relocated here from "Testing Phase 1
   follow-ups" above (same reason as 0.32 — unbuilt, was sitting unmarked in an "all built" list).
 
+- **Debug log dump window (dev/tester tooling — not shipped to players; part of the debug suite
+  `queue.md` Q6's ship/no-ship manifest strips from the player build).** Today `/lgs debug dump`
+  prints the stored ring buffer straight to chat, which floods it on a large buffer (the reason
+  `queue.md`'s dump line-limit nitpick, Q3, exists). Give the dump its own **scrollable window that
+  can display all stored messages at once** instead of dumping to chat — reusing the scrollable,
+  copyable multiline-editbox infrastructure already built for the developer report window
+  (`UI.ShowReportWindow`, #56). Q3's in-chat 50-line cap stays useful for a quick peek, but this
+  window is the full view; once it exists, `/lgs debug dump` can open here by default.
+
 Smaller tester-feedback nitpicks live in `queue.md` instead of here — small enough to pick up one at
 a time without needing a permanent roadmap slot: error reports to the developer, debug-toggle
 message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, and retiring
