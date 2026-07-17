@@ -10,6 +10,28 @@ For the full investigation behind any fix below (root cause, evidence, validatio
 
 ---
 
+## v0.385 (2026-07-16)
+
+Built on the `data_implementation` branch on top of v0.384, pushing toward `ROADMAP.md`'s `0.4`:
+two already-built-and-verified pieces (settings window resize, the score popout box) plus two more
+fixes from `queue.md`'s remaining test-pass feedback, addressed one at a time and merged back to
+`main`.
+
+- **Added:** the settings window is 40% bigger by default and resizable by dragging its bottom-left
+  or bottom-right corner (a visible grip texture marks them; top corners are deliberately fixed).
+  Found and fixed a real client bug along the way: `SetMinResize`/`SetMaxResize` silently broke the
+  rest of the window's load on this client. (Bug #47)
+- **Changed:** shift+right-clicking an equipped item (moved off shift+left-click, which now stays
+  purely native — "insert item link in chat") opens a small popout box beside it with the score
+  breakdown, replacing the old chat-printed output.
+- **Fixed:** the "Spec:" dropdown's "Auto-detect" option now actually re-engages talent-point
+  detection after a manual spec was picked — it used to silently do nothing, due to a real quirk in
+  this client's own dropdown menu API. (Bug #48)
+- **Added:** stat weights now enforce a real 0-20 range, rounded to the nearest tenth, with a popup
+  explaining exactly why a rejected value (negative, over 20, or non-numeric) didn't stick — instead
+  of accepting any number with no warning. (Bug #49)
+- Bug ledger: zero open bugs remain in `bugs/known-bugs.md` as of this version.
+
 ## v0.384 (2026-07-15)
 
 A second round of fixes, this time addressed one queued item at a time from live testing

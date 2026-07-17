@@ -499,5 +499,8 @@ After every non-trivial edit, stop treating the task as complete and perform a f
 - Libraries: Ace3 (AceDB, AceConfig, AceGUI) + LibDBIcon acceptable if they cut boilerplate;
   plain frames also fine for early versions (and are what's actually in use today — see
   `PROGRESS.md`'s decision log). Choose per step and record it in `PROGRESS.md`.
-- Pipeline: Python (installed) + optional SQLite (ships with macOS). Never a DB server.
+- Pipeline: Python 3 standard library only, no pip packages, no SQLite (the original plan floated
+  SQLite as a fallback for parsing cmangos's SQL dump — `pipeline/sql_extract.py` ended up not
+  needing it, a hand-rolled streaming `INSERT` parser was enough; see `DATA_PIPELINE.md`). Never a
+  DB server.
 - Provide exact in-game test steps each stop ("/reload, type /levelinggears, expect X").

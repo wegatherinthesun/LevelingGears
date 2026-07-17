@@ -9,7 +9,6 @@ local GearEvaluation = LG.GearEvaluation
 
 local SafeCall = LG.Debug.SafeCall
 local WriteDebugLog = LG.Debug.WriteDebugLog
-local PrintChat = LG.Debug.PrintChat
 
 -- A small set of Blizzard slot names lets us draw a thin outline around the equipped item buttons.
 -- Shirt/Ammo/Tabard are deliberately excluded (not stat-relevant for gearing). RangedSlot also
@@ -38,26 +37,32 @@ local equippedSlotDefinitions = {
 local gearOutlineFrames = {}
 local scoreClickHookedButtons = {}
 
--- Bug #30's real fix (per the author, after rejecting the /lgs score slash command as "too
--- complicated"): shift-click an equipped item in the character window to print its score breakdown
--- to chat. HookScript (not SetScript) is required here -- it runs alongside Blizzard's own OnClick
--- handler instead of replacing it, so the native left-click (pick up), ctrl-click (dress up), and
--- shift-click (insert item link in chat) behaviors all stay intact.
+-- Bug #30's original fix (per the author, after rejecting the /lgs score slash command as "too
+-- complicated"): shift-click an equipped item in the character window to see its score breakdown.
+-- HookScript (not SetScript) is required here -- it runs alongside Blizzard's own OnClick handler
+-- instead of replacing it, so the native click behaviors underneath stay intact.
 --
--- Implemented as shift+LEFT-click, not shift+right-click as literally requested: confirmed against
--- FrameXML's PaperDollItemSlotButton_OnClick that right-click unconditionally calls
--- UseInventoryItem(slotId) regardless of any held modifier, so hooking shift+right-click would also
--- risk firing the item's on-use effect (e.g. a trinket proc) as an unwanted side effect. Left-click
--- already branches on Shift for its own "insert item link in chat" behavior, so shift+left-click is
--- both side-effect-free and reuses a gesture every WoW player already knows.
+-- Now shift+RIGHT-click, not shift+left-click, per direct instruction: shift+left-click already
+-- means something to players (inserts the item link into an open chat edit box), so this moved to
+-- shift+right-click instead to avoid overloading that gesture. Real, accepted trade-off: confirmed
+-- against FrameXML's PaperDollItemSlotButton_OnClick that right-click unconditionally calls
+-- UseInventoryItem(slotId) regardless of any held modifier, so shift+right-clicking an equipped item
+-- also uses/unequips it (or fires an on-use trinket/weapon effect) as a side effect of Blizzard's own
+-- handler -- unlike shift+left-click, which was side-effect-free. Accepted anyway per direct
+-- instruction rather than silently avoided.
+--
+-- No longer prints to chat (removed bug #30/T8's original chat-output behavior) -- instead opens
+-- LG.UI's score popout anchored beside the clicked slot button, per ROADMAP.md's "Starting to
+-- actually use the database" section. The popout itself (frame, close button, click-away-to-close)
+-- lives in UI.lua, matching this project's data/UI layering convention.
 local function EnsureScoreClickHook(slotButton, slotId)
 	if not slotButton or scoreClickHookedButtons[slotButton] then
 		return
 	end
 	scoreClickHookedButtons[slotButton] = true
 
-	slotButton:HookScript("OnClick", function(_, button)
-		if button ~= "LeftButton" or not IsShiftKeyDown() then
+	slotButton:HookScript("OnClick", function(self, button)
+		if button ~= "RightButton" or not IsShiftKeyDown() then
 			return
 		end
 
@@ -70,21 +75,13 @@ local function EnsureScoreClickHook(slotButton, slotId)
 		if not itemStats or not next(itemStats) then
 			WriteDebugLog("EnsureScoreClickHook: GetItemStats returned " ..
 				(itemStats and "an empty table" or "nil") .. " for '" .. itemLink .. "'", 1)
-			-- T8b (v0.382 test pass): this used to fail silently (only a debug-log line, no chat
-			-- message), which looks exactly like "the feature is broken" to a player -- e.g.
-			-- shift-clicking a totem, whose only real effect is a passive "Equip:" bonus this addon's
-			-- v1 policy deliberately doesn't score (see ROADMAP.md's proc/effect note), just did
-			-- nothing visible at all. Now says so explicitly, same wording as /lgs score's message.
-			if itemStats then
-				PrintChat("This item has no stats this addon can score (only clean numeric stats are counted -- passive \"Equip:\" effects and procs aren't itemized yet).")
-			end
 			return
 		end
 
 		LG.Weights.EnsureWeights()
 		local characterState = LG.Settings.GetCharacterState()
 		local score, breakdown = LG.Scoring:ScoreEquippedItem(itemStats, characterState and characterState.weights, itemLink)
-		LG.Scoring:PrintBreakdown(itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
+		LG.UI.ShowScorePopout(self, itemLink, score, breakdown, LG.Scoring:DescribeCurrentSpec())
 	end)
 end
 

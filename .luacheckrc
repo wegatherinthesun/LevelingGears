@@ -5,6 +5,7 @@ globals = {
 	"LevelingGearsFrame",
 	"SLASH_LEVELINGGEARS1", "SLASH_LEVELINGGEARS2",
 	"SlashCmdList",
+	"StaticPopupDialogs",
 }
 read_globals = {
 	"CreateFrame", "UIParent", "BackdropTemplateMixin",
@@ -28,4 +29,6 @@ read_globals = {
 	"UIDropDownMenu_CreateInfo", "UIDropDownMenu_AddButton", "CloseDropDownMenus",
 	-- T10 (minimap button drag-to-reposition):
 	"GetCursorPosition",
+	-- v0.385 (T23/T24, bug #49): weight-validation rejection popup:
+	"OKAY", "StaticPopup_Show",
 }

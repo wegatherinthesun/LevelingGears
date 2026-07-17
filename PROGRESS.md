@@ -9,7 +9,119 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
+- **Current step: v0.385 — the `data_implementation` branch's first version-numbered batch, merged
+  back to `main`.** Closed out two more `queue.md` items on top of the already-built settings resize/
+  popout box: **bug #48** (the "Spec:" dropdown's "Auto-detect" option silently did nothing after a
+  manual spec was picked — this client's `UIDropDownMenu_AddButton` doesn't leave a nil-value
+  button's `self.value` as nil, it falls back to the button's text, confirmed via two other installed
+  addons' bundled `LibUIDropDownMenu.lua`; fixed by capturing the intended spec key in each button's
+  own closure instead of reading `self.value` back) and **bug #49** (stat weights accepted any typed
+  number, including negative, with no warning — added a real 0-20 bound, rounded to the nearest
+  tenth, with a popup explaining exactly why a rejected value didn't stick, instead of a silent
+  accept/clamp/revert). `TEST_PLAN.md`'s T8 (rewritten for the popout box's shift+right-click
+  gesture), T14b (new, window resize), T20b, and T22b (rewritten for the new ceiling; old T24
+  removed as stale) all updated to match. See `CHANGELOG.md` and `bugs/resolved-bugs.md` #48-#49 for
+  full detail.
+- **Previous step: `data_implementation` branch — 0.41-0.44 built and run end-to-end against real
+  data.** Testing Phase 1's gate is considered cleared as of v0.384 (remaining `queue.md` items were
+  minor polish, not Blocker/Critical/Major). Branched off `main` at v0.384 to isolate this work
+  until it tests well. Built out `pipeline/` (Python 3 standard-library only, no pip packages,
+  matching this project's "never require compiling anything from source" rule):
+  `dependencies.py`/`download.py`/`inspect_schema.py` (the earlier scaffold), plus real extractors --
+  `sql_extract.py` (a hand-rolled mysqldump `INSERT` row streamer), `lua_writer.py` (Python->Lua
+  table serializer), `wow_enums.py` (stable InventoryType/ItemClass/race-bitmask constants),
+  `extract_items.py`, `extract_loot.py`, `extract_vendor.py`, `extract_quests.py`,
+  `extract_recipes.py`, and `build_database.py` tying them all together
+  (`big_data.py --build-database`). Questie stays excluded (license unresolved, author resolving
+  directly).
+  - Real run against the current cmangos dump produced 18,711 Items, 6,599 Quests, 1,108 Chains,
+    900 Recipes, and a merged Sources table -- all written to `pipeline/output/*.lua`.
+  - Two bugs found and fixed against real data: `extract_rows` needs a table's FULL column list
+    (mysqldump rows are positional across every column, not just the ones a caller wants), and
+    `npc_trainer`/`npc_trainer_template` teach class-ability spells too, not just recipes (filtered
+    to real profession skill ids, cutting 2676 false "recipes" down to 900 real ones).
+  - Real findings, not bugs: quest pickup/turn-in coordinates work with **no Questie dependency**
+    (cmangos's own `creature`/`gameobject` + questrelation tables are enough); `spell_template`
+    ships **completely empty** in this dump, so `Recipes.reagents`/`createsItemId` stay empty until
+    a different source is found; `zone` is a numeric map id, not a real zone name (both are
+    client-side DBC data cmangos doesn't ship in the SQL dump); and shared loot-pool reference
+    groups (up to 1,517 creatures sharing one pool) blew `Sources.lua` up to 162MB, collapsed to one
+    representative creature per item as a stopgap (down to 16MB) -- the real, considered fix is the
+    new `ROADMAP.md` `0.46` data-curation phase (eliminate gear that's not great for any class,
+    dedupe near-identical items, prefer easier/cheaper/nearer equivalents), explicitly scheduled
+    after the addon otherwise works, before Alpha, not attempted now.
+  - Also added `ROADMAP.md`'s `0.45` (an Auction House BOE scanner — a client-side, in-game Lua
+    feature, not a `big_data.py` step, since Python has no access to a live game session).
+  - `pipeline/logs/` mirrors every console line to a timestamped file per run; nothing under
+    `pipeline/downloads|output|logs/` is committed (new root `.gitignore`).
+- **Planning only, no code changed:** `ROADMAP.md` gained a new "Starting to actually use the
+  database" section laying out how the addon starts consuming the pipeline's real output --
+  settings window resize (drag-any-corner, 40% bigger default, mirroring Questie's
+  `TrackerBaseFrame.lua`) + removing shift-click's chat output, then continent-aware querying
+  (`C_Map`/`UnitPosition`, confirmed available via Questie's bundled `HereBeDragons-2.0.lua`, though
+  matching cmangos's classic map ids still needs in-game verification), then a real popout box
+  replacing shift-click's old output (`0.5`'s flyout-frame concept, cross-referenced from both
+  places), then the actual suggestion engine. Per direct instruction, **none of this is
+  version-numbered yet** -- versions get assigned once each piece actually ships, not planned in
+  advance. UI.lua stays one file for now (707 lines, 5 sections) -- revisit once the popout/
+  recommendation window (a new file regardless) exists and its real shape is visible.
+- **Built and verified live, one piece at a time: settings window resize + the popout box.**
+  - Default window size increased 40% (420x330 -> 588x462).
+  - Resizable by dragging the bottom two corners (top corners disabled per direct instruction).
+    **Bug #47 (Solved):** `SetMinResize`/`SetMaxResize` silently aborted the rest of `UI.lua`'s load
+    on this client -- caught immediately via live testing ("it is empty... isn't adjustable...
+    isn't a minimap button"), root-caused via real precedent in two other installed addons (Attune's
+    own `--HC BUG` comment on that same call; AceGUI-3.0 gating it behind `WoW 10.0`'s
+    `SetResizeBounds`), fixed by preferring `SetResizeBounds` with a fallback.
+  - Draggability shown via a visible grip texture (Blizzard's own chat-frame resize art, the same
+    real pattern DBM-GUI uses) rather than a guessed cursor name -- no installed addon on this
+    client uses a resize-specific `SetCursor` string.
+  - Shift-clicking equipped gear no longer prints to chat; the trigger itself moved to
+    **shift+right-click** per direct instruction (shift+left-click already means "insert item link
+    in chat" to players) -- accepting the real trade-off that right-click's native
+    `UseInventoryItem` now also fires alongside it.
+  - Built the real replacement: `UI.ShowScorePopout`/`UI.HideScorePopout`, a reusable flyout beside
+    the clicked item showing the same score breakdown that used to go to chat, closing via its own
+    X button or a full-screen click-catcher frame behind it. This is `ROADMAP.md`'s `0.5`
+    flyout-frame concept, built for real now.
+  - `luac -p`/`luacheck` clean throughout (`UI.lua`, `GearEvaluation.lua`). See
+    `bugs/resolved-bugs.md` #47 for the full investigation.
+- **Previous step: v0.385 — the settings resize/popout box above, plus two more `queue.md` fixes,
+  batched into this branch's first version-numbered release and merged to `main`.**
+  - **Bug #48 (Solved):** the "Spec:" dropdown's "Auto-detect" option silently did nothing after a
+    manual spec had been selected. Root cause: `InitializeSpecDropdown` (`UI.lua`) set
+    `info.value = nil` for "Auto-detect," relying on `OnSelect` reading it back as `self.value`
+    (nil) to clear the override -- but this client's own `UIDropDownMenu_AddButton` doesn't leave a
+    nil-value button's `value` as nil, it falls back to `button.value = info.text`, confirmed (not
+    guessed) by reading the real implementation bundled with two other installed addons (ShamanPower's
+    and PallyPower's own `LibUIDropDownMenu.lua`). `self.value` on that button therefore read back as
+    the string `"Auto-detect"`, which failed `Settings.SetSpecOverride`'s validOptions check and
+    silently no-opped. Fixed by capturing the intended spec key directly in each dropdown button's own
+    closure instead of reading `self.value` back at all. Confirmed working live ("Autodetect is
+    working").
+  - **Bug #49 (Solved):** direct-entry stat weights accepted any typed number -- including negative --
+    with no bound and no warning (T23/T24: "It does allow me to input a negative number"). Added
+    `Weights.MIN_WEIGHT`/`MAX_WEIGHT` (0-20) and `Weights.ValidateWeightInput`, which rejects
+    non-numeric/negative/over-20 input with a human-readable reason and rounds an accepted value to
+    the nearest tenth; `UI.lua`'s `CommitValue` shows that reason in a new
+    `StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"]` popup (confirmed a plain OK-only popup works
+    unmodified on this client via ShamanPower's own `SHAMANPOWER_DELETESET` dialog) before reverting
+    the box -- never a silent revert. Also updated the stat-weights helper text to state the range up
+    front, closing `ROADMAP.md`'s separate T17 backlog item as a side effect. Checked every authored
+    default weight in `Priorities.lua` against the new ceiling -- all within range.
+  - `queue.md`'s remaining "Still open" retest items (T14, T27, T31-T34) weren't filed as new bugs or
+    roadmap items -- they're already tracked as their own `TEST_PLAN.md` test-case IDs awaiting a
+    retest, so `queue.md`'s mention of them was purely redundant with the checklist itself.
+  - `queue.md`'s "Roadmap backlog" list triaged into `ROADMAP.md`'s new "Deferred minor polish"
+    subsection (error reports to the developer, debug-dump chat-output limit, clearer `/lgs score`
+    output, retiring `/lgs score` once the tooltip hook exists, upgrade-relative outline coloring) --
+    except "make the settings window ~40% bigger," which was simply dropped: this version's own
+    resize feature already built it.
+  - `ROADMAP.md`/`DESIGN.md` updated to stop describing the weight box as having "no imposed scale."
+    `luac -p` clean on all touched files (`UI.lua`, `Weights.lua`). Version bumped to 0.385
+    (thousandths patch, per `ROADMAP.md`'s own rule for this un-numbered "Starting to actually use
+    the database" phase: "a version gets assigned once each item is actually built").
+- **Previous step: 0.384 — six more items from the v0.383 test pass, addressed one at a time with no
   version bump in between, then batched together (see `queue.md` for the working list).**
   - **Bug #43 (Solved):** low-level gear with no clean numeric stats scored a dead, indistinguishable
     0. `GetItemStats` never itemizes a plain item's base armor (bug #23's own note already documented

@@ -14,6 +14,12 @@ section is the rationale/target-shape overview; see [`DATA_PIPELINE.md`](DATA_PI
 actionable download links, confirmed license status, and parser design for turning one into the
 other.)
 
+**This shape is now real, not just planned** — `pipeline/big_data.py --build-database` (cmangos
+source only; Questie still license-blocked) produces real `Items`/`Sources`/`Quests`/`Chains`/
+`Recipes`/`BySlot` Lua files exactly in this shape (`pipeline/output/`, not yet wired into the
+addon). See `ROADMAP.md`'s own `0.41-0.44` entry below and `DATA_PIPELINE.md`'s Status note for real
+numbers and known gaps (recipe reagents, zone names, the shared-loot-pool size cap).
+
 **How the source data is shaped now:**
 - cmangos tbc-db (SQL): organized by *creature* — `creature_loot_template` rows say "creature X
   drops item Y at Z%." World drops and shared tables hide behind `reference_loot_template` (a
@@ -82,7 +88,9 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
   Per-character, saved.
   Every OTHER setting the addon ever gains (minimap toggle, suggestion count, source checkboxes,
   spec dropdown, TomTom row, etc.) also lives on THIS one scrolling page — there is no second
-  settings screen anywhere in the app.
+  settings screen anywhere in the app. (v0.385 reintroduced a real bound — 0-20, rejecting anything
+  outside it with an explanatory popup instead of silently accepting or clamping — see this file's
+  "Settings inventory" section and `bugs/resolved-bugs.md` #49.)
 - **0.21 — The scorer.** A function behind the page: score(item) = sum over the item's numeric
   stats of (statValue × that stat's weight). It reads the exact values shown on the 0.2 page.
   It has no results window YET (that's the recommendation window later), so at this step prove it
@@ -116,6 +124,15 @@ before Testing Phase 1 itself is over is **not more building, it's a real `TEST_
 closed — see `bugs/resolved-bugs.md` #29 — and `bugs/known-bugs.md` currently has zero open bugs.
 Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major findings — see
 `TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
+
+**That gate is now considered cleared as of v0.384** — remaining `queue.md` items were minor UX
+polish, not Blocker/Critical/Major findings, and continued in parallel rather than blocking `0.4`.
+**v0.385 closed two of them:** T20b's Auto-detect edge case (`bugs/resolved-bugs.md` #48) and
+T23/T24's weight-ceiling validation (`bugs/resolved-bugs.md` #49). T13's blank-space polish is still
+open (see `TEST_PLAN.md` T13). **The push to `0.4` is now the active work**, happening on the
+`data_implementation` branch — see this file's `0.4`-`0.45` entries below and `DATA_PIPELINE.md`'s
+Status note for where the pipeline (`big_data.py`) actually stands. Merges back to `main` once this
+branch tests well.
 
 - **0.31 — Consolidated release: single weight set per character, direct-entry stat editing,
   analytically-derived defaults.** Squashes the `single-profile` fork's iterative work (previously
@@ -197,18 +214,125 @@ Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major f
   chain, craft, vendor, boe) so all later UI can be built and tested with zero pipeline. This is
   the contract every other module codes against.
 - **0.41 — Download the sources. 0.42 — Parser: quests first. 0.43 — Parser: loot + recipes.
-  0.44 — Bake coordinates + merge.** Full detail — exact repo URLs, confirmed license status for
-  each source (Questie's has a real open question, not yet resolved), confirmed file/table
-  structure, and the step-by-step parser design for both sources — is in
+  0.44 — Bake coordinates + merge.** **Built (`data_implementation` branch, cmangos-only — Questie
+  still deferred, license unresolved)** — `pipeline/big_data.py --build-database` runs all of it
+  end-to-end against the real cmangos dump and writes real `Items`/`Sources`/`Quests`/`Chains`/
+  `Recipes`/`BySlot` Lua files to `pipeline/output/`. Full detail — exact repo URLs, confirmed
+  license status for each source, confirmed file/table structure, and the parser design — is in
   [`DATA_PIPELINE.md`](DATA_PIPELINE.md), not repeated here. Short version: cmangos tbc-db (GPLv3)
   supplies loot/quest-reward/vendor/recipe facts from its SQL dump; Questie's source Lua (license
-  status unresolved — see `DATA_PIPELINE.md`) supplies quest chain ordering, prerequisites, and
-  coordinates. Re-derive facts into our own schema and credit sources rather than redistributing
-  either source directly; using cmangos for loot avoids AtlasLoot's GPL entirely.
+  status unresolved — see `DATA_PIPELINE.md`) would add quest chain corrections and hand-verified
+  pickup/turn-in details on top, once unblocked — basic chain ordering and coordinates turned out to
+  need it less than expected (see below). Re-derive facts into our own schema and credit sources
+  rather than redistributing either source directly; using cmangos for loot avoids AtlasLoot's GPL
+  entirely.
+  - **Real finding: quest pickup/turn-in coordinates don't need Questie at all.** cmangos's own
+    `creature`/`gameobject` tables carry real spawn coordinates, and `creature_questrelation`/
+    `_involvedrelation` (+ the `gameobject_*` equivalents) already say which NPC/object starts and
+    finishes each quest. `DATA_PIPELINE.md` originally assumed this required Questie — it doesn't,
+    for the basic case.
+  - **Known gap: recipe reagents/created-item are empty.** `spell_template` — where a crafting
+    spell's `Reagent1-8`/`EffectItemType` would come from — ships completely empty in this cmangos
+    dump (confirmed: `DISABLE KEYS`/`ENABLE KEYS` with zero rows between them). Spell data is
+    client-side DBC content cmangos doesn't redistribute in the SQL dump. Every `Recipes` entry
+    currently has real `taughtBy`/`skill`/`prof` but empty `reagents`/`createsItemId` until a
+    different source for that data is found (raises its own license question, same category as
+    Questie — not yet investigated).
+  - **Known gap: `zone` is a numeric map id, not a readable zone name.** Human-readable zone names
+    (e.g. "Elwynn Forest") are Blizzard's client-side Area/Zone data, not present in this
+    server-side SQL dump either — same category of gap as the reagent one above.
+  - **Known, deliberate simplification: one representative source per shared loot pool.** A first
+    real run showed some `reference_loot_template` groups (shared "generic trash loot" tables) are
+    reused by hundreds to thousands of different creatures — one group alone was referenced by 1,517
+    creatures, blowing `Sources.lua` up to 162MB for what's mostly redundant near-duplicate entries.
+    Collapsed to the single lowest-level qualifying creature per item for now (down to ~16MB) — the
+    real fix is 0.46 below, not a bigger cap.
+- **0.45 — Auction House BOE scanner (supplemental, client-side, not part of the offline pipeline).**
+  The baked `Items`/`Sources` tables from 0.41-0.44 come from static, offline sources (cmangos/
+  Questie) — neither can tell us an item is a Bind-on-Equip that's realistically bought/sold on the
+  AH rather than dropped/quested/vendored, since that's a live, realm-and-faction-specific economic
+  fact, not something a static DB snapshot captures. Python has no access to a live game session, so
+  this can't be a `big_data.py` pipeline step — it has to be an in-game Lua feature: while the player
+  has the Auction House window open, page through current listings (respecting the client's own
+  built-in query throttling, same as every other AH addon) and, for each item seen, check whether it
+  already has an entry in our baked `Items`/`Sources` tables. If it does, skip it — a real drop/quest/
+  vendor/craft source is always more useful than "buy it." If it doesn't, record a `kind="boe"`
+  `Sources[itemId]` entry locally (a supplemental, addon-side SavedVariable table, not the baked
+  data — AH content varies by realm/faction and can't be shipped as one global fact). This closes the
+  gap for exactly the items the static schema already reserved `kind="boe"` for (see this file's
+  "DATA" section above) but that the pipeline alone can never discover.
+- **0.46 — Data curation pass (shrink the database down to what's actually worth recommending).**
+  Scheduled for **after the addon works as envisioned otherwise, but before Alpha** — not now, and
+  not by capping/sampling harder in the pipeline itself (0.41-0.44's one-representative-per-pool
+  simplification is a stopgap, not this). The real fix is judgment, applied in phases, in this
+  order:
+  1. Eliminate gear that isn't great for any class/spec at all (scores poorly everywhere our engine
+     evaluates it).
+  2. Remove pieces that are very similar to another already-kept piece (near-duplicate stat spreads
+     for the same slot).
+  3. Between remaining equivalent options, prefer the one that's less difficult to obtain.
+  4. Between remaining equivalent options, prefer the one that's cheaper to craft (fewer/cheaper
+     reagents) over one that's equivalent but pricier.
+  5. When recommending a source, prefer one that's geographically nearby the player when a
+     comparably-good option exists, rather than always the single mathematically-best pick.
+  This is what actually solves 0.41-0.44's file-size problem (162MB collapsed to 16MB by a blunt cap;
+  this phase is the real, considered reduction) and is a prerequisite for a genuinely useful
+  recommendation list, not just a smaller file.
+
+### Starting to actually use the database
+
+Everything below this line is ordered but **deliberately not version-numbered yet** — per direct
+instruction, versioning past the current step stays loose ("we will increment as we make progress...
+just put it in front of us and we will version change as it makes sense"). A version (thousandths
+place, one patch = a batch of accepted fixes) gets assigned once each item is actually built, not in
+this planning pass.
+
+- **Settings window resize.** **Built.** Default size increased 40% (420x330 → 588x462); resizable
+  by dragging the bottom two corners (top corners deliberately disabled per direct instruction).
+  `SetResizable(true)` + a `Button`-type "sizer" frame per corner, `OnMouseDown` →
+  `frame:StartSizing(corner)`, `OnMouseUp` → `StopMovingOrSizing()` + persists the new size the same
+  way window position already persists. Real bug found and fixed during this build: `SetMinResize`/
+  `SetMaxResize` silently aborted the rest of `UI.lua`'s load on this client (confirmed via two
+  installed addons — Attune has `SetMinResize` commented out with a `--HC BUG` note; AceGUI-3.0
+  calls it a pre-"WoW 10.0" API) — replaced with `SetResizeBounds` (falling back to
+  `SetMinResize`/`SetMaxResize` only if `SetResizeBounds` doesn't exist). See `bugs/resolved-bugs.md`
+  #47. Draggability is shown with a visible grip texture (Blizzard's own
+  `Interface\ChatFrame\UI-ChatIM-SizeGrabber-*`, the same real pattern DBM-GUI uses for its own
+  resize handle) rather than a cursor swap — no installed addon on this client uses a resize-specific
+  `SetCursor` name, so this was chosen over guessing one. Also in this same batch: shift-clicking an
+  equipped item no longer prints a score breakdown to chat (removed bug #30/T8's old chat-output
+  behavior), and the trigger itself moved from shift+left-click to **shift+right-click** (per direct
+  instruction — shift+left-click already means "insert item link in chat" to players).
+- **Popout box.** **Built.** Shift+right-clicking an equipped item opens a clickable flyout
+  (`UI.ShowScorePopout`) beside the item showing the score breakdown (item name, spec/score line,
+  then the same sorted per-stat breakdown that used to print to chat) — closes via its own X button
+  or by clicking anywhere else (a full-screen invisible click-catcher frame just behind it in
+  strata). One reusable frame, not one per click. This is `0.5` below's flyout-frame concept, built
+  now rather than just planned — `0.5`'s own entry is the fuller spec for this same frame.
+- Continent-aware querying: detect the player's current continent so upgrade queries can be scoped
+  to "obtainable on your own continent first" instead of scanning the whole `BySlot`/`Sources`
+  dataset (which spans every continent) — smaller, more relevant result sets once real suggesting
+  starts. This client supports the modern `C_Map` namespace (confirmed via Questie's bundled
+  `HereBeDragons-2.0.lua`: `C_Map.GetBestMapForUnit("player")`, `C_Map.GetMapInfo`,
+  `UnitPosition("player")`) — but our pipeline's `Quests`/creature `map` field is cmangos's classic
+  Map.dbc numbering (0=Eastern Kingdoms, 1=Kalimdor, 530=Outland, 571=Northrend), which does **not**
+  equal Blizzard's newer `uiMapId` numbering. `UnitPosition`'s `instanceID` return is the more likely
+  direct match (the exact reason compatibility libraries like HereBeDragons exist) — confirm this
+  live in game before trusting it for real filtering, not an assumed mapping.
+- Begin suggesting: the real recommendation engine — query `BySlot`/`Sources`/`Items` (continent-
+  scoped per the item above) for actual upgrades to show the player. This is where the pipeline's
+  real data (`pipeline/output/*.lua`, not yet wired into the addon) actually starts being consumed
+  instead of `0.4`'s hand-made sample.
+- UI.lua reorganization: not split yet (707 lines across 5 sections as of this writing) — the
+  popout box above and the recommendation window (`0.6`) are new frames that get their own new
+  file(s) regardless of what happens to UI.lua itself; revisit UI.lua's size once those exist and
+  its real shape is visible, rather than splitting preemptively now.
 
 ### The product (UI against sample data, then real data once 0.4x lands)
-- **0.5 — Tooltip hook.** Hovering an EQUIPPED item adds a small Leveling Gears section for that
-  slot. TECHNICAL REALITY: Blizzard's GameTooltip cannot host clickable buttons — tooltips aren't
+- **0.5 — Tooltip hook.** (The "Popout box" item in the section just above is this same
+  flyout-frame concept, already being built — keep the two in sync as it lands.) Hovering an
+  EQUIPPED item adds a small Leveling Gears section for that slot. TECHNICAL REALITY: Blizzard's
+  GameTooltip cannot host clickable buttons — tooltips aren't
   mouse-interactive and vanish when the cursor leaves the item. So implement as: informational
   lines appended INTO the tooltip (selected upgrade + where to get it), and the clickable actions
   ("Select Gears" / "next step") on a small separate clickable flyout frame anchored beside the
@@ -243,6 +367,27 @@ Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major f
   to have logged in once with the addon; per-character data unioned in a global SavedVariable —
   "known alts only"). Toggle: if no one you have can craft it, still show reagents + offer a
   pre-written trade-chat message to find a crafter. Both default on, both disableable.
+
+### Deferred minor polish (from testing feedback, no version assigned — build only when picked up)
+- **Error reports back to the developer.** Nothing today lets a player send a caught error or debug
+  dump directly to the developer — they still have to copy/paste manually (T3).
+- **The debug-toggle chat confirmation should also explain how to disable it once enabled** — today
+  it confirms debug mode turned on but doesn't remind the player `/lgs debug` toggles it back off
+  (T3 notes).
+- **Limit `/lgs debug dump`'s chat output to the last 50 lines**, independent of how large the
+  underlying ring-buffer storage is (currently up to 2000 entries — bug #40/T7) — a full dump of a
+  large buffer floods chat.
+- **Improve `/lgs score` / shift+right-click score output to be clearer for a player, less raw** —
+  today's breakdown is a flat list of derived-stat contributions, useful for debugging but not
+  designed for a first-time player to read at a glance (T8).
+- **Remove the `/lgs score` slash command entirely; fold its function into the item tooltip
+  instead**, once the 0.5 tooltip hook exists — today it's kept as the debug-bench fallback for
+  sanity-checking `Priorities.lua` independent of a player's own weights (see `DESIGN.md`) (T8b).
+- **Outline coloring relative to an available upgrade, not just the character's own current
+  average.** Today's 0.9 coloring (`GearEvaluation.lua`) is entirely self-relative — it can't yet
+  say "this slot's outline is bad because a specific better item exists," since no upgrade data is
+  wired in yet. Revisit once "Begin suggesting" (this file's "Starting to actually use the database"
+  section) is real (T20).
 
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),
@@ -297,12 +442,14 @@ it is the per-slot upgrade picker opened from "Select Gears." Those are the only
   list — see DESIGN.md), seeded with spec-aware defaults on first use, and later spec automation just
   fills these in. Each stat is a direct-entry edit box since v0.305 (replacing the 0.26-era up/down
   buttons with 0.05 steps and a Shift-click coarser ±1 — see `bugs/resolved-bugs.md` #32); v0.306
-  removed the box's artificial 0-10 clamp/framing too, so it shows and accepts the exact number
-  `Scoring.lua` multiplies the stat by, with no imposed scale (see `bugs/resolved-bugs.md` #33). A
-  "Restore Defaults" button in the same section resets the character's own weights back to the
-  spec-aware defaults on demand. Since v0.304 there is exactly one weight set per character (no
-  profiles — see the "Testing Phase 1 follow-ups" section above); defaults do not yet auto-update on
-  respec (0.35). **Built.**
+  removed the box's artificial 0-10 clamp/framing entirely (see `bugs/resolved-bugs.md` #33), and
+  v0.385 reintroduced a real bound — 0-20, rounded to the nearest tenth, with a popup explaining
+  exactly why a value outside that range (or non-numeric) gets rejected rather than a silent revert
+  (see `bugs/resolved-bugs.md` #49) — so it shows and accepts the exact number `Scoring.lua`
+  multiplies the stat by, within that bound. A "Restore Defaults" button in the same section resets
+  the character's own weights back to the spec-aware defaults on demand. Since v0.304 there is
+  exactly one weight set per character (no profiles — see the "Testing Phase 1 follow-ups" section
+  above); defaults do not yet auto-update on respec (0.35). **Built.**
 - Minimap button on/off. **Built.**
 - Suggestion count (default 3). **Not built** (depends on 0.6 recommendation window).
 - Sort mode default. **Not built** (depends on 0.8).

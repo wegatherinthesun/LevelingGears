@@ -45,8 +45,27 @@ Weights.statDefinitions = {
 -- exact number the scoring engine multiplies a derived stat by (`ComputeScore` in Scoring.lua does
 -- `score = score + derivedStatValue * weight` -- there is no separate "real" value hidden behind an
 -- abstracted 0-10 rating; the number in the box IS the weight). v0.306 removed the artificial 0-10
--- ceiling this used to enforce -- see bugs/known-bugs.md #33 -- so there is nothing left to clamp:
--- whatever the player types is exactly what gets used.
+-- ceiling this used to enforce -- see bugs/known-bugs.md #33. T23/T24 (v0.384 test pass) reintroduced
+-- a real bound -- 0-20, rounded to the nearest tenth -- since unbounded/negative input had no warning
+-- at all; see ValidateWeightInput below.
+
+-- A typed weight must land in this range -- anything outside it is rejected outright (with an
+-- explanation shown to the player -- see UI.lua's CommitValue), not silently clamped into range.
+Weights.MIN_WEIGHT = 0
+Weights.MAX_WEIGHT = 20
+
+-- Validates a parsed (already tonumber'd) weight input and rounds it to the nearest tenth. Returns
+-- the rounded value on success, or nil plus a human-readable reason on failure -- callers show that
+-- reason to the player (a rejected edit is never a silent revert, per the T23/T24 tester report).
+function Weights.ValidateWeightInput(statName, parsed)
+	if not parsed then
+		return nil, string.format("%s must be a number.", statName)
+	end
+	if parsed < Weights.MIN_WEIGHT or parsed > Weights.MAX_WEIGHT then
+		return nil, string.format("%s must be between %d and %d.", statName, Weights.MIN_WEIGHT, Weights.MAX_WEIGHT)
+	end
+	return math.floor((parsed * 10) + 0.5) / 10
+end
 
 -- Rounds to the nearest hundredth purely to hide floating-point noise (e.g. 7.099999999996) --
 -- NOT a step grid the player is restricted to; any value they type is honored as-is once rounded to

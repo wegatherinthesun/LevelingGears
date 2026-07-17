@@ -4,7 +4,7 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.384), entering Testing Phase 1.** The stat-weighting and
+> **Status: early, active development (v0.385), entering Testing Phase 1.** The stat-weighting and
 > scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
 > get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
 > [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
@@ -13,9 +13,12 @@ score" required.
 ## What it does today
 
 - **One settings window** (`/levelinggears` or `/lgs`, or the minimap button) — there is only ever
-  one settings screen in this addon.
+  one settings screen in this addon. Resizable by dragging its bottom-left or bottom-right corner
+  (look for the grip icon in the bottom-right) if the default size doesn't suit you.
 - **Weight the stats you care about** by typing directly into each stat's edit box — the exact
-  number the scoring engine uses, no abstracted rating scale. Covers Spell Power, Healing, Attack
+  number the scoring engine uses (0-20, rounded to the nearest tenth), no abstracted rating scale. A
+  rejected value (negative, over 20, or not a number) pops up an explanation instead of silently
+  reverting. Covers Spell Power, Healing, Attack
   Power, Ranged Attack Power, Health, Mana, every combat
   rating (Hit/Crit/Haste/Expertise/Armor Penetration/Defense/Dodge/Parry/Block/Resilience), Block
   Value, MP5, Spell Penetration, Armor, and all 5 resistances.
@@ -32,8 +35,9 @@ score" required.
   raid or dungeon standard), using your weights.
 - **One weight set per character**, saved and restored automatically — hand-adjust it or click
   "Restore Defaults" any time.
-- **Shift+left-click an equipped item** in the character window to print its full derived-stat
-  breakdown and score to chat.
+- **Shift+right-click an equipped item** in the character window to pop open a small box beside it
+  showing its full derived-stat breakdown and score — close it with its own X button or by clicking
+  anywhere else.
 - **`/lgs score <item link>`** — a debug command that prints the same kind of breakdown for any
   item link (scored against the raw default priorities, not your own weights), so the underlying
   priority tables can be sanity-checked independent of any hand-adjustment.
@@ -97,7 +101,7 @@ See [`DESIGN.md`](DESIGN.md) for how these fit together.
 
 ## Roadmap / current limitations
 
-Not built yet (see `CLAUDE.md` for the full staged roadmap):
+Not built yet (see `ROADMAP.md` for the full staged roadmap):
 
 - No item database — "where to get this upgrade" (quest, drop, vendor, recipe) isn't implemented.
 - No tooltip integration or recommendation window for unequipped upgrades.
@@ -108,9 +112,7 @@ Not built yet (see `CLAUDE.md` for the full staged roadmap):
 This project keeps unusually thorough living documentation instead of relying on tribal knowledge,
 split by purpose so a given change only needs to load the piece it actually needs:
 
-- [`CLAUDE.md`](CLAUDE.md) — small index: the current step, and which of the files below to read
-  for a given kind of task. Start here.
-- [`ROADMAP.md`](ROADMAP.md) — the staged feature roadmap and the target data shape.
+- [`ROADMAP.md`](ROADMAP.md) — the staged feature roadmap and the target data shape. Start here.
 - [`PROGRESS.md`](PROGRESS.md) — chronological build history, dated decisions, and current status.
 - [`CONVENTIONS.md`](CONVENTIONS.md) — coding conventions, the WoW/Lua sandbox rules, process rules,
   the versioning ladder, and technical reference notes verified against this client.

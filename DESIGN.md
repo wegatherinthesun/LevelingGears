@@ -175,7 +175,7 @@ link's `|H`/`|h` hyperlink escape pair is case-sensitive, so the `score` subcomm
 against the ORIGINAL casing and the item-link argument is never lowercased, avoiding a real bug that
 would otherwise corrupt every pasted item link.
 
-## Weight entry and Restore Defaults (v0.26 → v0.306)
+## Weight entry and Restore Defaults (v0.26 → v0.385)
 
 The Priorities.lua tables ARE the defaults; `EnsureWeights` only ever seeds a key the player has
 never touched, and a manual edit permanently overrides that key going forward.
@@ -195,8 +195,16 @@ never touched, and a manual edit permanently overrides that key going forward.
   `Weights.SetWeightValue(statKey, value)`. Still clamped input to a 0-10 range at this point, and
   the helper text still framed it as "0 = ignore, 10 = highest importance" — reported as still
   reading like the old abstracted rating scale, just with a different input widget.
-- **v0.306 (current):** removed the 0-10 clamp and the "0 = ignore, 10 = highest importance" framing
-  entirely — see `bugs/resolved-bugs.md` #33. There is no scale any more: the box shows and accepts
-  exactly the number `ComputeScore` (in `Scoring.lua`) multiplies the derived stat by, with no
-  minimum, maximum, or rating-language layered on top. `FormatWeight` still rounds only the
-  *display* to a hundredth purely to hide floating-point noise, not to restrict input.
+- **v0.306 (superseded):** removed the 0-10 clamp and the "0 = ignore, 10 = highest importance"
+  framing entirely — see `bugs/resolved-bugs.md` #33. There was no scale left at all: the box showed
+  and accepted exactly the number `ComputeScore` (in `Scoring.lua`) multiplies the derived stat by,
+  with no minimum, maximum, or rating-language layered on top.
+- **v0.385 (current):** reintroduced a real bound — `Weights.MIN_WEIGHT`/`MAX_WEIGHT` (0-20) — after
+  live testing showed the unbounded box had no warning at all for a negative or absurdly large typed
+  value (T23/T24, `bugs/resolved-bugs.md` #49). Unlike the old v0.305 clamp, an out-of-range or
+  non-numeric value is never silently clamped or silently reverted: `Weights.ValidateWeightInput`
+  rejects it outright with a human-readable reason, `UI.lua` shows that reason in a popup
+  (`StaticPopupDialogs["LEVELINGGEARS_INVALID_WEIGHT"]`), then reverts the box to its last real saved
+  value. An accepted value is rounded to the nearest tenth (not just hundredth-precision display
+  rounding — the stored value itself is now a tenth-precision number). Checked every one of
+  `Priorities.lua`'s authored default weights against the new ceiling; all fall within 0-20.
