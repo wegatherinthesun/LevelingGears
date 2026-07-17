@@ -4,10 +4,12 @@ A World of Warcraft addon for **TBC Classic Anniversary** that helps a leveling 
 own equipped gear against their own priorities — no external database or dungeon-standard "gear
 score" required.
 
-> **Status: early, active development (v0.385), entering Testing Phase 1.** The stat-weighting and
-> scoring engine is built and usable today. The longer-term goal — pointing you at exactly where to
-> get your next upgrade (quest, drop, vendor, recipe) — is planned but not built yet. See
-> [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
+> **Status: early, active development (v0.385, plus unversioned work since).** The stat-weighting and
+> scoring engine is built and usable today, and a first real upgrade-recommendation engine and window
+> now exist too — shift+right-click an equipped item to see up to 6 real suggested upgrades for that
+> slot. What's still missing: a proper in-game entry point for it (today it's shift+right-click or a
+> debug command, not the planned tooltip hook) and the "next step" that actually walks you to go get
+> one. See [Roadmap](#roadmap--current-limitations). If you're testing this addon, start with
 > [`TEST_PLAN.md`](TEST_PLAN.md) — its "Quick start" has everything you need.
 
 ## What it does today
@@ -35,9 +37,11 @@ score" required.
   raid or dungeon standard), using your weights.
 - **One weight set per character**, saved and restored automatically — hand-adjust it or click
   "Restore Defaults" any time.
-- **Shift+right-click an equipped item** in the character window to pop open a small box beside it
-  showing its full derived-stat breakdown and score — close it with its own X button or by clicking
-  anywhere else.
+- **Shift+right-click an equipped item** in the character window to open the Suggestions window for
+  that slot — up to 6 real upgrade candidates (never a downgrade from what's equipped), each with its
+  name in native item-quality color, upgrade %, and where to get it (drop, quest, craft, vendor, or
+  Bind on Equip). Hover a row for the full native item tooltip; Refresh re-checks on demand; Settings
+  opens the main settings window alongside it.
 - **`/lgs score <item link>`** — a debug command that prints the same kind of breakdown for any
   item link (scored against the raw default priorities, not your own weights), so the underlying
   priority tables can be sanity-checked independent of any hand-adjustment.
@@ -95,6 +99,8 @@ fallbacks, Druid form handling, low-level spec assumptions, etc.) are documented
 | `Weights.lua` | The weightable-stat list and weight-value math (set/seed/restore) |
 | `GearEvaluation.lua` | Scores equipped items and colors their slot outlines |
 | `UI.lua` | The settings window (all frames/widgets) |
+| `Suggestions.lua` | The upgrade-recommendation engine: queries the pipeline data for real candidates |
+| `SuggestionsUI.lua` | The recommendation window (opened via shift+right-click) |
 | `Core.lua` | Slash commands and startup sequence |
 
 See [`DESIGN.md`](DESIGN.md) for how these fit together.
@@ -103,9 +109,13 @@ See [`DESIGN.md`](DESIGN.md) for how these fit together.
 
 Not built yet (see `ROADMAP.md` for the full staged roadmap):
 
-- No item database — "where to get this upgrade" (quest, drop, vendor, recipe) isn't implemented.
-- No tooltip integration or recommendation window for unequipped upgrades.
+- No tooltip integration — the recommendation window exists (shift+right-click an equipped item) but
+  there's no way to reach it yet by just hovering an item, the originally-planned entry point.
+- No "next step" — a suggestion shows what to get and roughly where, but nothing yet walks you
+  through quest chains, opens the profession window for crafted items, or sets a TomTom waypoint.
 - No sorting/filtering by source type, accessibility, or faction.
+- No dungeon-vs-overworld distinction in drop sources yet (a real data-pipeline gap, not a design
+  choice — see `ROADMAP.md`'s `0.41-0.44` entry).
 
 ## Development
 
