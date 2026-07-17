@@ -16,9 +16,11 @@ other.)
 
 **This shape is now real, not just planned** — `pipeline/big_data.py --build-database` (cmangos
 source only; Questie still license-blocked) produces real `Items`/`Sources`/`Quests`/`Chains`/
-`Recipes`/`BySlot` Lua files exactly in this shape (`pipeline/output/`, not yet wired into the
-addon). See `ROADMAP.md`'s own `0.41-0.44` entry below and `DATA_PIPELINE.md`'s Status note for real
-numbers and known gaps (recipe reagents, zone names, the shared-loot-pool size cap).
+`Recipes`/`BySlot` Lua files exactly in this shape, and they're now wired directly into the addon
+(`LevelingGears.toc` loads `pipeline/output/*.lua`, tracked in git — see `DATA_PIPELINE.md`'s Status
+note) and consumed for real by `Suggestions.lua`. See `ROADMAP.md`'s own `0.41-0.44` entry below and
+`DATA_PIPELINE.md`'s Status note for real numbers and known gaps (recipe reagents, zone names, the
+shared-loot-pool size cap).
 
 **How the source data is shaped now:**
 - cmangos tbc-db (SQL): organized by *creature* — `creature_loot_template` rows say "creature X
@@ -118,12 +120,15 @@ If coordinates are baked into Quests at build time, TomTom works with NO runtime
 ### Testing Phase 1 follow-ups (found during v0.301 testing; gated on all current features passing)
 
 These came out of the first real test pass (`TEST_PLAN.md`, v0.301) as things to build, not bugs in
-what already exists. **Every item below (0.31-0.38) is now Built** — this list is done. What's left
-before Testing Phase 1 itself is over is **not more building, it's a real `TEST_PLAN.md` T1-T35 pass**
-(see `PROGRESS.md`'s Current status / `CLAUDE.md`'s Next step). Bug #29 (window position) is now
-closed — see `bugs/resolved-bugs.md` #29 — and `bugs/known-bugs.md` currently has zero open bugs.
-Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/Major findings — see
-`TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
+what already exists. **Every item below except 0.32 is now Built** — 0.32 (custom art) is real,
+unbuilt work that had been sitting unmarked in this "all built" list by mistake; relocated to
+"Coloring it in" below, where cosmetic polish actually belongs. (0.35, also unbuilt, was found
+misfiled here the same way — also relocated.) What's left before Testing Phase 1 itself is over is
+**not more building, it's a real `TEST_PLAN.md` T1-T35 pass** (see `PROGRESS.md`'s Current status /
+`CLAUDE.md`'s Next step). Bug #29 (window position) is now closed — see `bugs/resolved-bugs.md` #29
+— and `bugs/known-bugs.md` has one open bug as of this writing (#55, unrelated to this section — see
+"Begin suggesting" below). Once a full T1-T35 pass comes back clean (no unresolved Blocker/Critical/
+Major findings — see `TESTERS.md`'s severity scale), the next real step is `0.4` below, not before.
 
 **That gate is now considered cleared as of v0.384** — remaining `queue.md` items were minor UX
 polish, not Blocker/Critical/Major findings, and continued in parallel rather than blocking `0.4`.
@@ -144,11 +149,6 @@ branch tests well.
   default weights with values analytically derived from real TBC combat formulas (see `DESIGN.md`'s
   Layer 3 section) instead of either hand-authored guesses or an invented rank-to-number scale.
   **Built.**
-- **0.32 — Custom art: minimap button icon/border, and the addon's own icon/logo.** The current
-  minimap button uses a generic placeholder icon (`INV_Misc_Gear_01`) and the border appears larger
-  than the clickable button itself. `CONVENTIONS.md`'s Branding section already calls for "a small
-  gear meshing with a big gear" — this is where that actually gets designed and built, for the
-  minimap button and anywhere else the addon shows its own icon.
 - ~~**0.33 — Shift-click scoring on equipped items, replacing `/lgs score`.**~~ **Built in v0.303**,
   pulled forward and shipped as bug #30's real fix (`bugs/resolved-bugs.md` #30) rather than staying
   gated — direct feedback on that bug ("too complicated... shift-click an equipped item to output the
@@ -167,19 +167,6 @@ branch tests well.
   removed the multi-profile system entirely (repeated real bugs, see `bugs/resolved-bugs.md` #28 and
   the "single-profile" fork's PROGRESS.md entry) in favor of exactly one hand-adjustable weight set
   per character. There is no longer a profile to name.
-- **0.35 — Auto-updating default weights on respec/talent change.** Today `EnsureWeights` only ever
-  seeds a stat the FIRST time it's missing (v0.25) and never again — spending a talent point or
-  respeccing does not re-seed the character's weights, even though `DetectSpec` itself already
-  re-runs on `CHARACTER_POINTS_CHANGED`/`PLAYER_LEVEL_UP` (`GearEvaluation.lua`). The player currently
-  has to notice this themselves and click "Restore Defaults" or hand-adjust again (v0.304 added a
-  one-time boot chat message explaining this limitation). This item is the real fix: defaults should
-  update automatically whenever the player spends a talent point or changes spec. Needs a judgment
-  call on scope before building: overwrite EVERY weight on every talent-point spend (matching
-  `RestoreDefaultWeights`'s existing "start clean" behavior, but would also silently discard any
-  hand-adjustment made since the last spec change), or only re-seed stats the player has never
-  hand-touched (needs a new "touched by player" flag per stat, since today there's no way to tell a
-  hand-set 5 apart from a seeded 5) — the second option preserves customization but is more state to
-  track. Decide and record the choice here before implementing.
 - **0.36 — Minimap button: drag to reposition.** **Built (shipped in v0.384, out of numeric order —
   same versioning-ladder precedent as 0.37/0.38).** Right-click-and-drag moves the button around the
   minimap (the standard convention most players expect from an addon minimap icon); the new position
@@ -241,43 +228,27 @@ branch tests well.
   - **Known gap: `zone` is a numeric map id, not a readable zone name.** Human-readable zone names
     (e.g. "Elwynn Forest") are Blizzard's client-side Area/Zone data, not present in this
     server-side SQL dump either — same category of gap as the reagent one above.
+  - **Known gap: no way to tell a dungeon/instance drop apart from an overworld drop.**
+    `extract_loot.py` builds every `kind="drop"` `Sources` entry from `creature_loot_template` joined
+    only against `creature_template.MinLevel` — it never touches the `creature` spawn table (which
+    would give a `map` id, the same join `extract_quests.py`'s `_build_spawn_locations()` already does
+    for quest coordinates) or `creature_template.rank` (mangos's standard 0=normal/1=elite/
+    2=rare-elite/3=boss/4=rare column, free from a table already being read but not currently
+    selected). Without either, nothing in `Sources` can answer "is this a dungeon-boss drop" —
+    surfaced by the "Begin suggesting" item below, which wants to guarantee a dungeon-blue candidate
+    when one exists. Fix: join the spawn table for `map`, cross-reference against `instance_template`
+    (or a hardcoded instance-mapId list) to classify world vs. instance, and select `rank` for a
+    boss/elite/rare signal — not attempted yet, deferred until the suggestion engine actually needs
+    it (which it does, but ships without this category in the meantime — see below).
   - **Known, deliberate simplification: one representative source per shared loot pool.** A first
     real run showed some `reference_loot_template` groups (shared "generic trash loot" tables) are
     reused by hundreds to thousands of different creatures — one group alone was referenced by 1,517
     creatures, blowing `Sources.lua` up to 162MB for what's mostly redundant near-duplicate entries.
     Collapsed to the single lowest-level qualifying creature per item for now (down to ~16MB) — the
     real fix is 0.46 below, not a bigger cap.
-- **0.45 — Auction House BOE scanner (supplemental, client-side, not part of the offline pipeline).**
-  The baked `Items`/`Sources` tables from 0.41-0.44 come from static, offline sources (cmangos/
-  Questie) — neither can tell us an item is a Bind-on-Equip that's realistically bought/sold on the
-  AH rather than dropped/quested/vendored, since that's a live, realm-and-faction-specific economic
-  fact, not something a static DB snapshot captures. Python has no access to a live game session, so
-  this can't be a `big_data.py` pipeline step — it has to be an in-game Lua feature: while the player
-  has the Auction House window open, page through current listings (respecting the client's own
-  built-in query throttling, same as every other AH addon) and, for each item seen, check whether it
-  already has an entry in our baked `Items`/`Sources` tables. If it does, skip it — a real drop/quest/
-  vendor/craft source is always more useful than "buy it." If it doesn't, record a `kind="boe"`
-  `Sources[itemId]` entry locally (a supplemental, addon-side SavedVariable table, not the baked
-  data — AH content varies by realm/faction and can't be shipped as one global fact). This closes the
-  gap for exactly the items the static schema already reserved `kind="boe"` for (see this file's
-  "DATA" section above) but that the pipeline alone can never discover.
-- **0.46 — Data curation pass (shrink the database down to what's actually worth recommending).**
-  Scheduled for **after the addon works as envisioned otherwise, but before Alpha** — not now, and
-  not by capping/sampling harder in the pipeline itself (0.41-0.44's one-representative-per-pool
-  simplification is a stopgap, not this). The real fix is judgment, applied in phases, in this
-  order:
-  1. Eliminate gear that isn't great for any class/spec at all (scores poorly everywhere our engine
-     evaluates it).
-  2. Remove pieces that are very similar to another already-kept piece (near-duplicate stat spreads
-     for the same slot).
-  3. Between remaining equivalent options, prefer the one that's less difficult to obtain.
-  4. Between remaining equivalent options, prefer the one that's cheaper to craft (fewer/cheaper
-     reagents) over one that's equivalent but pricier.
-  5. When recommending a source, prefer one that's geographically nearby the player when a
-     comparably-good option exists, rather than always the single mathematically-best pick.
-  This is what actually solves 0.41-0.44's file-size problem (162MB collapsed to 16MB by a blunt cap;
-  this phase is the real, considered reduction) and is a prerequisite for a genuinely useful
-  recommendation list, not just a smaller file.
+(0.45 and 0.46, originally planned here, are pure data-quality refinement on top of an already-working
+suggestion flow — relocated to "Coloring it in" below, after the outline that actually needs them
+first exists.)
 
 ### Starting to actually use the database
 
@@ -309,43 +280,108 @@ this planning pass.
   or by clicking anywhere else (a full-screen invisible click-catcher frame just behind it in
   strata). One reusable frame, not one per click. This is `0.5` below's flyout-frame concept, built
   now rather than just planned — `0.5`'s own entry is the fuller spec for this same frame.
-- Continent-aware querying: detect the player's current continent so upgrade queries can be scoped
-  to "obtainable on your own continent first" instead of scanning the whole `BySlot`/`Sources`
-  dataset (which spans every continent) — smaller, more relevant result sets once real suggesting
-  starts. This client supports the modern `C_Map` namespace (confirmed via Questie's bundled
-  `HereBeDragons-2.0.lua`: `C_Map.GetBestMapForUnit("player")`, `C_Map.GetMapInfo`,
-  `UnitPosition("player")`) — but our pipeline's `Quests`/creature `map` field is cmangos's classic
-  Map.dbc numbering (0=Eastern Kingdoms, 1=Kalimdor, 530=Outland, 571=Northrend), which does **not**
-  equal Blizzard's newer `uiMapId` numbering. `UnitPosition`'s `instanceID` return is the more likely
-  direct match (the exact reason compatibility libraries like HereBeDragons exist) — confirm this
-  live in game before trusting it for real filtering, not an assumed mapping.
-- Begin suggesting: the real recommendation engine — query `BySlot`/`Sources`/`Items` (continent-
-  scoped per the item above) for actual upgrades to show the player. This is where the pipeline's
-  real data (`pipeline/output/*.lua`, not yet wired into the addon) actually starts being consumed
-  instead of `0.4`'s hand-made sample.
+- **Continent-aware querying.** **Built and confirmed live** (`Suggestions.GetPlayerLocation`) —
+  `UnitPosition("player")`'s `instanceID` return was the right match after all: the on-disk debug log
+  confirms it correctly resolved to `EASTERN_KINGDOMS` (instanceId=0) and, later the same session
+  after the character actually traveled there, `OUTLAND` (instanceId=530) — real live confirmation,
+  not an assumed mapping. Upgrade queries scope to "obtainable on your own continent first" per
+  `Suggestions.lua`'s dynamic opposite-continent threshold (see "Begin suggesting" below).
+- **Begin suggesting: the real recommendation engine.** **Engine built and live-verified**
+  (`Suggestions.lua`, `data_implementation` branch) — confirmed via the on-disk debug log finding 6
+  real candidates across multiple different slots (Head/Neck/Chest/Ranged/Feet/Wrist/Waist/Hands/Legs)
+  in real live sessions. **The window (`SuggestionsUI.lua`, `0.6` below) is built but has an open bug
+  (`bugs/known-bugs.md` #55): the window itself shows correctly (backdrop, correct size, correct
+  centered position) but its content — title, buttons, every row's icon/name/source/category text —
+  never renders, even when the engine is confirmed to have found real candidates the same instant.**
+  Query `BySlot`/`Sources`/`Items`/`Quests` (all six now committed, real, and loaded — see this file's
+  DATA section above and `DATA_PIPELINE.md`'s Status note) for actual upgrades to show the player,
+  instead of `0.4`'s hand-made sample. Verify via the `/lgs suggest <slot>` (text) or
+  `/lgs suggestwindow <slot>` (window) debug commands. Concrete design, decided per direct instruction:
+  - **Hard rule: no downgrades, ever.** A candidate only enters the pool if its score beats the
+    currently-equipped item's score for that slot — applied before any category logic touches the
+    pool, not a display-side filter. **Built.**
+  - **Level and armor-type filters**, added after live evidence showed the unfiltered pool was both
+    slow (hundreds of never-cached items scanned per slot) and occasionally wrong (items the player
+    couldn't even equip yet). Level window: `reqLevel` within 3 below to 3 above the player's own
+    level (tightened from an initial, too-generous 15-below per direct instruction: "it should shave
+    off possibilities quickly"). Armor type: restricts armor-slot candidates to the player's class's
+    real proficiency type (with TBC's level-40 Mail unlock rule), while passing non-proficiency values
+    (`"Miscellaneous"`, `"Shield"`, relics) through untouched. **Built** — two real bugs found and
+    fixed along the way by checking the pipeline's actual generated data instead of assuming its
+    shape: `reqLevel = 0` (4,313 real items) means "no requirement," not a literal level-0 requirement
+    (`bugs/resolved-bugs.md` #52); armor slots also use `"Miscellaneous"`/`"Shield"`/relic values that
+    aren't governed by class proficiency at all, and were being wrongly excluded before the fix
+    (`bugs/resolved-bugs.md` #51).
+  - **6 suggestions per slot**, chosen as a mix of guaranteed category diversity and pure score: one
+    reserved slot per category that has at least one qualifying candidate (crafted, BOE/AH-obtainable,
+    a same-continent quest close to the player, a same-continent quest further but not opposite-
+    continent — plus a dungeon-blue category once the pipeline gap above is fixed; ships without that
+    category for now, not faked), filled by that category's single best-scoring candidate; remaining
+    slots up to 6 filled by pure score across the whole remaining pool (all categories, duplicates
+    allowed). **Built.** Each candidate's shown info carries its `Sources` entry's `dropRate` forward
+    (in addition to source kind, obtain level, etc.), not just used internally to pick candidates.
+    **Real pivot from the original ask:** "a quest in the zone we're in" isn't buildable as literally
+    specified — the pipeline's `zone` field is only a 4-value continent id, not a per-zone id (this
+    file's known-gap note above). Used straight-line distance between the player's live position and
+    each quest's pickup coordinates instead (both already in the data): "local" within 400 units,
+    "nearby" within 1500, same-continent only — arguably more precise than zone-name matching, but
+    those two distance numbers are unresearched starting points, not tuned against real zone sizes.
+  - **Opposite-continent quest sources are excluded** from both the category quota and the score fill
+    *unless* the candidate clears a dynamic margin, not a fixed threshold: it must beat the best
+    same-continent candidate's score by a percentage that scales with how deep the same-continent pool
+    already is — 0% margin at an empty local pool (any real upgrade qualifies, nothing local to prefer
+    instead), up to 50% at 4+ local candidates ("if the pool is thin, trigger it easier; if everything
+    we need is nearby, why bother unless it's incredible" — direct instruction). **Built**, not yet
+    tuned against real play.
+  - **Computed one slot at a time, not all 17 at once, to avoid a computation spike.** **Built**: a
+    background queue walks the 17 equipped slots one per ~1.5s, warming the client's own `GetItemInfo`
+    cache for each (there's no separate results cache — once an item's info is cached, `GetCandidates`
+    just returns it instantly on its own). Wired to the tracked trigger events: `PLAYER_ENTERING_WORLD`
+    (startup and real continent switches only, not every minor zone change), `PLAYER_EQUIPMENT_CHANGED`
+    (gated on a genuinely new item via a persisted per-character "seen before" set), spec/level changes.
+    Opening a slot's window bumps it to the front of the queue.
+  - **Persistent suggestion memory.** **Built**, per direct instruction ("any upgrade you find, save
+    the info about it... so you don't have to check as often"): once a real candidate is found for a
+    slot, its item ID (not the full data, which is already baked pipeline data) is saved into the
+    character's own SavedVariables, and re-verified live (never trusted blindly) as a fallback whenever
+    a fresh check comes back empty purely from caching lag.
+  - **UI requirements for the recommendation window (`0.6` below):** a **Refresh** button that
+    re-runs just that slot's 6-candidate query on demand and a **Settings** button opening the main
+    settings window without closing this one. **Built** — see this item's own open bug (#55) above for
+    why the window isn't actually usable yet despite this.
 - UI.lua reorganization: not split yet (707 lines across 5 sections as of this writing) — the
   popout box above and the recommendation window (`0.6`) are new frames that get their own new
   file(s) regardless of what happens to UI.lua itself; revisit UI.lua's size once those exist and
   its real shape is visible, rather than splitting preemptively now.
 
-### The product (UI against sample data, then real data once 0.4x lands)
-- **0.5 — Tooltip hook.** (The "Popout box" item in the section just above is this same
-  flyout-frame concept, already being built — keep the two in sync as it lands.) Hovering an
-  EQUIPPED item adds a small Leveling Gears section for that slot. TECHNICAL REALITY: Blizzard's
-  GameTooltip cannot host clickable buttons — tooltips aren't
+### Outline: close the loop from suggestion to action (continues directly from "Begin suggesting" above)
+
+**Philosophy: draw the whole outline first, color it in after.** These three pick up exactly where
+"Begin suggesting" above leaves off — get a full suggest → see it in game → act on it loop working
+end to end, even crudely, before refining any single piece of it. "Coloring it in" below is
+everything that only makes sense once this loop already works.
+
+- **0.5 — Tooltip hook.** Hovering an EQUIPPED item adds a small Leveling Gears section for that
+  slot. TECHNICAL REALITY: Blizzard's GameTooltip cannot host clickable buttons — tooltips aren't
   mouse-interactive and vanish when the cursor leaves the item. So implement as: informational
   lines appended INTO the tooltip (selected upgrade + where to get it), and the clickable actions
   ("Select Gears" / "next step") on a small separate clickable flyout frame anchored beside the
   tooltip, or triggered by a modifier key (e.g., "Alt+click to Select Gears") — propose the
   approach for review and record the chosen one here. No upgrade chosen for that slot → the Select
-  Gears action. One chosen → show it + where to get it + the next-step action.
-- **0.6 — Recommendation window.** Opens from "Select Gears," scoped to the hovered slot (gloves →
-  glove upgrades). Layout top→bottom: header (name + icon + version), character summary (name,
-  level, color-rated gearscore), then suggested items: each row = icon + name (native quality
-  color), % upgrade, source summary, group-content marker. Hovering a row shows the NATIVE item
-  tooltip (Blizzard renders stats free) PLUS our appended lines (source, drop %, quest/chain
-  position, profession, mob/boss, dungeon, quest-giver location). Clicking selects it for the slot.
-  Scores via the 0.21 engine; data from the sample table until the pipeline is done.
+  Gears action. One chosen → show it + where to get it + the next-step action. **Not built** — this
+  is the real in-game trigger for `SuggestionsUI.lua`'s window, which today only opens via debug
+  commands (`/lgs suggestwindow <slot>`) or shift+right-click (which took over the old score-popout
+  gesture — see `GearEvaluation.lua`). Deciding and building this is the next real outline gap once
+  bug #55 is closed.
+- **0.6 — Recommendation window.** **Mostly built** as `SuggestionsUI.lua` (`data_implementation`
+  branch) — opens scoped to one slot, 6-row list (icon + name in native quality color + % upgrade +
+  source summary + category tags), hovering a row shows the native item tooltip plus appended
+  source/category lines, Refresh and Settings buttons. **Blocked on bug #55** (`bugs/known-bugs.md`
+  — window shows but its content never renders) and not yet opened by a real trigger (0.5 above is
+  still an open decision). Still not built from the original spec: a character-summary header
+  (name/level/color-rated gearscore) and a group-content marker — both cosmetic/informational
+  additions on top of the working list, not blocking. Scores via the real engine (`Suggestions.lua`),
+  real pipeline data, not the old `0.4` hand-made sample.
 - **0.7 — Next-step engine.** Selected upgrade shows current next step and iterates it: quest
   chains advance to the first uncompleted quest (completed quests excluded everywhere); crafted
   items show reagents and open the profession window; recipe-is-a-drop shows the recipe's own drop
@@ -353,41 +389,86 @@ this planning pass.
   boss's dungeon, quest pickup, vendor, or AH for BoE). TomTom absent → button reads "Install
   TomTom for waypoints" and coords/zone still show as text. BoE: button also prints a clickable
   item link LOCALLY into the player's own chat frame (no self-whisper — client forbids it) so their
-  pricing addon can act on it.
+  pricing addon can act on it. **Not built** — this is what actually closes the outline: without it,
+  a suggestion is just an inert list, not "tells you exactly where to get it" (this addon's own
+  stated purpose). A minimal version (just show the location clearly as text) closes the loop before
+  TomTom/chain-iteration polish is worth adding.
+
+### Coloring it in (refinements on an already-working outline — build only once 0.5-0.7 all work end to end)
+
 - **0.8 — Sorting & filters.** Sorts: **Best upgrade %** (default, top 3 by default, count
   configurable), **Most accessible** (composite of mob level vs player, elite/group, chain length —
   imperfect OK, list scrolls to less accessible), **Highest stats**, **By particular stat**.
   Source-type checkboxes, ALL ON by default (quest, dungeon, world/mob, craft, vendor, BoE/AH).
   Faction = HARD filter. Race = NOT filtered (show it, player judges the trip). Group-required
   content is explicitly marked so no one gets waypointed to an unsoloable dungeon blind.
-- **0.9 — Equipped-gear glow.** Thin, clean, non-invasive colored outline showing upgrade need,
-  computed RELATIVE to the character's OWN average item quality (a quest-gear player is judged
-  against themselves, never dungeon standards).
+- **0.9 — Equipped-gear glow, relative to a specific available upgrade.** `0.23` already built a
+  self-relative version (**Built** — thin colored outline against the character's own gear average,
+  see "Testing Phase 1 follow-ups" above) — this item is the real refinement on top of it: once 0.6/
+  0.7's suggestion data exists, an outline can say "this slot is bad because a specific better item
+  exists," not just "below your own average." Not buildable until the outline above is real (this
+  was previously filed twice, once as a stale duplicate under "Deferred minor polish" as tester
+  feedback T20 — merged here, one entry).
 - **0.91 — Alt professions & crafter fallback.** Checkbox: consider alts' professions (needs the alt
   to have logged in once with the addon; per-character data unioned in a global SavedVariable —
   "known alts only"). Toggle: if no one you have can craft it, still show reagents + offer a
   pre-written trade-chat message to find a crafter. Both default on, both disableable.
+- **0.45 — Auction House BOE scanner (supplemental, client-side, not part of the offline pipeline).**
+  The baked `Items`/`Sources` tables from 0.41-0.44 come from static, offline sources (cmangos/
+  Questie) — neither can tell us an item is a Bind-on-Equip that's realistically bought/sold on the
+  AH rather than dropped/quested/vendored, since that's a live, realm-and-faction-specific economic
+  fact, not something a static DB snapshot captures. Python has no access to a live game session, so
+  this can't be a `big_data.py` pipeline step — it has to be an in-game Lua feature: while the player
+  has the Auction House window open, page through current listings (respecting the client's own
+  built-in query throttling, same as every other AH addon) and, for each item seen, check whether it
+  already has an entry in our baked `Items`/`Sources` tables. If it does, skip it — a real drop/quest/
+  vendor/craft source is always more useful than "buy it." If it doesn't, record a `kind="boe"`
+  `Sources[itemId]` entry locally (a supplemental, addon-side SavedVariable table, not the baked
+  data — AH content varies by realm/faction and can't be shipped as one global fact). This closes the
+  gap for exactly the items the static schema already reserved `kind="boe"` for (see this file's
+  "DATA" section above) but that the pipeline alone can never discover.
+- **0.46 — Data curation pass (shrink the database down to what's actually worth recommending).**
+  Scheduled for **after the addon works as envisioned otherwise, but before Alpha** — not now, and
+  not by capping/sampling harder in the pipeline itself (0.41-0.44's one-representative-per-pool
+  simplification is a stopgap, not this). The real fix is judgment, applied in phases, in this
+  order:
+  1. Eliminate gear that isn't great for any class/spec at all (scores poorly everywhere our engine
+     evaluates it).
+  2. Remove pieces that are very similar to another already-kept piece (near-duplicate stat spreads
+     for the same slot).
+  3. Between remaining equivalent options, prefer the one that's less difficult to obtain.
+  4. Between remaining equivalent options, prefer the one that's cheaper to craft (fewer/cheaper
+     reagents) over one that's equivalent but pricier.
+  5. When recommending a source, prefer one that's geographically nearby the player when a
+     comparably-good option exists, rather than always the single mathematically-best pick.
+  This is what actually solves 0.41-0.44's file-size problem (162MB collapsed to 16MB by a blunt cap;
+  this phase is the real, considered reduction) and is a prerequisite for a genuinely useful
+  recommendation list, not just a smaller file.
+- **0.32 — Custom art: minimap button icon/border, and the addon's own icon/logo.** The current
+  minimap button uses a generic placeholder icon (`INV_Misc_Gear_01`) and the border appears larger
+  than the clickable button itself. `CONVENTIONS.md`'s Branding section already calls for "a small
+  gear meshing with a big gear" — this is where that actually gets designed and built, for the
+  minimap button and anywhere else the addon shows its own icon. Pure cosmetic polish — relocated
+  here from "Testing Phase 1 follow-ups" above, where it had been sitting unbuilt and unmarked.
+- **0.35 — Auto-updating default weights on respec/talent change.** Today `EnsureWeights` only ever
+  seeds a stat the FIRST time it's missing (v0.25) and never again — spending a talent point or
+  respeccing does not re-seed the character's weights, even though `DetectSpec` itself already
+  re-runs on `CHARACTER_POINTS_CHANGED`/`PLAYER_LEVEL_UP` (`GearEvaluation.lua`). The player currently
+  has to notice this themselves and click "Restore Defaults" or hand-adjust again (v0.304 added a
+  one-time boot chat message explaining this limitation). This item is the real fix: defaults should
+  update automatically whenever the player spends a talent point or changes spec. Needs a judgment
+  call on scope before building: overwrite EVERY weight on every talent-point spend (matching
+  `RestoreDefaultWeights`'s existing "start clean" behavior, but would also silently discard any
+  hand-adjustment made since the last spec change), or only re-seed stats the player has never
+  hand-touched (needs a new "touched by player" flag per stat, since today there's no way to tell a
+  hand-set 5 apart from a seeded 5) — the second option preserves customization but is more state to
+  track. Decide and record the choice here before implementing. Relocated here from "Testing Phase 1
+  follow-ups" above (same reason as 0.32 — unbuilt, was sitting unmarked in an "all built" list).
 
-### Deferred minor polish (from testing feedback, no version assigned — build only when picked up)
-- **Error reports back to the developer.** Nothing today lets a player send a caught error or debug
-  dump directly to the developer — they still have to copy/paste manually (T3).
-- **The debug-toggle chat confirmation should also explain how to disable it once enabled** — today
-  it confirms debug mode turned on but doesn't remind the player `/lgs debug` toggles it back off
-  (T3 notes).
-- **Limit `/lgs debug dump`'s chat output to the last 50 lines**, independent of how large the
-  underlying ring-buffer storage is (currently up to 2000 entries — bug #40/T7) — a full dump of a
-  large buffer floods chat.
-- **Improve `/lgs score` / shift+right-click score output to be clearer for a player, less raw** —
-  today's breakdown is a flat list of derived-stat contributions, useful for debugging but not
-  designed for a first-time player to read at a glance (T8).
-- **Remove the `/lgs score` slash command entirely; fold its function into the item tooltip
-  instead**, once the 0.5 tooltip hook exists — today it's kept as the debug-bench fallback for
-  sanity-checking `Priorities.lua` independent of a player's own weights (see `DESIGN.md`) (T8b).
-- **Outline coloring relative to an available upgrade, not just the character's own current
-  average.** Today's 0.9 coloring (`GearEvaluation.lua`) is entirely self-relative — it can't yet
-  say "this slot's outline is bad because a specific better item exists," since no upgrade data is
-  wired in yet. Revisit once "Begin suggesting" (this file's "Starting to actually use the database"
-  section) is real (T20).
+Smaller tester-feedback nitpicks live in `queue.md` instead of here — small enough to pick up one at
+a time without needing a permanent roadmap slot: error reports to the developer, debug-toggle
+message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, and retiring
+`/lgs score` once 0.5 exists.
 
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),

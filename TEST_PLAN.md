@@ -34,25 +34,29 @@ these and it still mostly works, just harder to diagnose):
 
 ## Recent changes to focus on (as of this commit)
 
-**Version: v0.385.** See `CHANGELOG.md` for the concise summary. Built on the `data_implementation`
-branch, on top of v0.384's baseline:
+**On the `data_implementation` branch, unreleased (no version bump yet), on top of v0.385's
+baseline.** Two batches worth knowing about:
 
-1. **Settings window resize:** the window is now 40% bigger by default and resizable by dragging its
-   bottom-left or bottom-right corner (look for the grip texture). **New case T14b** — not yet tested
-   live by anyone but the author.
-2. **Popout box:** shift+right-click (moved off shift+left-click) an equipped item now opens a small
-   flyout beside it showing the score breakdown, instead of printing to chat. **T8 rewritten** to
-   match — if you tested shift+left-click scoring before, note the gesture changed.
-3. **Bug #48 (closed): the "Spec:" dropdown's "Auto-detect" option now actually re-engages
-   talent-point detection** after a manual spec was selected — previously a silent no-op. **Retest
-   T20b**, specifically the "switch back to Auto-detect" half.
-4. **Bug #49 (closed): stat weights now enforce a real 0-20 range**, rounded to the nearest tenth,
-   with a popup explaining exactly why a rejected value (negative, over 20, or non-numeric) didn't
-   stick — instead of the old no-bound, no-warning behavior. **T22b rewritten** for this; the old
-   T24 (`+`/`-` button clamping) is removed — those buttons haven't existed since v0.305.
+**Settings window resize, Popout box, bug #48 (Auto-detect fix), bug #49 (weight-ceiling
+validation)** — all v0.385, all previously covered here; see `CHANGELOG.md`/`bugs/resolved-bugs.md`
+for detail if retesting them specifically.
 
-**Testing should cover T8, T14b, T20b, and T22b above first** (all new or changed this version, none
-yet confirmed live by anyone but the author), then resume the regular T1-T35 sweep as time allows.
+**New this round — the Suggestions engine and recommendation window:**
+1. **Shift+right-click an equipped item now opens the Suggestions window instead of the old score
+   popout** — the popout's code is still present but no longer wired to this gesture. **T8
+   rewritten** to match.
+2. **New: `Suggestions.lua` (the upgrade-recommendation engine) and `SuggestionsUI.lua` (its
+   window).** Shows up to 6 real upgrade candidates for the clicked slot — never a downgrade from
+   what's equipped, mixing guaranteed category diversity (crafted/BOE/nearby quest) with pure score,
+   filtered by level and armor type. **New cases T36-T44** cover this — all brand new, none
+   previously tested by anyone but the author. Confirmed working live after fixing several real bugs
+   along the way (`bugs/resolved-bugs.md` #50-#55) — T36-T38 are the most important ones to confirm
+   independently.
+3. **No real in-game trigger exists yet besides shift+right-click and debug commands** — `ROADMAP.md`'s
+   0.5 tooltip hook (the originally-planned entry point) isn't built. This is expected, not a bug.
+
+**Testing should cover T8 and T36-T44 first** (all new or changed, none independently confirmed yet),
+then resume the regular T1-T35 sweep as time allows.
 
 ---
 
@@ -113,21 +117,17 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
-**T8 — Shift+right-click an equipped item opens the score popout (moved off shift+left-click; supersedes bug #30's chat-print fix)**
+**T8 — Shift+right-click an equipped item opens the Suggestions window (moved off the score popout — see the new "Suggestions engine & recommendation window" section below for the window's own content)**
 - Instruction: Open the character window (paperdoll) so your equipped gear is visible, then
   shift+right-click one of your equipped items. Try several different slots/items (e.g. a weapon, a
-  caster cloth item, a trinket), including a low-level or otherwise low-stat armor piece if you have
-  one.
+  caster cloth item, a trinket).
 - Repeat: 3x (3 different items)
-- Expected: Opens a small flyout box beside the item showing its name, a spec/score line, and the
-  same sorted per-stat breakdown that used to print to chat — scored against your own character
-  weights (same weights that drive the gear-outline colors). An armor piece's breakdown should still
-  include a small `BASEARMOR` line (bug #43) — expect it tiny relative to real stats, not a major
-  contributor. Close it via its own X button, or by clicking anywhere else. A plain shift+left-click
-  on the same item now ONLY inserts the item link into an open chat edit box (Blizzard's native
-  behavior) — it no longer also prints a score, since the trigger moved off that gesture. A plain
-  right-click (no Shift) behaves as it always does natively (fires the item's on-use effect if it has
-  one) — this is an accepted trade-off of moving to shift+right-click, not a bug.
+- Expected: Opens the Suggestions window (`SuggestionsUI.lua`) for that slot — see T36+ below for
+  what it should contain. This replaced the old score-breakdown popout, which no longer opens from
+  this gesture (its code is still present in `UI.lua` but unreferenced). A plain shift+left-click on
+  the same item still ONLY inserts the item link into an open chat edit box (Blizzard's native
+  behavior). A plain right-click (no Shift) behaves as it always does natively (fires the item's
+  on-use effect if it has one) — this is an accepted trade-off of using shift+right-click, not a bug.
 - Result:
 - Notes:
 
@@ -437,6 +437,98 @@ testing into a grind. If you have time to do more on any case, more is always we
 - Result:
 - Notes:
 
+### Suggestions engine & recommendation window (new — `data_implementation` branch, unreleased)
+
+**T36 — Suggestions window shows real upgrade candidates**
+- Instruction: Shift+right-click an equipped item (see T8). Try at least 3 different slots, including
+  at least one armor slot and one non-armor slot (ring, neck, trinket, or cloak).
+- Repeat: 3x (3 different slots)
+- Expected: A window opens titled "Suggestions -- <SlotName>", showing an "Equipped score" line and a
+  continent name, and up to 6 rows below it — each with an icon, an item name colored by its native
+  quality (grey/white/green/blue/purple etc.), an upgrade percentage (or "New" if the slot was empty),
+  a source line (e.g. "Drops from a creature", "Quest reward", "Crafted", "Vendor", "Bind on Equip"),
+  and a smaller category line underneath. If fewer than 6 real upgrades exist, fewer rows show instead
+  of padding with anything fake.
+- Result:
+- Notes:
+
+**T37 — No-downgrades rule**
+- Instruction: Check a slot where your equipped item is already strong (a rare/epic piece, or one
+  you've hand-tuned weights around).
+- Repeat: 1x
+- Expected: No suggested row should ever be an actual downgrade from what's equipped — if your gear
+  is already very strong for that slot, the window may show fewer than 6 rows (or "No qualifying
+  upgrades found") rather than padding the list with worse items.
+- Result:
+- Notes:
+
+**T38 — Hovering a row shows the real item tooltip plus our own lines**
+- Instruction: With the Suggestions window open, hover your mouse over one of the rows (not click).
+- Repeat: 2x (2 different rows)
+- Expected: Blizzard's native item tooltip appears (full stats, exactly like hovering the item
+  anywhere else), with our own source and category lines appended below it.
+- Result:
+- Notes:
+
+**T39 — Refresh button**
+- Instruction: With the Suggestions window open, click the "Refresh" button.
+- Repeat: 1x
+- Expected: The window re-queries and repopulates for the same slot — if anything changed (gear,
+  weights, location) since it was opened, the list reflects that; otherwise it looks the same.
+- Result:
+- Notes:
+
+**T40 — Settings button**
+- Instruction: With the Suggestions window open, click the "Settings" button.
+- Repeat: 1x
+- Expected: The main Leveling Gears settings window opens, and the Suggestions window stays open
+  (doesn't close itself).
+- Result:
+- Notes:
+
+**T41 — Empty / still-loading messaging is honest about which one it is**
+- Instruction: Check a slot immediately after logging in or reloading (before the background
+  pre-fetch has had time to run), and separately check a slot where you're confident nothing better
+  exists.
+- Repeat: 1x each
+- Expected: A slot that's still resolving item data says something like "Still loading item data (N
+  item(s) not cached yet) -- checking again shortly..." and the row area auto-refreshes on its own a
+  few times without needing Refresh clicked manually. A slot that's been fully checked and genuinely
+  has no upgrades says "No qualifying upgrades found for this slot right now." These two messages
+  should never look identical (bug #54).
+- Result:
+- Notes:
+
+**T42 — Window stays put (no drifting or disappearing)**
+- Instruction: Open the Suggestions window for several different slots in a row (shift+right-click
+  different items one after another).
+- Repeat: 3x+
+- Expected: The window reappears in the same dead-center screen position every time — it should never
+  need to be found somewhere else on screen, and it's not draggable (bug #53 — this is deliberate,
+  not a missing feature).
+- Result:
+- Notes:
+
+**T43 — Debug commands still work**
+- Instruction: Type `/lgs suggest handsslot` (or any real slot name), then separately
+  `/lgs suggestwindow handsslot`.
+- Repeat: 1x each
+- Expected: `/lgs suggest` prints a text summary to chat (equipped score, continent, up to 6
+  candidates with scores/sources). `/lgs suggestwindow` opens the same window T36 describes.
+- Result:
+- Notes:
+
+**T44 — Suggestions still show up promptly after a reload**
+- Instruction: `/reload`, wait about 30 seconds without touching anything, then shift+right-click an
+  equipped item you checked before the reload.
+- Repeat: 1x
+- Expected: Candidates appear reasonably quickly — the background pre-fetch queue (tied to login,
+  continent switches, new equips, spec/level changes) should have already been warming the item cache
+  in the background, and previously-found upgrades are remembered per-character across sessions, so
+  this shouldn't feel like starting from zero every time.
+- Result:
+- Notes:
+
 ---
 
 ## Known, accepted behavior (not a bug — don't report these)
@@ -445,19 +537,22 @@ testing into a grind. If you have time to do more on any case, more is always we
   right-click-and-drag repositions the button instead (bug #44, `ROADMAP.md` 0.36).
 - A plain right-click (no Shift) on an equipped item slot still fires Blizzard's native
   `UseInventoryItem` (e.g. a trinket's on-use effect), even though Shift+right-click now opens the
-  score popout (T8) — accepted so Shift+left-click can stay purely native ("insert item link in
-  chat"), per `ROADMAP.md`'s note under "Settings window resize."
+  Suggestions window (T8) — accepted so Shift+left-click can stay purely native ("insert item link
+  in chat"), per `ROADMAP.md`'s note under "Settings window resize."
+- The Suggestions window (T36-T44) is not draggable — deliberate, see T42.
+- The Suggestions window has no real in-game trigger yet other than shift+right-click and the debug
+  commands — `ROADMAP.md`'s 0.5 tooltip hook (the originally-planned entry point) isn't built yet.
 - Some blank space below the last stat group in the settings window is still expected (an attempted
   fix for this was rolled back this version — still an open item, not a new regression).
-- Roadmap features not yet built (tooltip hook, recommendation window, sorting/filters, alt
-  professions, data pipeline) are absent by design — see `ROADMAP.md` for what's intentionally not
-  built yet at this stage.
+- Roadmap features not yet built (tooltip hook, sorting/filters, alt professions, AH scanner, data
+  curation) are absent by design — see `ROADMAP.md` for what's intentionally not built yet at this
+  stage.
 
 ---
 
 ## Summary (fill in after finishing)
 
-- Total test cases: 35 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
+- Total test cases: 44 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
 - Anything that failed, in plain language, and how bad it seemed:
 - Overall impression / anything not covered by a specific test case above:
 

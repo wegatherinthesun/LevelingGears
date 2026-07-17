@@ -16,7 +16,8 @@ at the moment it's first filed, whichever file it currently lives in.
 
 ## Bug entries
 
-None currently open — bug #29 (window position) was confirmed solved during the v0.383 testing
-round. See [`resolved-bugs.md`](resolved-bugs.md) for the full history, including several entries
-whose investigation technique (especially reading the on-disk debug log directly, or comparing
-against how other installed addons handle the same problem) is worth reusing on a new bug.
+None currently open — bug #55 (SuggestionsUI window content not rendering) confirmed fixed by live
+testing plus new geometry diagnostics; see [`resolved-bugs.md`](resolved-bugs.md) #55. See that file
+for the full history, including several entries whose investigation technique (especially reading
+the on-disk debug log directly, or comparing against how other installed addons handle the same
+problem) is worth reusing on a new bug.

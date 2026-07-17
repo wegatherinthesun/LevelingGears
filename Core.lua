@@ -68,6 +68,26 @@ local function HandleSlashCommand(msg)
 		return
 	end
 
+	-- Debug bench for the Suggestions.lua recommendation engine, verifiable before 0.6's
+	-- recommendation window exists to call it for real -- see ROADMAP.md's "Begin suggesting" entry.
+	local suggestArg = original:match("^%s*[Ss][Uu][Gg][Gg][Ee][Ss][Tt]%s+(.+)$")
+	if suggestArg then
+		SafeCall(function()
+			LG.Suggestions.PrintSuggestions(suggestArg)
+		end)
+		return
+	end
+
+	-- Debug trigger for the new recommendation window (ROADMAP.md's 0.6) -- the real in-game entry
+	-- point (tooltip hook, popout button, etc.) is still an open decision, not resolved here.
+	local suggestWindowArg = original:match("^%s*[Ss][Uu][Gg][Gg][Ee][Ss][Tt][Ww][Ii][Nn][Dd][Oo][Ww]%s+(.+)$")
+	if suggestWindowArg then
+		SafeCall(function()
+			LG.SuggestionsUI.Show(suggestWindowArg)
+		end)
+		return
+	end
+
 	local msgLower = original:lower()
 	if msgLower == "debug dump" then
 		LG.Debug.DumpDebugLog()
