@@ -68,7 +68,9 @@ case (in the same email, or as a second attachment):
 - Expected:
 - Actual:
 - Reproducible: Yes (every time) / Yes (sometimes) / No (happened once)
-- Debug log excerpt (`/lgs debug` then `/lgs debug dump`), if you have it:
+- Debug log: easiest way is `/lgs report` — it opens a window with your version, character, and the
+  whole debug log already assembled and selected, ready to paste here. (`/lgs debug` then
+  `/lgs debug dump` still works if you'd rather read it in chat.)
 - Screenshot, if relevant:
 ```
 
@@ -76,3 +78,9 @@ case (in the same email, or as a second attachment):
 
 Covered in `TEST_PLAN.md`'s Quick start: rename the completed file and email it to
 **wegatherinthesun@gmail.com**. Nothing else to set up — no accounts, no separate tool.
+
+If the addon throws a Lua error while you're testing, it will offer you a report window once per
+session — take it, copy the text, and paste it into your email. You can also open that window any
+time with **`/lgs report`** or the "Copy report for developer" button in the settings window. It
+never sends anything on its own (WoW addons can't); it just spares you scraping the log out of chat
+by hand.

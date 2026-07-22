@@ -9,7 +9,32 @@ the current single most important next step — this file has everything behind 
 
 ## Current status
 
-- **Current step: v0.44 — `ROADMAP.md`'s `0.4` milestone (freeze the schema, build the real data
+- **Current step (unreleased, on branch `gear_assessment`): gear valuation rework, plus a copy-ready
+  developer report and a real triggering fix.** No version bump yet — this work folds into the next
+  one.
+  - **Added a copy-ready developer report** (`bugs/resolved-bugs.md` #56): `/lgs report`, a settings
+    button, and a once-per-session offer when a Lua error is caught. Established the hard constraint
+    first — the addon sandbox has no network access and *cannot* send anything, so the honest goal
+    was removing copy/paste friction, and the window says so plainly rather than implying otherwise.
+    Already proved itself in real use: the debug log shows it auto-offering on a genuine error.
+  - **Root-caused and fixed a real triggering bug** (#58). Three `script ran too long` Lua errors
+    looked like a performance problem in `Scoring.lua`, but the actual fault was upstream: instances
+    have no `MAP_ID_CONTINENT` entry, so `GetPlayerLocation` returns `nil` for them, and `nil` was
+    also being used to mean "first check of the session." Every dungeon entry, exit, and loading
+    screen in between therefore read as a continent change and triggered a full 17-slot rescan. Per
+    direct instruction ("it was running in conditions where we didn't need it to run"), the trigger
+    was root-caused *before* optimising anything — the performance symptom was a scan that should
+    never have run.
+  - **Version string de-duplicated:** `Debug.lua` now reads `## Version` from the `.toc` at runtime,
+    so the two can't drift. This broke addon load once by assuming the bare global
+    `GetAddOnMetadata` still exists — the Anniversary client runs the modern engine despite reporting
+    `Interface: 20505`. Now recorded as a general rule in `CONVENTIONS.md`.
+  - **`PACKAGING.md` added** — the ship/no-ship manifest (lean player build vs fuller tester build),
+    with Curse *and* non-Curse options so nothing is vendor-locked.
+  - **Still open on this branch:** the per-slot scan is still one contiguous call over hundreds of
+    items and can trip the watchdog on its own; splitting it into short-lived chained executions is
+    queued, as is honest proc surfacing and the Pawn valuation scaffold.
+- **Previous step: v0.44 — `ROADMAP.md`'s `0.4` milestone (freeze the schema, build the real data
   pipeline) is complete and shipped, catching up a version number that had gone stale across several
   unversioned commits.** `Suggestions.lua` (the recommendation engine) and `SuggestionsUI.lua` (its
   window) built per direct instruction from the ground up: no downgrades ever, a 6-candidate mix of
@@ -522,6 +547,37 @@ the current single most important next step — this file has everything behind 
 
 ## Decision log
 
+- **2026-07-21** — **Gear valuation direction: use Pawn as an interim scaffold, replace it later.**
+  Pawn is the mature reference implementation for stat-weight gear valuation, and reading its source
+  supplied the exact fixes for two real defects of ours: it caps displayed upgrade percentages
+  (`PawnBigUpgradeThreshold = 100`, i.e. 10,000%) on top of an epsilon denominator — our uncapped
+  `(new - old) / |old|` was producing absurd "40000x better" numbers off a near-zero baseline — and
+  it gates on `MinLevel` read live from `GetItemInfo`, where we were trusting the pipeline's
+  `reqLevel`, which is `0` for lots of high-level gear and let level-70 items be suggested to a
+  level-59 character. **Licence constraint that shapes everything here:** Pawn is CC BY-NC-ND 3.0, so
+  we may call its API when a user installs it themselves (interoperability is not a derivative work)
+  but may **never** bundle, fork, modify, or copy its code. `PawnAddPluginScale` is a documented
+  extension point, so our own spec-derived weights can be registered with it. Chosen with eyes open
+  that unwinding later has a real cost — mitigated by a hard design rule that **all** Pawn calls sit
+  behind one thin adapter, so replacing it stays a one-file swap rather than a rewrite.
+- **2026-07-21** — **Procs are surfaced, never folded into the score.** Deliberate honesty decision:
+  an estimate we can't stand behind must not distort ranking, and where a proc isn't valued the addon
+  says so plainly so the player can judge it themselves. Investigating what data we actually hold
+  turned up a genuinely useful result — the cmangos dump we already ship *does* carry proc
+  **frequency** (`item_template.spellid_N`/`spelltrigger_N`/`spellppmRate_N`, joinable to
+  `spell_proc_event`'s `ppmRate`/`CustomChance`/`Cooldown`) — but **not** effect *magnitude*, since
+  `spell_template` ships empty. So we can honestly report "chance-on-hit, ~1.5 PPM, 45s ICD" while
+  stating the value isn't calculated. Magnitude has to come from elsewhere; `wowsims/tbc` is the most
+  structured candidate. Notably this goes further than Pawn, which drops proc lines into an
+  `UnknownLines` bucket and values them at zero.
+- **2026-07-21** — **`queue.md` holds open work only.** Once an item is finished its line is removed
+  from the queue *entirely* — not condensed into a "done" summary — and the finished work is written
+  into `CHANGELOG.md`, the bug ledger, and anywhere else it belongs at the next `update all files`
+  pass. Recorded after a real failure to follow the instruction as given: "fully remove the line
+  explaining the job" was implemented as a summary left behind in the queue. The batching is
+  deliberate on the author's part — expensive doc passes are held until explicitly commanded so that
+  significant progress accumulates between them, which also means acting ahead of that command spends
+  the author's resources against their intent. Now a hard rule at the top of `CLAUDE.md`.
 - **2026-07-12** — Project moved to `~/Projects/LevelingGears` (git-initialized), symlinked into
   `.../_anniversary_/Interface/AddOns/LevelingGears` on the external drive for live in-game testing.
 - **2026-07-12** — Confirmed `## Interface: 20505` is correct for this TBC Anniversary client by

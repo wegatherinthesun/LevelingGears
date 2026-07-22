@@ -484,9 +484,12 @@ everything that only makes sense once this loop already works.
   wherever it appears, not about polishing the debug command.
 
 Smaller tester-feedback nitpicks live in `queue.md` instead of here — small enough to pick up one at
-a time without needing a permanent roadmap slot: error reports to the developer, debug-toggle
-message clarity, `/lgs debug dump`'s line limit, `/lgs score` output clarity, and retiring
-`/lgs score` once 0.5 exists.
+a time without needing a permanent roadmap slot. Of the original set: **error reports to the
+developer** and **debug-toggle message clarity** are now **Built** (`bugs/resolved-bugs.md` #56/#57 —
+`/lgs report`, a settings button, and a once-per-session offer on a caught error); `/lgs debug dump`'s
+line limit was **cancelled**, superseded by the scrollable dump window above; `/lgs score` output
+clarity was promoted to "Coloring it in" above; and retiring `/lgs score` once 0.5 exists is still
+queued.
 
 ### Later
 - **Spec guesser / chooser (later version).** Reads talent point distribution (e.g., 21/5/33),

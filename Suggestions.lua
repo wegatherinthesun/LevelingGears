@@ -644,6 +644,23 @@ end
 -- ===================== Trigger events =====================
 
 local lastKnownContinent = nil
+-- Tracked SEPARATELY from lastKnownContinent, deliberately. The old code used
+-- `lastKnownContinent == nil` to mean "first check of the session", but nil is also what
+-- GetPlayerLocation returns for ANY instance (no MAP_ID_CONTINENT entry for an instance's map id).
+-- Overloading nil that way meant every dungeon left the state permanently looking like "first
+-- check", so every later loading screen re-triggered a full 17-slot rescan. See bug notes below.
+local hasRunInitialScan = false
+
+-- Does this character already have a stored suggestion record? Checked once on login/reload to
+-- decide whether the initial scan is needed at all: an intact record means no rescan, a missing one
+-- (brand-new character, or a record lost at some point) rebuilds. Deliberately NOT re-checked
+-- mid-session -- per direct instruction, a record lost while logged in rebuilds on the next relog,
+-- not immediately.
+local function HasSuggestionRecord()
+	local characterState = LG.Settings.GetCharacterState()
+	local memory = characterState and characterState.suggestionMemory
+	return memory ~= nil and next(memory) ~= nil
+end
 
 -- "Equipping a piece of gear (unless it has been equipped before)" -- gates the equip-change
 -- trigger so swapping between two already-owned items (e.g. toggling a PvP trinket) doesn't restart
@@ -676,14 +693,34 @@ triggerFrame:RegisterEvent("PLAYER_LEVEL_UP")
 triggerFrame:SetScript("OnEvent", function(_, event)
 	SafeCall(function()
 		if event == "PLAYER_ENTERING_WORLD" then
-			-- Fires on login/reload AND every zone transition, not just a continent switch -- only
-			-- refresh on the very first check (login/reload, lastKnownContinent still nil) or a real
-			-- continent change, not every minor zone-to-zone move within the same continent.
+			-- Fires on login/reload AND every loading screen (zone change, instance entry/exit,
+			-- release, summon) -- not just a continent switch.
 			local continent = Suggestions.GetPlayerLocation()
-			local isFirstCheck = lastKnownContinent == nil
-			local continentChanged = continent ~= lastKnownContinent
-			lastKnownContinent = continent
-			if isFirstCheck or continentChanged then
+
+			-- Instances have no MAP_ID_CONTINENT entry, so GetPlayerLocation returns nil for them.
+			-- Ignore those loading screens entirely and leave lastKnownContinent untouched: the
+			-- player's gear needs did not change because they zoned into a dungeon. Treating nil as
+			-- a continent change is what caused a full 17-slot rescan on every instance entry AND
+			-- exit AND every loading screen in between -- the real cause of the "script ran too
+			-- long" errors, which were a symptom of scanning when we never needed to scan at all.
+			if continent == nil then
+				return
+			end
+
+			-- First real (non-instance) check of the session: this is the login/reload case. Only
+			-- scan if there's no stored record to work from.
+			if not hasRunInitialScan then
+				hasRunInitialScan = true
+				lastKnownContinent = continent
+				if not HasSuggestionRecord() then
+					Suggestions.RefreshAllSlotsInBackground()
+				end
+				return
+			end
+
+			-- After that, only a genuine continent change justifies a full rescan.
+			if continent ~= lastKnownContinent then
+				lastKnownContinent = continent
 				Suggestions.RefreshAllSlotsInBackground()
 			end
 			return

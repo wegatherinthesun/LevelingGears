@@ -56,9 +56,17 @@ validation)** — all shipped in v0.385, all previously covered here; see `CHANG
    independently.
 3. **No real in-game trigger exists yet besides shift+right-click and debug commands** — `ROADMAP.md`'s
    0.5 tooltip hook (the originally-planned entry point) isn't built. This is expected, not a bug.
+4. **New: a copy-ready developer report** (`/lgs report`, a settings-window button, and a
+   once-per-session offer when a Lua error is caught) — **cases T45-T47**. Nothing is ever sent
+   automatically; WoW addons have no network access, so the report is prepared for you to copy and
+   email (`bugs/resolved-bugs.md` #56).
+5. **Fixed: suggestion scans no longer restart on every instance loading screen** — **cases
+   T48-T49**. This was producing real `script ran too long` Lua errors during dungeon runs, because
+   entering and leaving an instance each read as a continent change and triggered a full 17-slot
+   rescan (#58). Login now only rescans when there's no stored record.
 
-**Testing should cover T8 and T36-T44 first** (all new or changed, none independently confirmed yet),
-then resume the regular T1-T35 sweep as time allows.
+**Testing should cover T8, T36-T44, and T45-T49 first** (all new or changed, none independently
+confirmed yet), then resume the regular T1-T35 sweep as time allows.
 
 ---
 
@@ -533,6 +541,60 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ---
 
+### Developer report & scan triggering (new — unreleased)
+
+**T45 — `/lgs report` opens a copy-ready report**
+- Instruction: Type `/lgs report`.
+- Repeat: 1x
+- Expected: A window opens titled "report for the developer". The text is **already selected**, so
+  Ctrl+C (Cmd+C on Mac) copies it — paste it somewhere to confirm you got the whole thing. It should
+  contain the addon version, your character name/realm/class/level, and the debug log. The window
+  states plainly that nothing is sent automatically.
+- Result:
+- Notes:
+
+**T46 — "Copy report for developer" button in the settings window**
+- Instruction: Open the settings window (`/lgs`), find the "Copy report for developer" button under
+  the minimap checkbox, click it.
+- Repeat: 1x
+- Expected: The same report window opens. Also check the settings content *below* the button (Spec
+  section, stat weights) still lays out correctly and nothing overlaps — that section grew to fit
+  the new button.
+- Result:
+- Notes:
+
+**T47 — The addon offers a report when it hits an error**
+- Instruction: Type `/lgs testerror` (a developer command that deliberately triggers a caught error).
+- Repeat: 2x
+- Expected: A chat line says a Lua error occurred and points at `/lgs report`, and a popup asks if
+  you want to open a copy-ready report. "Open report" opens it; "Dismiss" closes it. Running the
+  command a second time offers it again.
+- Result:
+- Notes:
+
+**T48 — Entering and leaving a dungeon does NOT restart scanning**
+- Instruction: `/lgs debug` to turn logging on. Enter any dungeon, then leave it. Then
+  `/lgs debug dump`.
+- Repeat: 1x
+- Expected: **No** burst of `Suggestions.GetCandidates` lines for the dungeon entry or exit — zoning
+  into an instance no longer counts as a continent change. Previously this triggered a full 17-slot
+  rescan on entry *and* exit, which is what produced `script ran too long` errors. Report it if you
+  see that error at all.
+- Result:
+- Notes:
+
+**T49 — Login only rescans when there's no stored record**
+- Instruction: With a character you've already used the Suggestions window on, `/reload`, then
+  `/lgs debug dump`.
+- Repeat: 1x
+- Expected: No full rescan burst on login — the stored suggestion record is reused. A brand-new
+  character (or one that has never opened the window) *should* scan on its first login, and a real
+  continent change, a level-up, or equipping something new should still trigger one.
+- Result:
+- Notes:
+
+---
+
 ## Known, accepted behavior (not a bug — don't report these)
 
 - A plain right-click on the minimap button (no drag) does nothing — this is deliberate now that
@@ -554,7 +616,7 @@ testing into a grind. If you have time to do more on any case, more is always we
 
 ## Summary (fill in after finishing)
 
-- Total test cases: 44 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
+- Total test cases: 49 — Passed: ___ Failed: ___ Partial: ___ Skipped: ___
 - Anything that failed, in plain language, and how bad it seemed:
 - Overall impression / anything not covered by a specific test case above:
 

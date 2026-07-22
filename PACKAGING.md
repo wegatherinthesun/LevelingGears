@@ -147,6 +147,9 @@ whichever backend):
   `pipeline/README.md`, `pipeline/output/schema_report.txt` and any non-shipped `output/` artifact
 - Local-only (already gitignored, never in the repo anyway): `CLAUDE.md`, `WORKFLOW.md`, `queue.md`,
   `testing-log.md`
+- Test-session tooling that runs on the test computer rather than inside the client (the log-watcher
+  script tracked as `queue.md` Q13). It is external to the addon, so the client never loads it — but
+  it is dev-only and must not end up in a player zip.
 
 ---
 

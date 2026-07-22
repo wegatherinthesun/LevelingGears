@@ -10,6 +10,34 @@ For the full investigation behind any fix below (root cause, evidence, validatio
 
 ---
 
+## Unreleased
+
+Work completed since v0.44, not yet carrying a version number of its own — it folds into whatever
+the next bump is called. Recorded here now so finished work has a permanent home the moment it's
+done (see `WORKFLOW.md`).
+
+- **Added: a copy-ready developer report.** `/lgs report`, a "Copy report for developer" button in
+  the settings window, and a once-per-session popup offering the report when a Lua error is caught.
+  The report bundles the addon version, your character context, and the full debug log into one
+  pre-selected block to copy and email. The addon sandbox has no network access and cannot send
+  anything itself — the window says so plainly rather than implying otherwise. (`bugs/resolved-bugs.md` #56)
+- **Changed: `/lgs debug` now tells you how to turn debug back off** instead of only pointing at
+  `/lgs debug dump`. (#57)
+- **Fixed: suggestion scans re-ran on every instance loading screen**, producing real
+  `script ran too long` Lua errors during dungeon runs. Entering a dungeon, leaving it, and every
+  loading screen in between each triggered a full 17-slot rescan, because instances report no
+  continent and that was being read as a continent change. Scans now ignore instance transitions
+  entirely, and on login only run when there's no stored suggestion record to work from. (#58)
+- **Changed: the addon version is now read from `LevelingGears.toc` at runtime** rather than
+  duplicated in `Debug.lua`, so the two can no longer drift. Uses the `C_AddOns` shim required on
+  this client.
+- **Added: `PACKAGING.md`** — the ship/no-ship manifest separating the lean player build (whose only
+  diagnostic surface is the error report) from the fuller tester build, with Curse *and* non-Curse
+  packaging options so nothing is locked to one vendor.
+- **Developer/tester only (never ships to players):** `/lgs testerror` to exercise the error path on
+  demand, and a `report` debug channel (`/lgs debug report`) logging the report window's
+  visibility/geometry and the auto-offer state.
+
 ## v0.44 (2026-07-17)
 
 **The `0.4` milestone (`ROADMAP.md`: freeze the schema, build the real data pipeline) is complete

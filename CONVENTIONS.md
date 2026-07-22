@@ -460,6 +460,23 @@ After every non-trivial edit, stop treating the task as complete and perform a f
 
 - Client: TBC Classic Anniversary. Lua 5.1 subset; Blizzard strips most of `io`/`os`. No file or
   network access from the addon itself.
+- **The Anniversary client runs the MODERN engine despite reporting `Interface: 20505`.** Do not
+  assume an API exists just because it existed in real 2.5.x — some old globals have been removed in
+  favour of their `C_*` namespaced replacements. Confirmed the hard way (2026-07-21): calling the
+  bare global `GetAddOnMetadata` in `Debug.lua` returned nil and **broke addon load entirely**. The
+  working pattern, taken from real installed addons on this client (Auctionator, Clique), is a
+  namespace-first shim:
+  `local f = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata`.
+  Generalise from this: when reaching for any global API, check whether a `C_*` equivalent exists and
+  prefer the shim, and verify against a working installed addon rather than assuming the Interface
+  number tells you which APIs are present.
+- **Watchdog / "script ran too long":** WoW aborts a script that holds a single execution context too
+  long. Nested function calls all count as **one** script no matter how deep, so splitting work into
+  more functions changes nothing. What *does* reset the budget is a new execution context: each
+  `C_Timer.After(0, fn)` callback runs later with a fresh allowance (confirmed in use on this client
+  by Attune, Auctionator, Questie, DBM-Core). To process a large collection, do a chunk and then hand
+  off to the next chunk via a timer rather than looping over everything inline; `debugprofilestop()`
+  can make chunk size adaptive. Real incident: `bugs/resolved-bugs.md` #58.
 - Item stats: read at runtime. Numeric stats come from **`GetItemStats(itemLink)`** (returns a
   table of ITEM_MOD_* values) — NOT from GetItemInfo, which gives name/quality/ilvl/equipLoc but
   no stats. Caching still gates both: `GetItemInfo` is ASYNC — uncached items return nil on first

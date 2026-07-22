@@ -42,6 +42,11 @@ score" required.
   name in native item-quality color, upgrade %, and where to get it (drop, quest, craft, vendor, or
   Bind on Equip). Hover a row for the full native item tooltip; Refresh re-checks on demand; Settings
   opens the main settings window alongside it.
+- **Report a problem without copy/pasting chat** — `/lgs report` (or the "Copy report for developer"
+  button in the settings window) opens a window with your addon version, character details, and the
+  debug log already assembled and selected, ready to copy into an email. If the addon hits a Lua
+  error it offers this to you once per session, unprompted. Nothing is ever sent automatically — WoW
+  addons have no network access, so the report is prepared for *you* to send, and the window says so.
 - **`/lgs score <item link>`** — a debug command that prints the same kind of breakdown for any
   item link (scored against the raw default priorities, not your own weights), so the underlying
   priority tables can be sanity-checked independent of any hand-adjustment.
@@ -67,8 +72,9 @@ Not yet published to CurseForge/Wago — install manually:
 | Command | Effect |
 |---|---|
 | `/levelinggears` or `/lgs` | Open/close the settings window |
-| `/lgs debug` | Toggle debug logging on/off |
+| `/lgs debug` | Toggle debug logging on/off (run it again to turn it back off) |
 | `/lgs debug dump` | Print recent debug log entries to chat |
+| `/lgs report` | Open a copy-ready report (version, character, debug log) to email to the developer |
 | `/lgs score <item link>` | Shift-click an item link after this command to print its score breakdown |
 
 ## How the scoring works, briefly
@@ -129,6 +135,8 @@ split by purpose so a given change only needs to load the piece it actually need
 - [`DESIGN.md`](DESIGN.md) — the scoring engine's architecture and every judgment call behind it.
 - [`DATA_PIPELINE.md`](DATA_PIPELINE.md) — source URLs, license status, and parser design for the
   future data pipeline (roadmap steps 0.41-0.44).
+- [`PACKAGING.md`](PACKAGING.md) — the ship/no-ship manifest: what goes in the lean player build vs
+  the fuller tester build, and how that split gets produced.
 - [`bugs/known-bugs.md`](bugs/known-bugs.md) — still-open bugs only. See also
   [`bugs/resolved-bugs.md`](bugs/resolved-bugs.md), the archive of everything already solved/mitigated.
 - [`TEST_PLAN.md`](TEST_PLAN.md) — start here if you're testing this addon. A fillable checklist
